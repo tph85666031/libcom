@@ -1,0 +1,30 @@
+#!/bin/bash
+
+SCRIPT_BUILD_URL="http://git.aerohuanyou.com:81/tbox/v3/publish/raw/master/config/build_for_lib"
+SCRIPT_CMAKE_URL="http://git.aerohuanyou.com:81/tbox/v3/publish/raw/master/config/CMakeLists_for_lib.txt"
+
+mkdir -pv tmp > /dev/null
+
+if [ ! -f ./tmp/.xbuild ]; then
+	wget ${SCRIPT_BUILD_URL} -q -O ./tmp/.xbuild && chmod +x ./tmp/.xbuild
+
+	if [ $? != 0 ]; then
+		echo "[-----------------Failed to get build script-----------------]"
+		exit -1
+	fi
+fi
+
+if [ ! -f ./CMakeLists.txt ]; then
+	wget ${SCRIPT_CMAKE_URL} -q -O ./CMakeLists.txt
+
+	if [ $? != 0 ]; then
+	    echo "[-----------------Failed to get cmake file-----------------]"
+	    exit -1
+	fi
+fi
+
+if [ -x ./tmp/.xbuild ];then
+    ./tmp/.xbuild $@
+else
+    echo failed to donwload build script ...
+fi

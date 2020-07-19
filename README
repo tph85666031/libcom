@@ -1,0 +1,72 @@
+集成字符串操作库  
+时间api  
+cjson  
+md5计算  
+sqlite3操作api  
+unqlite KV读写型数据库操作api  
+config KV只读型配置文件操作api  
+socket操作api  
+mutex,sem,thread操作api  
+堆栈打印api  
+gps nmea格式解析api  
+自动持久化缓存操作api【CacheManager】  
+
+
+
+
+1：编译
+./build -h   #build编译系统会自动从服务器下载编译脚本
+
+编译参数说明：
+o:
+交叉编译工具链类型（交叉编译工具链需用户预先配置），build脚本会自动根据此类型来适配依赖关系，同时此类型会转化为宏定义供被编译源码使用
+
+d:
+若指定，build将尝试编译源码为debug版本
+
+u：
+若指定，build将编译带单元测试模块的版本（请参考实例在源码中引用UNIT_TEST_LIB或UNIT_TEST_APP）
+
+c：
+清除编译产生的临时文件（不包括从服务器下载的依赖关系文件）
+
+C：
+清除所有编译产生的临时文件（包括下载的依赖关系文件）
+
+
+
+2:配置
+修改config.txt文件进行模块配置
+模块配置包括：
+module_ver=1.0.0          #模块版本号
+module_name=example       #模块名称
+module_model=EBD.FAW001RV #模块类型
+module_define="-DMACRO_A -DMACRO_B=\"value\" -DMACRO_C"  #模块私有的宏定义，需要以双引号包含，若宏定义为字符串，需要加\做转义
+depend_app=app_example:1.0.0:tricheer,yyy    #依赖的app，若不带版本号，将直接使用本机已安装的文件，否则将从服务器下载对应版本,若附带了目标运行系统名则只在编译对应目标系统版本时才下载此依赖文件
+depend_lib=ipc:1.0.3,com:1.0.4:tricheer,xxx  #依赖的lib库，若不带版本号，将直接使用本机已安装的文件，否则将从服务器下载对应版本,若附带了目标运行系统名则只在编译对应目标系统版本时才下载此依赖文件
+
+
+
+3：目录结构
+文件夹结构必须要保留src/export
+需要对外输出的头文件必须置于src/export下面
+src/export不允许有子文件夹
+所有源码均放置于src目录下,不建议存放于src下的子文件夹，否则需要修改CMakeLists.txt文件
+所有头文件(除需要对外输出)均放置于src目录下,不建议存放于src下的子文件夹，否则需要修改CMakeLists.txt文件
+
+
+4:系统内置宏
+HOST_LINUX_X64
+HOST_TRICHEER
+HOST_TRICHEER_V2
+
+__DEBUG__
+UNIT_TEST
+
+MODULE_TYPE
+MODULE_VER
+MODULE_NAME
+
+以下三个在bcp_com.h中被整合为一个宏MODULE_DEPEND，MODULE_DEPEND可直接用于DEV报文中的“模块其它信息”字段
+MODULE_DEPEND_LIB
+MODULE_DEPEND_APP

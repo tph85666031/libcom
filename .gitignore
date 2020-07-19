@@ -1,0 +1,7 @@
+out
+tmp
+*.orig
+*.log
+*.db
+.1.ini*
+CMakeLists.txt

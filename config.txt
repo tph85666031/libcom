@@ -1,0 +1,5 @@
+#!/bin/sh
+module_ver=1.2.0
+module_name=com
+depend_lib=
+module_define="-DSQLITE_THREADSAFE=1 -DUNQLITE_ENABLE_THREADS -DHAVE_STRINGS_H -DHAVE_SIGNAL_H -DHAVE_INTTYPES_H -DHAVE_MALLOC_H"
