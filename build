@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SCRIPT_BUILD_URL="http://git.aerohuanyou.com:81/tbox/v3/publish/raw/master/config/build_for_lib"
-SCRIPT_CMAKE_URL="http://git.aerohuanyou.com:81/tbox/v3/publish/raw/master/config/CMakeLists_for_lib.txt"
+SCRIPT_BUILD_URL="http://git.wisper.com.cn:9000/wisper/publish/raw/master/config/build_for_lib"
+SCRIPT_CMAKE_URL="http://git.wisper.com.cn:9000/wisper/publish/raw/master/config/CMakeLists_for_lib.txt"
 
 mkdir -pv tmp > /dev/null
 
