@@ -10,7 +10,7 @@ void bcp_md5_unit_test_suit(void** state)
 
     md5.appendFile("./build");
     result =  md5.finish().toHexString();
-    ASSERT_STR_EQUAL("3998cddca0527000f8285be132cc496b", result.c_str());
+    ASSERT_STR_EQUAL("62629b15810cee6656fb7d25c870173c", result.c_str());
 
     result = md5.finish().toHexString();
     ASSERT_STR_EQUAL("d41d8cd98f00b204e9800998ecf8427e", result.c_str());

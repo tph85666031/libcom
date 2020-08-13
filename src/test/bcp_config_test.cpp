@@ -104,16 +104,16 @@ void bcp_config_unit_test_suit(void** state)
 
     ASSERT_STR_EQUAL("/1/2/3/", bcp_path_dir("/1/2/3/4.txt").c_str());
 
-    ASSERT_TRUE(config.load("2.ini"));
-    config.set("hhh", "abc", 3);
-    config.set("hhh", "abcd", 4);
+    CPPConfig config2("2.ini");
+    config2.set("hhh", "abc", 3);
+    config2.set("hhh", "abcd", 4);
 
-    ASSERT_INT_EQUAL(config.getUInt32("hhh", "abc"), 3);
-    ASSERT_INT_EQUAL(config.getUInt32("hhh", "abcd"), 4);
-    ASSERT_TRUE(config.save());
+    ASSERT_INT_EQUAL(config2.getUInt32("hhh", "abc"), 3);
+    ASSERT_INT_EQUAL(config2.getUInt32("hhh", "abcd"), 4);
+    ASSERT_TRUE(config2.save());
 
-    ASSERT_INT_EQUAL(bcp_file_type(".2.ini"), FILE_TYPE_FILE);
-    ASSERT_INT_EQUAL(bcp_file_type(".2.ini.bak"), FILE_TYPE_FILE);
+    ASSERT_INT_EQUAL(bcp_file_type(".2.ini"), FILE_TYPE_NOT_EXIST);
+    ASSERT_INT_EQUAL(bcp_file_type(".2.ini.bak"), FILE_TYPE_NOT_EXIST);
 
     ASSERT_TRUE(config.load("2.ini"));
     ASSERT_INT_EQUAL(config.getUInt32("hhh", "abc"), 3);

@@ -28,14 +28,14 @@ static void auto_mutex_test()
 static ByteArray bytearray_test(uint8* data, int dataSize)
 {
     ByteArray bytes;
-    if (data == NULL || dataSize <= 0 || dataSize % 8 != 0)
+    if(data == NULL || dataSize <= 0 || dataSize % 8 != 0)
     {
         return bytes;
     }
 
     ByteArray bytesSrc(data, dataSize);
     uint8 buf[8];
-    for (int i = 0; i < bytesSrc.getDataSize() / 8; i++)
+    for(int i = 0; i < bytesSrc.getDataSize() / 8; i++)
     {
         memcpy(buf, bytesSrc.getData() + 8 * i, 8);
         bytes.append(buf, sizeof(buf));
@@ -46,7 +46,7 @@ static ByteArray bytearray_test(uint8* data, int dataSize)
 
 static void thread_condition_test(void* arg)
 {
-    if (arg == NULL)
+    if(arg == NULL)
     {
         return;
     }
@@ -117,78 +117,68 @@ void bcp_com_xstring_unit_test(void** state)
 
 void bcp_com_string_split_unit_test_suit(void** state)
 {
-    int count_split = 0;
-    char** ret_split = bcp_string_split_F("123,456,7", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 3);
-    ASSERT_STR_EQUAL(ret_split[0], "123");
-    ASSERT_STR_EQUAL(ret_split[1], "456");
-    ASSERT_STR_EQUAL(ret_split[2], "7");
-    bcp_string_split_free(ret_split);
-    ret_split = bcp_string_split_F("123,456,7,", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 4);
-    ASSERT_STR_EQUAL(ret_split[0], "123");
-    ASSERT_STR_EQUAL(ret_split[1], "456");
-    ASSERT_STR_EQUAL(ret_split[2], "7");
-    ASSERT_STR_EQUAL(ret_split[3], "");
-    bcp_string_split_free(ret_split);
-    ret_split = bcp_string_split_F(",123,456,7", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 4);
-    ASSERT_STR_EQUAL(ret_split[0], "");
-    ASSERT_STR_EQUAL(ret_split[1], "123");
-    ASSERT_STR_EQUAL(ret_split[2], "456");
-    ASSERT_STR_EQUAL(ret_split[3], "7");
-    bcp_string_split_free(ret_split);
-    ret_split = bcp_string_split_F(",123,456,7,", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 5);
-    ASSERT_STR_EQUAL(ret_split[0], "");
-    ASSERT_STR_EQUAL(ret_split[1], "123");
-    ASSERT_STR_EQUAL(ret_split[2], "456");
-    ASSERT_STR_EQUAL(ret_split[3], "7");
-    ASSERT_STR_EQUAL(ret_split[4], "");
-    bcp_string_split_free(ret_split);
-    ret_split = bcp_string_split_F(",,456,7,", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 5);
-    ASSERT_STR_EQUAL(ret_split[0], "");
-    ASSERT_STR_EQUAL(ret_split[1], "");
-    ASSERT_STR_EQUAL(ret_split[2], "456");
-    ASSERT_STR_EQUAL(ret_split[3], "7");
-    ASSERT_STR_EQUAL(ret_split[4], "");
-    bcp_string_split_free(ret_split);
-    ret_split = bcp_string_split_F(",123,,7,", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 5);
-    ASSERT_STR_EQUAL(ret_split[0], "");
-    ASSERT_STR_EQUAL(ret_split[1], "123");
-    ASSERT_STR_EQUAL(ret_split[2], "");
-    ASSERT_STR_EQUAL(ret_split[3], "7");
-    ASSERT_STR_EQUAL(ret_split[4], "");
-    bcp_string_split_free(ret_split);
-    ret_split = bcp_string_split_F(",123,,7,", ',', NULL);
-    ASSERT_NULL(ret_split);
-    ret_split = bcp_string_split_F(NULL, ',', &count_split);
-    ASSERT_NULL(ret_split);
-    ret_split = bcp_string_split_F(NULL, ',', NULL);
-    ASSERT_NULL(ret_split);
-    ret_split = bcp_string_split_F("123", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 1);
-    ASSERT_STR_EQUAL(ret_split[0], "123");
-    bcp_string_split_free(ret_split);
-    ret_split = bcp_string_split_F(" ", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 1);
-    ASSERT_STR_EQUAL(ret_split[0], " ");
-    bcp_string_split_free(ret_split);
-    ret_split = bcp_string_split_F("", ',', &count_split);
-    ASSERT_NOT_NULL(ret_split);
-    ASSERT_INT_EQUAL(count_split, 1);
-    ASSERT_STR_EQUAL(ret_split[0], "");
-    bcp_string_split_free(ret_split);
+    std::vector<std::string> ret_split = bcp_string_split("123,456,7", ",");
+   ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 3);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), "123");
+    ASSERT_STR_EQUAL(ret_split[1].c_str(), "456");
+    ASSERT_STR_EQUAL(ret_split[2].c_str(), "7");
+    ret_split = bcp_string_split("123,456,7,", ",");
+    ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 4);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), "123");
+    ASSERT_STR_EQUAL(ret_split[1].c_str(), "456");
+    ASSERT_STR_EQUAL(ret_split[2].c_str(), "7");
+    ASSERT_STR_EQUAL(ret_split[3].c_str(), "");
+    ret_split = bcp_string_split(",123,456,7", ",");
+    ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 4);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), "");
+    ASSERT_STR_EQUAL(ret_split[1].c_str(), "123");
+    ASSERT_STR_EQUAL(ret_split[2].c_str(), "456");
+    ASSERT_STR_EQUAL(ret_split[3].c_str(), "7");
+    ret_split = bcp_string_split(",123,456,7,", ",");
+    ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 5);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), "");
+    ASSERT_STR_EQUAL(ret_split[1].c_str(), "123");
+    ASSERT_STR_EQUAL(ret_split[2].c_str(), "456");
+    ASSERT_STR_EQUAL(ret_split[3].c_str(), "7");
+    ASSERT_STR_EQUAL(ret_split[4].c_str(), "");
+    ret_split = bcp_string_split(",,456,7,", ",");
+    ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 5);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), "");
+    ASSERT_STR_EQUAL(ret_split[1].c_str(), "");
+    ASSERT_STR_EQUAL(ret_split[2].c_str(), "456");
+    ASSERT_STR_EQUAL(ret_split[3].c_str(), "7");
+    ASSERT_STR_EQUAL(ret_split[4].c_str(), "");
+    ret_split = bcp_string_split(",123,,7,", ",");
+    ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 5);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), "");
+    ASSERT_STR_EQUAL(ret_split[1].c_str(), "123");
+    ASSERT_STR_EQUAL(ret_split[2].c_str(), "");
+    ASSERT_STR_EQUAL(ret_split[3].c_str(), "7");
+    ASSERT_STR_EQUAL(ret_split[4].c_str(), "");
+    ret_split = bcp_string_split(",123,,7,", ",");
+    ASSERT_INT_EQUAL(ret_split.size(), 5);
+    ret_split = bcp_string_split(NULL, ",");
+    ASSERT_INT_EQUAL(ret_split.size(), 0);
+    ret_split = bcp_string_split(NULL, ",");
+    ASSERT_INT_EQUAL(ret_split.size(), 0);
+    ret_split = bcp_string_split("123", ",");
+    ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 1);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), "123");
+    ret_split = bcp_string_split(" ", ",");
+    ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 1);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), " ");
+    ret_split = bcp_string_split("", ",");
+    ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_INT_EQUAL(ret_split.size(), 1);
+    ASSERT_STR_EQUAL(ret_split[0].c_str(), "");
 }
 
 void bcp_com_string_unit_test_suit(void** state)
@@ -455,7 +445,7 @@ void bcp_com_unit_test_suit(void** state)
     LOG_D("condition start wait");
     condition.wait();
     LOG_D("condition wait done");
-    if (thread_test.joinable())
+    if(thread_test.joinable())
     {
         thread_test.join();
     }
@@ -513,9 +503,9 @@ void bcp_com_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(gcd, 7);
     try
     {
-        throw (ComException("test exception", 0));
+        throw(ComException("test exception", 0));
     }
-    catch (ComException& e)
+    catch(ComException& e)
     {
         ASSERT_STR_EQUAL("test exception", e.what());
     }

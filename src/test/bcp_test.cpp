@@ -38,7 +38,7 @@ extern void bcp_com_xstring_unit_test(void** state);
 
 CMUnitTest test_cases_bcp_lib[] =
 {
-#if 0
+#if 1
     cmocka_unit_test(bcp_com_unit_test_suit),
     cmocka_unit_test(bcp_com_string_split_unit_test_suit),
     cmocka_unit_test(bcp_com_string_unit_test_suit),
