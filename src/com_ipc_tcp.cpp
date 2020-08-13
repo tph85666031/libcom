@@ -26,7 +26,7 @@ ByteArray TcpIpcMessage::toBytes()
 
 bool TcpIpcMessage::FromBytes(TcpIpcMessage& msg, uint8* data, int data_size)
 {
-    if (data == NULL || data_size < TCP_IPC_MSG_HEAD_SIZE)
+    if (data == NULL || data_size < (int)TCP_IPC_MSG_HEAD_SIZE)
     {
         return false;
     }
@@ -40,7 +40,7 @@ bool TcpIpcMessage::FromBytes(TcpIpcMessage& msg, uint8* data, int data_size)
     s.detach(msg.from, TCP_IPC_NAME_LENGTH);
     s.detach(msg.to, TCP_IPC_NAME_LENGTH);
 
-    uint32 remain_size = 0;
+    int remain_size = 0;
     s.detach(remain_size);
     if (remain_size > s.getDetachRemainSize())
     {

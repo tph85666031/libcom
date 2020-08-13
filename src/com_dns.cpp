@@ -51,7 +51,7 @@ ByteArray dns_query_encode(const char* domain_name, uint16 id, bool is_tcp)
     s.append((uint16)0);
     s.append((uint16)0);
     std::vector<std::string> name_parts = com_string_split(domain_name, ".");
-    for (int i = 0; i < name_parts.size(); i++)
+    for (size_t i = 0; i < name_parts.size(); i++)
     {
         s.append((uint8)name_parts[i].size());
         s.append(name_parts[i]);
@@ -294,14 +294,14 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
         rp_set = true;
     }
     std::string ip;
-    for (int i = 0; i < dns_server_list.size(); i++)
+    for (size_t i = 0; i < dns_server_list.size(); i++)
     {
         ip = dns_via_udp(domain_name, interface_name, dns_server_list[i].c_str());
     }
 
     if (ip.empty())
     {
-        for (int i = 0; i < dns_server_list.size(); i++)
+        for (size_t i = 0; i < dns_server_list.size(); i++)
         {
             ip = dns_via_tcp(domain_name, interface_name, dns_server_list[i].c_str());
         }

@@ -227,7 +227,7 @@ bool com_kv_remove(const char* file, const char* key)
 void com_kv_remove_front(const char* file, int count)
 {
     std::vector<KVResult> results = com_kv_get_front(file, count);
-    for (int i = 0; i < results.size(); i++)
+    for (size_t i = 0; i < results.size(); i++)
     {
         com_kv_remove(file, results[i].key.c_str());
     }
@@ -236,7 +236,7 @@ void com_kv_remove_front(const char* file, int count)
 void com_kv_remove_tail(const char* file, int count)
 {
     std::vector<KVResult> results = com_kv_get_tail(file, count);
-    for (int i = 0; i < results.size(); i++)
+    for (size_t i = 0; i < results.size(); i++)
     {
         com_kv_remove(file, results[i].key.c_str());
     }
@@ -377,7 +377,7 @@ std::vector<KVResult> com_kv_get_front(const char* file, int count)
         free(data);
 
         list.push_back(result);
-        if (list.size() >= count)
+        if ((int)list.size() >= count)
         {
             break;
         }
@@ -449,7 +449,7 @@ std::vector<KVResult> com_kv_get_tail(const char* file, int count)
         free(data);
 
         list.push_back(result);
-        if (list.size() >= count)
+        if ((int)list.size() >= count)
         {
             break;
         }

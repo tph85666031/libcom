@@ -171,7 +171,7 @@ int Serializer::detach(char& val)
 
 int Serializer::detach(uint8& val)
 {
-    if (pos_detach >= buf.size())
+    if (pos_detach >= (int)buf.size())
     {
         return -1;
     }
@@ -262,14 +262,14 @@ int Serializer::detach(int64& val)
 //读到\0结尾或val_size（val_size<0则读取到\0）
 int Serializer::detach(std::string& val, int val_size)
 {
-    if (pos_detach >= buf.size())
+    if (pos_detach >= (int)buf.size())
     {
         return -1;
     }
 
     if (val_size > 0)
     {
-        if (pos_detach + val_size > buf.size())
+        if (pos_detach + val_size > (int)buf.size())
         {
             return -1;
         }
@@ -293,7 +293,7 @@ int Serializer::detach(char* val, int val_size)
         return -1;
     }
 
-    if (pos_detach >= buf.size())
+    if (pos_detach >= (int)buf.size())
     {
         return -1;
     }
@@ -311,7 +311,7 @@ int Serializer::detach(uint8* val, int val_size)
         return -1;
     }
 
-    if (pos_detach + val_size > buf.size())
+    if (pos_detach + val_size > (int)buf.size())
     {
         return -1;
     }
@@ -329,7 +329,7 @@ int Serializer::detach(ByteArray& bytes, int val_size)
         return -1;
     }
 
-    if (pos_detach + val_size > buf.size())
+    if (pos_detach + val_size > (int)buf.size())
     {
         return -1;
     }

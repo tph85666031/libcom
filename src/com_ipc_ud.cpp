@@ -80,10 +80,10 @@ void UnixDomainIPCServer::forwardMessage(std::string& from_file_name, uint8* dat
         des.bytes.append(data, data_size);
     }
 
-    while (des.bytes.getDataSize() >= sizeof(UD_IPC_MSG))
+    while (des.bytes.getDataSize() >= (int)sizeof(UD_IPC_MSG))
     {
         UD_IPC_MSG* head = (UD_IPC_MSG*)des.bytes.getData();
-        if (des.bytes.getDataSize() < sizeof(UD_IPC_MSG) + head->data_size)
+        if (des.bytes.getDataSize() < (int)sizeof(UD_IPC_MSG) + (int)head->data_size)
         {
             break;
         }
@@ -199,10 +199,10 @@ void UnixDomainIPCClient::onRecv(uint8* data, int data_size)
         bytes.append(data, data_size);
     }
 
-    while (bytes.getDataSize() >= sizeof(UD_IPC_MSG))
+    while (bytes.getDataSize() >= (int)sizeof(UD_IPC_MSG))
     {
         UD_IPC_MSG* head = (UD_IPC_MSG*)bytes.getData();
-        if (bytes.getDataSize() < sizeof(UD_IPC_MSG) + head->data_size)
+        if (bytes.getDataSize() < (int)sizeof(UD_IPC_MSG) + (int)head->data_size)
         {
             break;
         }

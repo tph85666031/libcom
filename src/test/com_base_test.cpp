@@ -58,7 +58,7 @@ static void thread_condition_test(void* arg)
     return;
 }
 
-void com_com_xstring_unit_test(void** state)
+void com_base_xstring_unit_test(void** state)
 {
     xstring x;
     ASSERT_TRUE(x.empty());
@@ -115,7 +115,7 @@ void com_com_xstring_unit_test(void** state)
     xstring z(y);
 }
 
-void com_com_string_split_unit_test_suit(void** state)
+void com_base_string_split_unit_test_suit(void** state)
 {
     std::vector<std::string> ret_split = com_string_split("123,456,7", ",");
    ASSERT_TRUE(ret_split.size() > 0);
@@ -181,7 +181,7 @@ void com_com_string_split_unit_test_suit(void** state)
     ASSERT_STR_EQUAL(ret_split[0].c_str(), "");
 }
 
-void com_com_string_unit_test_suit(void** state)
+void com_base_string_unit_test_suit(void** state)
 {
     char buf_a[8] = {0};
     char buf_b[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -311,7 +311,7 @@ void com_com_string_unit_test_suit(void** state)
     ASSERT_STR_EQUAL(x.c_str(), "IF U already have files U can push them using command line instructions ");
 }
 
-void com_com_time_unit_test_suit(void** state)
+void com_base_time_unit_test_suit(void** state)
 {
     uint32 val_32 = com_time_rtc_s();
     //printf("time_s=%u\n", val_32);
@@ -349,7 +349,7 @@ void com_com_time_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(com_tm_to_time(&tm_val), time_cur_s);
 }
 
-void com_com_gps_unit_test_suit(void** state)
+void com_base_gps_unit_test_suit(void** state)
 {
     //printf("lon=%f,lat=%f\n", 104.111696, 30.489359);
     //GPS gps = com_gps_wgs84_to_gcj02(104.111696, 30.489359);
@@ -378,7 +378,7 @@ XT& getXT()
     return *p_x;
 }
 
-void com_com_unit_test_suit(void** state)
+void com_base_unit_test_suit(void** state)
 {
     TIME_COST();
     Mutex* mutex = com_mutex_create("mutex_ut");
@@ -511,7 +511,7 @@ void com_com_unit_test_suit(void** state)
     }
 }
 
-void com_com_bytearray_unit_test_suit(void** state)
+void com_base_bytearray_unit_test_suit(void** state)
 {
     ByteArray bytes((uint8*)"123456", 6);
 
@@ -531,7 +531,7 @@ void com_com_bytearray_unit_test_suit(void** state)
     bytes1 = bytearray_test(bytes1.getData(), bytes1.getDataSize());
 }
 
-void com_com_message_unit_test_suit(void** state)
+void com_base_message_unit_test_suit(void** state)
 {
     Message msg(1);
     msg.set("key0", true);

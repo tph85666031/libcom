@@ -572,7 +572,7 @@ bool ThreadPool::pushMessage(Message& msg)
     {
         count = 1000;
     }
-    if (msgs.size() > count)
+    if ((int)msgs.size() > count)
     {
         mutex_msgs.unlock();
         return false;

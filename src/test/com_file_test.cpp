@@ -48,58 +48,58 @@ void com_file_unit_test_suit(void** state)
     }
 
     FilePath path("1/2/3/4/5/1.txt");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "1.txt");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "1/2/3/4/5/");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "1.txt");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "1/2/3/4/5/");
     ASSERT_FALSE(path.isDirectory());
 
     path = FilePath("/1/2/3/4/5/1.txt");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "1.txt");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "/1/2/3/4/5/");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "1.txt");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "/1/2/3/4/5/");
     ASSERT_FALSE(path.isDirectory());
 
     path = FilePath("/1/2/3/4/5/6/");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "6");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "/1/2/3/4/5/");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "6");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "/1/2/3/4/5/");
     ASSERT_TRUE(path.isDirectory());
 
     path = FilePath("/1");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "1");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "/");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "1");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "/");
     ASSERT_FALSE(path.isDirectory());
 
     path = FilePath("/1/");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "1");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "/");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "1");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "/");
     ASSERT_TRUE(path.isDirectory());
 
     path = FilePath("./1");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "1");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "./");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "1");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "./");
     ASSERT_FALSE(path.isDirectory());
 
     path = FilePath("./1/");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "1");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "./");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "1");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "./");
     ASSERT_TRUE(path.isDirectory());
 
     path = FilePath("");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "");
     ASSERT_FALSE(path.isDirectory());
 
     path = FilePath("/");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "/");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "/");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "/");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "/");
     ASSERT_TRUE(path.isDirectory());
 
     path = FilePath(".");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), ".");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), ".");
+    ASSERT_STR_EQUAL(path.getName().c_str(), ".");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), ".");
     ASSERT_TRUE(path.isDirectory());
 
     path = FilePath("..");
-    ASSERT_STR_EQUAL(path.GetName().c_str(), "..");
-    ASSERT_STR_EQUAL(path.GetLocationDirectory().c_str(), "..");
+    ASSERT_STR_EQUAL(path.getName().c_str(), "..");
+    ASSERT_STR_EQUAL(path.getLocationDirectory().c_str(), "..");
     ASSERT_TRUE(path.isDirectory());
 
 

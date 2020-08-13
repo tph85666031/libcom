@@ -103,7 +103,7 @@ private:
                 if (ctx->hooks.count(item.key) != 0)
                 {
                     std::vector<cb_mem_data_change> cbs = ctx->hooks[item.key];
-                    for (int i = 0; i < cbs.size(); i++)
+                    for (size_t i = 0; i < cbs.size(); i++)
                     {
                         if (cbs[i] != NULL)
                         {
@@ -398,7 +398,7 @@ bool com_mem_to_file(std::string file)
     std::string json = com_mem_to_json();
     int ret = com_file_write(file_fd, json.data(), json.size());
     com_file_close(file_fd);
-    return (ret == json.size());
+    return (ret == (int)json.size());
 }
 
 void com_mem_from_file(std::string file)

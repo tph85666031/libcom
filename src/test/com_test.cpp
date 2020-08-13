@@ -1,12 +1,12 @@
 #include "com.h"
 
-extern void com_com_unit_test_suit(void** state);
-extern void com_com_string_split_unit_test_suit(void** state);
-extern void com_com_string_unit_test_suit(void** state);
-extern void com_com_time_unit_test_suit(void** state);
-extern void com_com_gps_unit_test_suit(void** state);
-extern void com_com_bytearray_unit_test_suit(void** state);
-extern void com_com_message_unit_test_suit(void** state);
+extern void com_base_unit_test_suit(void** state);
+extern void com_base_string_split_unit_test_suit(void** state);
+extern void com_base_string_unit_test_suit(void** state);
+extern void com_base_time_unit_test_suit(void** state);
+extern void com_base_gps_unit_test_suit(void** state);
+extern void com_base_bytearray_unit_test_suit(void** state);
+extern void com_base_message_unit_test_suit(void** state);
 extern void com_cache_unit_test_suit(void** state);
 extern void com_thread_unit_test_suit(void** state);
 
@@ -34,19 +34,19 @@ extern void com_mem_unit_test_suit(void** state);
 
 extern void com_dns_unit_test_suit(void** state);
 
-extern void com_com_xstring_unit_test(void** state);
+extern void com_base_xstring_unit_test(void** state);
 
 CMUnitTest test_cases_com_lib[] =
 {
 #if 1
-    cmocka_unit_test(com_com_unit_test_suit),
-    cmocka_unit_test(com_com_string_split_unit_test_suit),
-    cmocka_unit_test(com_com_string_unit_test_suit),
-    cmocka_unit_test(com_com_time_unit_test_suit),
-    cmocka_unit_test(com_com_gps_unit_test_suit),
-    cmocka_unit_test(com_com_bytearray_unit_test_suit),
-    cmocka_unit_test(com_com_message_unit_test_suit),
-    cmocka_unit_test(com_com_xstring_unit_test),
+    cmocka_unit_test(com_base_unit_test_suit),
+    cmocka_unit_test(com_base_string_split_unit_test_suit),
+    cmocka_unit_test(com_base_string_unit_test_suit),
+    cmocka_unit_test(com_base_time_unit_test_suit),
+    cmocka_unit_test(com_base_gps_unit_test_suit),
+    cmocka_unit_test(com_base_bytearray_unit_test_suit),
+    cmocka_unit_test(com_base_message_unit_test_suit),
+    cmocka_unit_test(com_base_xstring_unit_test),
     cmocka_unit_test(com_config_unit_test_suit),
     cmocka_unit_test(com_cache_unit_test_suit),
     cmocka_unit_test(com_thread_unit_test_suit),

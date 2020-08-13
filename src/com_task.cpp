@@ -146,7 +146,7 @@ void TaskManager::destroyTask(std::string task_name)
 void TaskManager::sendMessage(std::string task_name_wildcard, Message& msg)
 {
     bool has_wildcard = false;
-    for (int i = 0; i < task_name_wildcard.size(); i++)
+    for (size_t i = 0; i < task_name_wildcard.size(); i++)
     {
         if (task_name_wildcard[i] == '?' || task_name_wildcard[i] == '*')
         {

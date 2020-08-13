@@ -455,7 +455,7 @@ const char* DBQuery::getItem(int row, int column)
     }
 
     row++;//排除列头
-    if (row >= this->list.size() || column >= this->list[0].size())
+    if (row >= (int)this->list.size() || column >= (int)this->list[0].size())
     {
         return NULL;
     }

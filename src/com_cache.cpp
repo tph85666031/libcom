@@ -89,7 +89,7 @@ bool Cache::expired()
     {
         return false;
     }
-    if (flag.expiretime_ms > 0 && com_time_rtc_ms() > flag.expiretime_ms)
+    if (flag.expiretime_ms > 0 && com_time_rtc_ms() > (uint64)flag.expiretime_ms)
     {
         return true;
     }
@@ -192,7 +192,7 @@ void CacheManager::ThreadFlushRunner(CacheManager* manager)
         if (manager->flush_count > 0)
         {
             manager->mutex_list.lock();
-            if (manager->list.size() >= manager->flush_count)
+            if ((int)manager->list.size() >= manager->flush_count)
             {
                 need_flush = true;
                 LOG_D("count matched, flush to disk");
@@ -331,7 +331,7 @@ void CacheManager::insertHead(Cache& cache)
     else
     {
         list.insert(list.begin(), cache);
-        if (list.size() > mem_cache_count_max)
+        if ((int)list.size() > mem_cache_count_max)
         {
             need_flush = true;
         }
@@ -392,7 +392,7 @@ void CacheManager::insertTail(Cache& cache)
     else
     {
         list.push_back(cache);
-        if (list.size() > mem_cache_count_max)
+        if ((int)list.size() > mem_cache_count_max)
         {
             need_flush = true;
         }
@@ -483,7 +483,7 @@ void CacheManager::removeFirst(int count)
     if (count_mem > 0)
     {
         mutex_list.lock();
-        if (count_mem > list.size())
+        if (count_mem > (int)list.size())
         {
             count_mem = list.size();
         }
@@ -695,14 +695,14 @@ std::vector<Cache> CacheManager::getFirst(int count)
         cache.setData(bytes);
         rets.push_back(cache);
     }
-    if (rets.size() < count)
+    if ((int)rets.size() < count)
     {
         //get from list
         count = count - rets.size();
         mutex_list.lock();
         if (list.empty() == false)
         {
-            if (count > list.size())
+            if (count > (int)list.size())
             {
                 count = list.size();
             }
@@ -723,17 +723,17 @@ std::vector<Cache> CacheManager::getLast(int count)
     mutex_list.lock();
     if (list.empty() == false)
     {
-        if (count > list.size())
+        if (count > (int)list.size())
         {
             count = list.size();
         }
-        for (int i = list.size(); i < list.size() - count; i--)
+        for (size_t i = list.size(); i < list.size() - count; i--)
         {
             rets.push_back(list.at(i));
         }
     }
     mutex_list.unlock();
-    if (rets.size() < count)
+    if ((int)rets.size() < count)
     {
         count = count - rets.size();
         //get from file

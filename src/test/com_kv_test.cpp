@@ -12,7 +12,7 @@ void com_kv_unit_test_suit(void** state)
     ASSERT_STR_EQUAL(val_str.c_str(), "142cger");
 
     uint8 buf[7];
-    for (int i = 0; i < sizeof(buf); i++)
+    for (size_t i = 0; i < sizeof(buf); i++)
     {
         buf[i] = i;
     }

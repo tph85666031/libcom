@@ -23,7 +23,7 @@ bool com_dir_create(const char* full_path)
     }
 
     std::string path;
-    for (int i = 0; i < paths.size(); i++)
+    for (size_t i = 0; i < paths.size(); i++)
     {
         path.append(paths[i]);
         if (path.empty())
@@ -244,7 +244,7 @@ FilePath::FilePath(const char* path)
         path_str.erase(path_str.length() - 1, 1);
     }
     //  ./1.txt   /1.txt  ./a/1.txt  /a/1.txt ./a/b/ /a/b/
-    int pos = path_str.find_last_of(PATH_DELIM_CHAR);
+    std::string::size_type pos = path_str.find_last_of(PATH_DELIM_CHAR);
     if (pos == std::string::npos)
     {
         dir = ".";
@@ -279,13 +279,13 @@ bool FilePath::isDirectory()
 std::string com_path_name(const char* path)
 {
     FilePath file_path(path);
-    return file_path.GetName();
+    return file_path.getName();
 }
 
 std::string com_path_dir(const char* path)
 {
     FilePath file_path(path);
-    return file_path.GetLocationDirectory();
+    return file_path.getLocationDirectory();
 }
 
 int com_file_type(const char* file)

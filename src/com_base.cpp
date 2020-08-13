@@ -35,7 +35,7 @@ std::string com_com_search_config_file()
     config_files.push_back(com_string_format("%s/%s", bin_path, FILE_COM_CONFIG));
     config_files.push_back(com_string_format("./tmp/%s/depend/%s", HOST_TYPE, FILE_COM_CONFIG));
 
-    for (int i = 0; i < config_files.size(); i++)
+    for (size_t i = 0; i < config_files.size(); i++)
     {
         if (com_file_type(config_files[i].c_str()) == FILE_TYPE_FILE)
         {
@@ -134,8 +134,8 @@ std::vector<std::string> com_string_split(const char* str, const char* delim)
     {
         std::string orgin = str;
         int delim_len = strlen(delim);
-        int pos = 0;
-        int pos_pre = 0;
+        std::string::size_type pos = 0;
+        std::string::size_type pos_pre = 0;
         while (true)
         {
             pos = orgin.find_first_of(delim, pos_pre);
@@ -438,7 +438,7 @@ ByteArray com_hexstring_to_bytes(const char* str)
 
     char tmp[4];
     memset(tmp, 0, sizeof(tmp));
-    for (int i = 0; i < val.length(); i = i + 2)
+    for (size_t i = 0; i < val.length(); i = i + 2)
     {
         memcpy(tmp, val.data() + i, 2);
         bytes.append(strtoul(tmp, NULL, 16));
@@ -491,7 +491,7 @@ bool com_string_replace(std::string& str, const char* from, const char* to)
         return false;
     }
 
-    int pos = 0;
+    std::string::size_type pos = 0;
     int from_len = com_string_len(from);
     int to_len = com_string_len(to);
     while ((pos = str.find(from, pos)) != std::string::npos)
@@ -1540,7 +1540,7 @@ const char* com_get_bin_name()
         char buf[256];
         memset(buf, 0, sizeof(buf));
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-        if (ret < 0 || (ret >= sizeof(buf) - 1))
+        if (ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
             return NULL;
         }
@@ -1566,7 +1566,7 @@ const char* com_get_bin_path()
         char buf[256];
         memset(buf, 0, sizeof(buf));
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-        if (ret < 0 || (ret >= sizeof(buf) - 1))
+        if (ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
             return NULL;
         }
@@ -1672,7 +1672,7 @@ ByteArray::ByteArray(const char* data)
 {
     if (data != NULL)
     {
-        for (int i = 0; i < strlen(data); i++)
+        for (size_t i = 0; i < strlen(data); i++)
         {
             buf.push_back((uint8)data[i]);
         }
@@ -1793,7 +1793,7 @@ ByteArray& ByteArray::append(const char* data)
 {
     if (data != NULL)
     {
-        for (int i = 0; i < strlen(data); i++)
+        for (size_t i = 0; i < strlen(data); i++)
         {
             buf.push_back(data[i]);
         }
@@ -1823,7 +1823,7 @@ ByteArray& ByteArray::append(ByteArray& bytes)
 
 uint8 ByteArray::getAt(int pos)
 {
-    if (pos < 0 || pos >= buf.size())
+    if (pos < 0 || pos >= (int)buf.size())
     {
         return 0;
     }
@@ -1832,7 +1832,7 @@ uint8 ByteArray::getAt(int pos)
 
 void ByteArray::removeAt(int pos)
 {
-    if (pos < 0 || pos >= buf.size())
+    if (pos < 0 || pos >= (int)buf.size())
     {
         return;
     }
@@ -1845,7 +1845,7 @@ void ByteArray::removeHead(int count)
     {
         return;
     }
-    if (count > buf.size())
+    if (count > (int)buf.size())
     {
         count = buf.size();
     }
@@ -2351,7 +2351,7 @@ bool xstring::ends_with(const char* str)
     {
         return false;
     }
-    int str_len = strlen(str);
+    size_t str_len = strlen(str);
     if (length() < str_len)
     {
         return false;
@@ -2389,7 +2389,7 @@ void xstring::replace(const char* from, const char* to)
         return;
     }
 
-    int pos = 0;
+    std::string::size_type pos = 0;
     int from_len = com_string_len(from);
     int to_len = com_string_len(to);
     while ((pos = find(from, pos)) != std::string::npos)
@@ -2412,8 +2412,8 @@ std::vector<xstring> xstring::split(const char* delim)
     {
         return vals;
     }
-    int pos = 0;
-    int pos_pre = 0;
+    std::string::size_type pos = 0;
+    std::string::size_type pos_pre = 0;
     int delim_len = strlen(delim);
     while (true)
     {
@@ -2432,8 +2432,8 @@ std::vector<xstring> xstring::split(const char* delim)
 std::vector<xstring> xstring::split(const xstring& delim)
 {
     std::vector<xstring> vals;
-    int pos = 0;
-    int pos_pre = 0;
+    std::string::size_type pos = 0;
+    std::string::size_type pos_pre = 0;
     while (true)
     {
         pos = find_first_of(delim, pos_pre);

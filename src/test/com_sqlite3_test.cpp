@@ -100,7 +100,7 @@ void com_sqlite3_unit_test_suit(void** state)
         threads.push_back(t);
     }
 
-    for (int i = 0; i < threads.size(); i++)
+    for (size_t i = 0; i < threads.size(); i++)
     {
         if (threads[i]->joinable())
         {

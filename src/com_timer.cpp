@@ -118,7 +118,7 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
         }
         manager->mutex_timers.unlock();
 
-        for(int i = 0; i < timeout_msgs.size(); i++)
+        for(size_t i = 0; i < timeout_msgs.size(); i++)
         {
             std::string task_name = timeout_msgs[i].getString("task");
             uint64 fc = timeout_msgs[i].getUInt64("fc");
@@ -144,7 +144,7 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
 bool CPPTimerManager::isTimerExist(std::string uuid)
 {
     AutoMutex a(mutex_timers);
-    for(int i = 0; i < timers.size(); i++)
+    for(size_t i = 0; i < timers.size(); i++)
     {
         if(timers[i].uuid == uuid)
         {
@@ -157,7 +157,7 @@ bool CPPTimerManager::isTimerExist(std::string uuid)
 void CPPTimerManager::removeTimer(std::string uuid)
 {
     mutex_timers.lock();
-    for(int i = 0; i < timers.size(); i++)
+    for(size_t i = 0; i < timers.size(); i++)
     {
         if(timers[i].uuid == uuid)
         {
@@ -172,7 +172,7 @@ void CPPTimerManager::removeTimer(std::string uuid)
 void CPPTimerManager::updateTimer(CPPTimer& timer)
 {
     mutex_timers.lock();
-    for(int i = 0; i < timers.size(); i++)
+    for(size_t i = 0; i < timers.size(); i++)
     {
         if(timers[i].uuid == timer.uuid)
         {

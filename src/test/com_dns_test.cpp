@@ -7,7 +7,7 @@ void com_dns_unit_test_suit(void** state)
 {
     std::string ip;
     std::vector<std::string> interfaces = com_net_get_interface_all();
-    for (int i = 0; i < interfaces.size(); i++)
+    for (size_t i = 0; i < interfaces.size(); i++)
     {
         if (com_string_equal(interfaces[i].c_str(), "lo")
                 || com_string_equal(interfaces[i].c_str(), "br0"))

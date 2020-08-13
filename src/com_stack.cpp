@@ -71,26 +71,26 @@ static std::string stack_addr2line(const char* info, const char* file_addr2line,
     std::string offset_absolute;
     std::string val = info;
 
-    int pos_file = val.find_first_of("(");
+    std::string::size_type pos_file = val.find_first_of("(");
     if (pos_file == std::string::npos)
     {
         return std::string();
     }
 
     file = val.substr(0, pos_file);
-    int pos_function = val.find_first_of("+", pos_file + 1);
+    std::string::size_type pos_function = val.find_first_of("+", pos_file + 1);
     if (pos_function != std::string::npos)
     {
         function = val.substr(pos_file + 1, pos_function - pos_file - 1);
-        int pos_offset = val.find_first_of(")", pos_function + 1);
+        std::string::size_type pos_offset = val.find_first_of(")", pos_function + 1);
         if (pos_offset != std::string::npos)
         {
             offset = val.substr(pos_function + 1, pos_offset - pos_function - 1);
         }
     }
 
-    int pos_offset_absolute_begin = val.find_first_of("[", pos_function + 1);
-    int pos_offset_absolute_end = val.find_first_of("]", pos_function + 1);
+    std::string::size_type pos_offset_absolute_begin = val.find_first_of("[", pos_function + 1);
+    std::string::size_type pos_offset_absolute_end = val.find_first_of("]", pos_function + 1);
     if (pos_offset_absolute_begin != std::string::npos && pos_offset_absolute_end != std::string::npos)
     {
         offset_absolute = val.substr(pos_offset_absolute_begin + 1, pos_offset_absolute_end - pos_offset_absolute_begin - 1);
@@ -264,28 +264,28 @@ void com_stack_init()
 
     std::vector<std::string> vals ;
     vals = com_string_split(signal_str_ignore.c_str(), ",");
-    for (int i = 0; i < vals.size(); i++)
+    for (size_t i = 0; i < vals.size(); i++)
     {
         signal_value_ignore.push_back(strtol(vals[i].c_str(), NULL, 0));
     }
 
     vals.clear();
     vals = com_string_split(signal_str_none_reset.c_str(), ",");
-    for (int i = 0; i < vals.size(); i++)
+    for (size_t i = 0; i < vals.size(); i++)
     {
         signal_value_none_reset.push_back(strtol(vals[i].c_str(), NULL, 0));
     }
 
     vals.clear();
     vals = com_string_split(signal_str_reset.c_str(), ",");
-    for (int i = 0; i < vals.size(); i++)
+    for (size_t i = 0; i < vals.size(); i++)
     {
         signal_value_reset.push_back(strtol(vals[i].c_str(), NULL, 0));
     }
 
     my_pid = com_thread_get_pid();
 #ifdef __GLIBC__
-    for (int i = 0; i < signal_value_ignore.size(); i++)
+    for (size_t i = 0; i < signal_value_ignore.size(); i++)
     {
         signal(signal_value_ignore[i], SIG_IGN);
     }
@@ -295,13 +295,13 @@ void com_stack_init()
     sig_action.sa_sigaction = stack_signal_function;
     sigemptyset(&sig_action.sa_mask);
     sig_action.sa_flags = SA_NODEFER | SA_SIGINFO;
-    for (int i = 0; i < signal_value_none_reset.size(); i++)
+    for (size_t i = 0; i < signal_value_none_reset.size(); i++)
     {
         sigaction(signal_value_none_reset[i], &sig_action, NULL);
     }
 
     sig_action.sa_flags |= SA_RESETHAND;   // 信号产生后重置该信号处理函数为系统默认处理
-    for (int i = 0; i < signal_value_reset.size(); i++)
+    for (size_t i = 0; i < signal_value_reset.size(); i++)
     {
         sigaction(signal_value_reset[i], &sig_action, NULL);
     }

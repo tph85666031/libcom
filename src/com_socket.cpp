@@ -1159,7 +1159,7 @@ void SocketTcpServer::stopServer()
     com_socket_close(epollfd);
     epollfd = -1;
     mutex_clients.lock();
-    for (int i = 0; i < clients.size(); i++)
+    for (size_t i = 0; i < clients.size(); i++)
     {
         com_socket_close(clients[i].clientfd);
     }
@@ -1586,7 +1586,7 @@ void UnixDomainTcpServer::stopServer()
     com_socket_close(epollfd);
     epollfd = -1;
     mutex_clients.lock();
-    for (int i = 0; i < clients.size(); i++)
+    for (size_t i = 0; i < clients.size(); i++)
     {
         com_socket_close(clients[i].clientfd);
     }
@@ -1636,7 +1636,7 @@ int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8* data
     mutex_clients.unlock();
 
     int ret = 0;
-    for (int i = 0; i < matched.size(); i++)
+    for (size_t i = 0; i < matched.size(); i++)
     {
         ret = com_socket_tcp_send(matched[i], data, data_size);
     }

@@ -266,7 +266,7 @@ bool CPPConfig::saveAs(const char* config_file)
     }
 
     int ret = com_file_write(file, val.data(), val.size());
-    if (ret != val.size())
+    if (ret != (int)val.size())
     {
         com_file_close(file);
         unlock();
@@ -310,12 +310,12 @@ Message CPPConfig::toMessage()
 {
     Message msg;
     std::vector<std::string> groups = getAllGroups();
-    for (int i = 0; i < groups.size(); i++)
+    for (size_t i = 0; i < groups.size(); i++)
     {
         std::vector<std::string> keys = getAllKeysByGroup(groups[i].c_str());
         if (keys.empty() == false)
         {
-            for (int j = 0; j < keys.size(); j++)
+            for (size_t j = 0; j < keys.size(); j++)
             {
                 std::string value = getString(groups[i].c_str(), keys[j].c_str());
                 if (value.empty() == false)
@@ -333,13 +333,13 @@ std::string CPPConfig::toString()
 {
     std::string val;
     std::vector<std::string> groups = getAllGroups();
-    for (int i = 0; i < groups.size(); i++)
+    for (size_t i = 0; i < groups.size(); i++)
     {
         std::vector<std::string> keys = getAllKeysByGroup(groups[i].c_str());
         if (keys.empty() == false)
         {
             val += "[" + groups[i] + "]\n";
-            for (int j = 0; j < keys.size(); j++)
+            for (size_t j = 0; j < keys.size(); j++)
             {
                 std::string value = getString(groups[i].c_str(), keys[j].c_str());
                 if (value.empty() == false)
@@ -458,7 +458,7 @@ bool CPPConfig::CreateSignature(const char* config_file_to, const char* config_f
     }
 
     int ret = com_file_write(file, content.data(), content.size());
-    if (ret != content.size())
+    if (ret != (int)content.size())
     {
         com_file_close(file);
         LOG_E("failed to write content to file");
@@ -663,7 +663,7 @@ std::vector<std::string> CPPConfig::getAllKeysByGroup(const char* group_name)
                 continue;
             }
             //key 默认包含了$group:需要去除
-            if (strlen(keys_tmp[i]) > len + 1)
+            if ((int)strlen(keys_tmp[i]) > len + 1)
             {
                 keys.push_back(keys_tmp[i] + len + 1);
             }
