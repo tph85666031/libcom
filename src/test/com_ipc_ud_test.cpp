@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 #if __linux__ == 1
 class MyUnixDomainIPCClient : public UnixDomainIPCClient

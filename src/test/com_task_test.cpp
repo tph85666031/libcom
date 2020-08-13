@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 class TestTask : public Task
 {

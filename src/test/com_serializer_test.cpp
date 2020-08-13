@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 typedef struct
 {

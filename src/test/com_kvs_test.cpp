@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 void kvs_test_thread(std::string file)
 {

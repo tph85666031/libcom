@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 void com_md5_unit_test_suit(void** state)
 {

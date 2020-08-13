@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 void test_timer_callback(uint8 id, void* user_arg)
 {

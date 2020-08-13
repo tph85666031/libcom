@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 static const char* mem_db_opt_type[] = {"remove all", "remove", "update", "add", "add all"};
 

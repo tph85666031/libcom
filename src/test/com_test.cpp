@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 extern void com_com_unit_test_suit(void** state);
 extern void com_com_string_split_unit_test_suit(void** state);

@@ -33,11 +33,11 @@
 #include "sqlite3.h"
 #include "tinyxml2.h"
 
-class BcpInitializer
+class ComInitializer
 {
 public:
-    BcpInitializer();
-    ~BcpInitializer();
+    ComInitializer();
+    ~ComInitializer();
     static void ManualInit();
 };
 

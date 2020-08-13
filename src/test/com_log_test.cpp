@@ -1,4 +1,4 @@
-#include "bcp.h"
+#include "com.h"
 
 static void log_hook_test(int level, const char* buf)
 {

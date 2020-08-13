@@ -1,5 +1,5 @@
 #include <iostream>
-#include "bcp.h"
+#include "com.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
