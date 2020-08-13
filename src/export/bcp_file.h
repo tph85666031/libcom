@@ -50,11 +50,6 @@ private:
 std::string bcp_path_name(const char* path);
 std::string bcp_path_dir(const char* path);
 
-DEPRECATED("use FilePath or bcp_path_dir instead")
-std::string bcp_file_path(const char* file);
-DEPRECATED("use FilePath or bcp_path_name instead")
-std::string bcp_file_name(const char* file);
-
 int bcp_file_type(const char* file);
 bool bcp_file_create(const char* file_path);
 FILE* bcp_file_open(const char* file_path, const char* flag);

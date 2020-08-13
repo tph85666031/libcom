@@ -15,23 +15,23 @@ static std::atomic<log_hook_fc> log_hook = {NULL};
 
 static spdlog::level::level_enum level_convert(int level)
 {
-    if (level == LOG_LEVEL_DEBUG)
+    if(level == LOG_LEVEL_DEBUG)
     {
         return spdlog::level::debug;
     }
-    else if (level == LOG_LEVEL_INFO)
+    else if(level == LOG_LEVEL_INFO)
     {
         return spdlog::level::info;
     }
-    else if (level == LOG_LEVEL_WARNING)
+    else if(level == LOG_LEVEL_WARNING)
     {
         return spdlog::level::warn;
     }
-    else if (level == LOG_LEVEL_ERROR)
+    else if(level == LOG_LEVEL_ERROR)
     {
         return spdlog::level::err;
     }
-    else if (level == LOG_LEVEL_FATAL)
+    else if(level == LOG_LEVEL_FATAL)
     {
         return spdlog::level::critical;
     }
@@ -51,11 +51,17 @@ void bcp_log_init()
     const char* group_name = bcp_get_bin_name();
     std::string config_file = bcp_com_search_config_file();
     CPPConfig config(config_file.c_str(), false, false, NULL);
-    if (config.isGroupExist(group_name) == false)
+    if(config.isGroupExist(group_name) == false)
     {
         group_name = "default";
     }
 
+    bool log_enable = config.getBool(group_name, "log.enable", false);
+    if(log_enable == false)
+    {
+        spdlog::set_default_logger(NULL);
+        return;
+    }
     bool console_enable = config.getBool(group_name, "log.console", false);
     std::string format = config.getString(group_name, "log.format", "%^[%Y-%m-%d %H:%M:%S.%e] [%L] [%t] %v%$");
     std::string file = config.getString(group_name, "log.file");
@@ -67,7 +73,7 @@ void bcp_log_init()
 
     std::vector<spdlog::sink_ptr> sink_list;
 
-    if (console_enable)
+    if(console_enable)
     {
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console_sink->set_level(level_convert(level));
@@ -75,7 +81,7 @@ void bcp_log_init()
         sink_list.push_back(console_sink);
     }
 
-    if (file.empty() == false)
+    if(file.empty() == false)
     {
         auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(file, file_size, file_count);
         file_sink->set_level(level_convert(level));
@@ -83,7 +89,7 @@ void bcp_log_init()
         sink_list.push_back(file_sink);
     }
 
-    if (file_err.empty() == false)
+    if(file_err.empty() == false)
     {
         auto file_sink_err = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(file_err, file_size, file_count);
         file_sink_err->set_level(spdlog::level::warn);
@@ -91,7 +97,7 @@ void bcp_log_init()
         sink_list.push_back(file_sink_err);
     }
 
-    if (sink_list.empty())
+    if(sink_list.empty())
     {
         spdlog::set_default_logger(NULL);
         return;
@@ -115,7 +121,7 @@ void bcp_log_uninit(void)
 void bcp_log_output(int level, const char* fmt, ...)
 {
     auto my_logger = spdlog::default_logger();
-    if (my_logger == NULL)
+    if(my_logger == NULL)
     {
         return;
     }
@@ -124,7 +130,7 @@ void bcp_log_output(int level, const char* fmt, ...)
     va_start(args, fmt);
     int len = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
-    if (len > 0)
+    if(len > 0)
     {
         len += 1;  //上面返回的长度不包含\0，这里加上
         std::vector<char> buf(len);
@@ -134,23 +140,23 @@ void bcp_log_output(int level, const char* fmt, ...)
         str.assign(buf.data());
     }
 
-    if (level & LOG_LEVEL_DEBUG)
+    if(level & LOG_LEVEL_DEBUG)
     {
         my_logger->debug(str);
     }
-    else if (level & LOG_LEVEL_INFO)
+    else if(level & LOG_LEVEL_INFO)
     {
         my_logger->info(str);
     }
-    else if (level & LOG_LEVEL_WARNING)
+    else if(level & LOG_LEVEL_WARNING)
     {
         my_logger->warn(str);
     }
-    else if (level & LOG_LEVEL_ERROR)
+    else if(level & LOG_LEVEL_ERROR)
     {
         my_logger->error(str);
     }
-    else if (level & LOG_LEVEL_FATAL)
+    else if(level & LOG_LEVEL_FATAL)
     {
         my_logger->critical(str);
     }
@@ -159,7 +165,7 @@ void bcp_log_output(int level, const char* fmt, ...)
     }
 
     log_hook_fc hook = log_hook;
-    if (hook != NULL)
+    if(hook != NULL)
     {
         hook(level, str.c_str());
     }
@@ -168,7 +174,7 @@ void bcp_log_output(int level, const char* fmt, ...)
 LogTimeCalc::LogTimeCalc(const char* func_name, int line_number)
 {
     this->line_number = line_number;
-    if (func_name != NULL)
+    if(func_name != NULL)
     {
         this->func_name = func_name;
     }

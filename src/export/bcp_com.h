@@ -188,11 +188,6 @@ bool bcp_string_equal(const char* a, const char* b);
 bool bcp_string_equal_ignore_case(const char* a, const char* b);
 std::vector<std::string> bcp_string_split(const char* str, const char* delim);
 
-DEPRECATED("use bcp_string_split instead")
-char** bcp_string_split_F(const char* str, char delim, int* count);
-
-DEPRECATED("this api is removed")
-void bcp_string_split_free(char** vals);
 std::string& bcp_string_trim_left(std::string& str, const char* t = " \t\n\r\f\v");
 std::string& bcp_string_trim_right(std::string& str, const char* t = " \t\n\r\f\v");
 std::string& bcp_string_trim(std::string& str, const char* t = " \t\n\r\f\v");

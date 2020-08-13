@@ -151,60 +151,6 @@ std::vector<std::string> bcp_string_split(const char* str, const char* delim)
     return vals;
 }
 
-char** bcp_string_split_F(const char* str, char delim, int* count)
-{
-    int len = 0;
-    if (str == NULL || count == NULL)
-    {
-        return NULL;
-    }
-    *count = 0;
-    char* str_bak = strdup(str);
-    if (str_bak == NULL)
-    {
-        return NULL;
-    }
-    len = strlen(str_bak);
-    *count = 1;
-    for (int i = 0; i < len; i++)
-    {
-        if (str_bak[i] == delim)
-        {
-            *count += 1;
-        }
-    }
-    char** vals = (char**)calloc(*count, sizeof(char*));
-    if (vals == NULL)
-    {
-        free(str_bak);
-        *count = 0;
-        return NULL;
-    }
-    int j = 0;
-    vals[j++] = str_bak;
-    for (int i = 0; i < len; i++)
-    {
-        if (str_bak[i] == delim)
-        {
-            str_bak[i] = '\0';
-            vals[j++] = str_bak + i + 1;
-        }
-    }
-    return vals;
-}
-
-void bcp_string_split_free(char** vals)
-{
-    if (vals != NULL)
-    {
-        if (vals[0] != NULL)
-        {
-            free(vals[0]);
-        }
-        free(vals);
-    }
-}
-
 char* bcp_strncpy(char* dst, const char* src, int dst_size)
 {
     if (dst == NULL || src == NULL || dst_size <= 0)

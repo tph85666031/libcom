@@ -288,57 +288,6 @@ std::string bcp_path_dir(const char* path)
     return file_path.GetLocationDirectory();
 }
 
-std::string bcp_file_path(const char* file)
-{
-    if (file == NULL || strlen(file) <= 0)
-    {
-        return std::string();
-    }
-    std::string path = file;
-
-    if (path.length() == 1 && path.front() == PATH_DELIM_CHAR)
-    {
-        return path;
-    }
-
-    if (path.back() == PATH_DELIM_CHAR)
-    {
-        return path;
-    }
-
-    int pos = path.find_last_of(PATH_DELIM_CHAR);
-    if (pos == std::string::npos)
-    {
-        std::string dir;
-        dir.assign(".");
-        dir.append(1, PATH_DELIM_CHAR);
-        return dir;
-    }
-
-    return path.substr(0, pos + 1);
-}
-
-std::string bcp_file_name(const char* file)
-{
-    if (file == NULL || strlen(file) <= 0)
-    {
-        return std::string();
-    }
-    std::string path = file;
-    std::string name;
-
-    int pos = path.find_last_of(PATH_DELIM_CHAR);
-    if (pos == std::string::npos)
-    {
-        name = file;
-    }
-    else
-    {
-        name = path.substr(pos + 1);
-    }
-    return name;
-}
-
 int bcp_file_type(const char* file)
 {
     if (file == NULL)
