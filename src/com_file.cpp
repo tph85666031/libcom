@@ -1,5 +1,5 @@
 ﻿#include <fcntl.h>
-#include "com_com.h"
+#include "com_base.h"
 #include "com_file.h"
 #include "com_log.h"
 
@@ -261,12 +261,12 @@ FilePath::~FilePath()
 {
 }
 
-std::string FilePath::GetName()
+std::string FilePath::getName()
 {
     return name;
 }
 
-std::string FilePath::GetLocationDirectory()
+std::string FilePath::getLocationDirectory()
 {
     return dir;
 }

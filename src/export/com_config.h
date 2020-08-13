@@ -2,7 +2,7 @@
 #define __BCP_CONFIG_H__
 
 #include <string>
-#include "com_com.h"
+#include "com_base.h"
 
 class CPPConfig
 {

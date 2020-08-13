@@ -1,7 +1,7 @@
 #ifndef __BCP_MEM_H__
 #define __BCP_MEM_H__
 
-#include "com_com.h"
+#include "com_base.h"
 
 /*
 flag:

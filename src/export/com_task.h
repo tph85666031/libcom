@@ -4,7 +4,7 @@
 #include <queue>
 #include <map>
 #include <atomic>
-#include "com_com.h"
+#include "com_base.h"
 #include "com_log.h"
 #include "com_thread.h"
 #include <iostream>

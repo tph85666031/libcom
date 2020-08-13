@@ -1,7 +1,7 @@
 #ifndef __BCP_GPS_H__
 #define __BCP_GPS_H__
 
-#include "com_com.h"
+#include "com_base.h"
 #include "minmea.h"
 
 typedef struct

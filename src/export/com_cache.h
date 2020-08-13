@@ -1,7 +1,7 @@
 #ifndef __BCP_CACHE_H__
 #define __BCP_CACHE_H__
 
-#include "com_com.h"
+#include "com_base.h"
 
 #pragma pack(push)
 #pragma pack(1)

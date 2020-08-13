@@ -1,7 +1,7 @@
 #ifndef __BCP_SQLITE_H__
 #define __BCP_SQLITE_H__
 
-#include "com_com.h"
+#include "com_base.h"
 
 #define BCP_SQL_ERR_OK      0
 #define BCP_SQL_ERR_FAILED  -1

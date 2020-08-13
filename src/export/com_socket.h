@@ -2,7 +2,7 @@
 #define __BCP_SOCKET_H__
 
 #include <atomic>
-#include "com_com.h"
+#include "com_base.h"
 #include "com_thread.h"
 #include "com_err.h"
 

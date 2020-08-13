@@ -1,5 +1,5 @@
 #include <string>
-#include "com_com.h"
+#include "com_base.h"
 #include "com_file.h"
 #include "com_md5.h"
 

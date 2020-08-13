@@ -1,7 +1,7 @@
 #ifndef __BCP_IPC_UD_H__
 #define __BCP_IPC_UD_H__
 
-#include "com_com.h"
+#include "com_base.h"
 #include "com_socket.h"
 
 #if __linux__ == 1

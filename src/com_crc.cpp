@@ -1,4 +1,4 @@
-#include "com_com.h"
+#include "com_base.h"
 #include "com_crc.h"
 #include "com_log.h"
 

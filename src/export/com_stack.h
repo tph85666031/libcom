@@ -1,7 +1,7 @@
 ﻿#ifndef __BCP_STACK_H__
 #define __BCP_STACK_H__
 
-#include "com_com.h"
+#include "com_base.h"
 
 typedef void (*signal_cb)(int signal, void* user_data);
 

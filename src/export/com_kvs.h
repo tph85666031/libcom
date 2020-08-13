@@ -2,7 +2,7 @@
 #define __BCP_KVS_H__
 
 #include <vector>
-#include "com_com.h"
+#include "com_base.h"
 #include "com_kv_result.h"
 
 void* com_kvs_batch_start(const char* file);

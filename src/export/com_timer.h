@@ -1,7 +1,7 @@
 #ifndef __BCP_TIMER_H__
 #define __BCP_TIMER_H__
 
-#include "com_com.h"
+#include "com_base.h"
 #include "com_task.h"
 
 typedef void (*fc_timer)(uint8 id, void* user_arg);

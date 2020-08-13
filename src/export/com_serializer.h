@@ -1,7 +1,7 @@
 #ifndef __BCP_JT808_SERIALIZER_H__
 #define __BCP_JT808_SERIALIZER_H__
 
-#include "com_com.h"
+#include "com_base.h"
 #include <vector>
 
 class Serializer

@@ -15,7 +15,7 @@
 #include <dirent.h>
 #endif
 
-#include "com_com.h"
+#include "com_base.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #define PATH_DELIM_CHAR '\\'
@@ -38,8 +38,8 @@ class FilePath
 public:
     FilePath(const char* path);
     ~FilePath();
-    std::string GetName(); //file name or dir name without dir prefix
-    std::string GetLocationDirectory();//endwith '/' or '\'
+    std::string getName(); //file name or dir name without dir prefix
+    std::string getLocationDirectory();//endwith '/' or '\'
     bool isDirectory();// path endwith '/' or '\' is directory
 private:
     std::string name;

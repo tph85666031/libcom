@@ -1,7 +1,7 @@
 #ifndef __BCP_CRC_H__
 #define __BCP_CRC_H__
 
-#include "com_com.h"
+#include "com_base.h"
 
 uint8 com_crc8(uint8* data, int data_size, uint8 init_val = 0);
 uint16 com_crc16(uint8* data, int data_size, uint16 init_val = 0);

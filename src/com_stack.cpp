@@ -7,7 +7,7 @@
 #include <execinfo.h>
 #include <sys/signalfd.h>
 #endif
-#include "com_com.h"
+#include "com_base.h"
 #include "com_stack.h"
 #include "com_thread.h"
 #include "com_file.h"

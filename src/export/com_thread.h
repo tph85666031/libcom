@@ -5,7 +5,7 @@
 #include <queue>
 #include <map>
 #include <thread>
-#include "com_com.h"
+#include "com_base.h"
 #include "com_log.h"
 #include "com_serializer.h"
 
