@@ -1,5 +1,5 @@
-#ifndef __BCP_IPC_TCP_H__
-#define __BCP_IPC_TCP_H__
+#ifndef __COM_IPC_TCP_H__
+#define __COM_IPC_TCP_H__
 
 #include "com_base.h"
 #include "com_log.h"
@@ -70,4 +70,4 @@ private:
 };
 #endif
 
-#endif /* __BCP_IPC_TCP_H__ */
+#endif /* __COM_IPC_TCP_H__ */

@@ -16,8 +16,8 @@ typedef struct
         struct minmea_sentence_vtg vtg;
         struct minmea_sentence_zda zda;
     } data;
-} BCP_GPS;
+} COM_GPS;
 
-bool com_nmea_parse(const char* nmea_line, BCP_GPS* gps);
+bool com_nmea_parse(const char* nmea_line, COM_GPS* gps);
 
 #endif /* __BCP_GPS_H__ */

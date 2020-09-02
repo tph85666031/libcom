@@ -1,11 +1,11 @@
-#ifndef __BCP_SQLITE_H__
-#define __BCP_SQLITE_H__
+#ifndef __COM_SQLITE_H__
+#define __COM_SQLITE_H__
 
 #include "com_base.h"
 
-#define BCP_SQL_ERR_OK      0
-#define BCP_SQL_ERR_FAILED  -1
-#define BCP_SQL_ERR_BUSY    -2
+#define COM_SQL_ERR_OK      0
+#define COM_SQL_ERR_FAILED  -1
+#define COM_SQL_ERR_BUSY    -2
 
 class DBQuery final
 {
@@ -50,4 +50,4 @@ bool com_sqlite_begin_transaction(void* fd);
 bool com_sqlite_commit_transaction(void* fd);
 bool com_sqlite_rollback_transaction(void* fd);
 
-#endif /* __BCP_SQLITE_H__ */
+#endif /* __COM_SQLITE_H__ */

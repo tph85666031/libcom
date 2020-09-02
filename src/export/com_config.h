@@ -1,5 +1,5 @@
-#ifndef __BCP_CONFIG_H__
-#define __BCP_CONFIG_H__
+#ifndef __COM_CONFIG_H__
+#define __COM_CONFIG_H__
 
 #include <string>
 #include "com_base.h"
@@ -104,4 +104,4 @@ uint64 com_global_config_get_uint64(const char* group, const char* key, uint64 d
 std::string com_global_config_get_string(const char* group, const char* key, std::string default_val = std::string());
 
 
-#endif /* __BCP_CONFIG_H__ */
+#endif /* __COM_CONFIG_H__ */

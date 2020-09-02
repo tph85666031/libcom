@@ -2,7 +2,7 @@
 
 void com_nmea_unit_test_suit(void** state)
 {
-    BCP_GPS gps;
+    COM_GPS gps;
     FILE* file = com_file_open("./gps.txt", "r");
     if (file == NULL)
     {

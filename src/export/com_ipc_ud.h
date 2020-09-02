@@ -1,5 +1,5 @@
-#ifndef __BCP_IPC_UD_H__
-#define __BCP_IPC_UD_H__
+#ifndef __COM_IPC_UD_H__
+#define __COM_IPC_UD_H__
 
 #include "com_base.h"
 #include "com_socket.h"
@@ -44,4 +44,4 @@ private:
 };
 #endif
 
-#endif /* __BCP_IPC_UD_H__ */
+#endif /* __COM_IPC_UD_H__ */

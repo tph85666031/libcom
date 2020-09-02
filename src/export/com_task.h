@@ -1,5 +1,5 @@
-#ifndef __BCP_TASK_H__
-#define __BCP_TASK_H__
+#ifndef __COM_TASK_H__
+#define __COM_TASK_H__
 
 #include <queue>
 #include <map>
@@ -123,5 +123,5 @@ T* com_task_create(std::string task_name, Message init_msg = Message())
     return GetTaskManager().createTask<T>(task_name, init_msg);
 }
 
-#endif /* __BCP_TASK_H__ */
+#endif /* __COM_TASK_H__ */
 

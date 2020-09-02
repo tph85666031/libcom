@@ -1,5 +1,5 @@
-#ifndef __BCP_URL_H__
-#define __BCP_URL_H__
+#ifndef __COM_URL_H__
+#define __COM_URL_H__
 
 #include "com_base.h"
 
@@ -15,5 +15,5 @@ private:
     static uint8 fromHex(uint8 x);
 };
 
-#endif /* __BCP_URL_H__ */
+#endif /* __COM_URL_H__ */
 

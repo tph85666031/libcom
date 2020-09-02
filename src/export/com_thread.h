@@ -1,5 +1,5 @@
-#ifndef __BCP_THREAD_H__
-#define __BCP_THREAD_H__
+#ifndef __COM_THREAD_H__
+#define __COM_THREAD_H__
 
 #include <atomic>
 #include <queue>
@@ -201,5 +201,5 @@ private:
 };
 
 
-#endif /* __BCP_THREAD_H__ */
+#endif /* __COM_THREAD_H__ */
 

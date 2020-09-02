@@ -1,5 +1,5 @@
-#ifndef __BCP_KV_RESULT_H__
-#define __BCP_KV_RESULT_H__
+#ifndef __COM_KV_RESULT_H__
+#define __COM_KV_RESULT_H__
 
 #include <string>
 #include "com_base.h"
@@ -17,4 +17,4 @@ public:
     uint8* data = NULL;
 };
 
-#endif /* __BCP_KV_RESULT_H__ */
+#endif /* __COM_KV_RESULT_H__ */

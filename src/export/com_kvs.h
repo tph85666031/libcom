@@ -1,5 +1,5 @@
-#ifndef __BCP_KVS_H__
-#define __BCP_KVS_H__
+#ifndef __COM_KVS_H__
+#define __COM_KVS_H__
 
 #include <vector>
 #include "com_base.h"
@@ -65,4 +65,4 @@ uint64 com_kvs_get_uint64(const char* file, const char* key, uint64 default_valu
 
 double com_kvs_get_double(const char* file, const char* key, double default_value = 0.0f);
 
-#endif /* __BCP_KVS_H__ */
+#endif /* __COM_KVS_H__ */

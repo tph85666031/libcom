@@ -1,5 +1,5 @@
-#ifndef __BCP_JT808_SERIALIZER_H__
-#define __BCP_JT808_SERIALIZER_H__
+#ifndef __COM_SERIALIZER_H__
+#define __COM_SERIALIZER_H__
 
 #include "com_base.h"
 #include <vector>
@@ -95,5 +95,5 @@ ByteArray toBytes(){\
     return s.toBytes();\
 }
 
-#endif /* __BCP_JT808_SERIALIZER_H__ */
+#endif /* __COM_SERIALIZER_H__ */
 

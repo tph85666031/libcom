@@ -1,5 +1,5 @@
-#ifndef __BCP_LOG_H__
-#define __BCP_LOG_H__
+#ifndef __COM_LOG_H__
+#define __COM_LOG_H__
 
 #include "com_stack.h"
 
@@ -14,8 +14,8 @@
 level=1,2,4,8,16   <----日志等级
 console=true  <----是否在控制台输出
 format="%^[%Y-%m-%d %H:%M:%S.%e] [%L] [%t] %v%$"  <----日志格式
-file="./tbox.log"   <----日志存储文件名
-file_err="./tbox_err.log"  <----Warning级别及其以上的日志存储文件名
+file="./com.log"   <----日志存储文件名
+file_err="./com_err.log"  <----Warning级别及其以上的日志存储文件名
 file_size=2097152  <-----日志文件最大上限
 file_count=3  <-----日志覆盖回滚个数
 flush_interval=10 <-----日志刷写磁盘间隔(单位秒)
@@ -63,5 +63,5 @@ private:
 #define TIME_COST() LogTimeCalc __calc__(__FUNC__,__LINE__)
 #endif
 
-#endif /* __BCP_LOG_H__ */
+#endif /* __COM_LOG_H__ */
 

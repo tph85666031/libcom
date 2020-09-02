@@ -1,5 +1,5 @@
-#ifndef __BCP_TEST_H__
-#define __BCP_TEST_H__
+#ifndef __COM_TEST_H__
+#define __COM_TEST_H__
 
 #include <setjmp.h>
 #include <float.h>
@@ -105,4 +105,4 @@ exit(ret);\
 #define ZH_UT_VIRTUAL
 #endif /* UNIT_TEST */
 
-#endif /* __BCP_TEST_H__ */
+#endif /* __COM_TEST_H__ */

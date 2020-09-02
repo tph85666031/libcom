@@ -1,5 +1,5 @@
-#ifndef __BCP_MD5_H__
-#define __BCP_MD5_H__
+#ifndef __COM_MD5_H__
+#define __COM_MD5_H__
 
 #define CPPMD5_SIZE        16
 
@@ -22,5 +22,5 @@ private:
     CPPMD5_CTX ctx;
 };
 
-#endif /* __BCP_MD5_H__ */
+#endif /* __COM_MD5_H__ */
 

@@ -53,7 +53,7 @@ void com_sqlite3_unit_test_suit(void** state)
              "TYPE",
              "VALUE");
 
-    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),BCP_SQL_ERR_OK);
+    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),COM_SQL_ERR_OK);
 
     snprintf(sql_create_table, sizeof(sql_create_table),
              "CREATE TABLE \"%s\" ( \
@@ -67,7 +67,7 @@ void com_sqlite3_unit_test_suit(void** state)
              "TYPE",
              "VALUE");
 
-    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),BCP_SQL_ERR_OK);
+    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),COM_SQL_ERR_OK);
     const char* sql = "select * from setting";
     int row_count;
     int column_count;

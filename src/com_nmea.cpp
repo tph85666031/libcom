@@ -3,7 +3,7 @@
 #include "com_log.h"
 #include "com_file.h"
 
-bool com_nmea_parse(const char* nmea_line, BCP_GPS* gps)
+bool com_nmea_parse(const char* nmea_line, COM_GPS* gps)
 {
     if (nmea_line == NULL || gps == NULL)
     {

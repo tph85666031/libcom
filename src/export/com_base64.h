@@ -1,5 +1,5 @@
-#ifndef __BCP_BASE64_H__
-#define __BCP_BASE64_H__
+#ifndef __COM_BASE64_H__
+#define __COM_BASE64_H__
 
 #include "com_base.h"
 #include "com_serializer.h"
@@ -16,5 +16,5 @@ private:
     static bool isBase64(char c);
 };
 
-#endif /* __BCP_BASE64_H__ */
+#endif /* __COM_BASE64_H__ */
 

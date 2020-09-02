@@ -18,6 +18,9 @@
 
 #define FILE_COM_CONFIG  "com.ini"
 
+static std::string app_path;
+static std::string app_name;
+
 std::string com_com_search_config_file()
 {
     std::vector<std::string> config_files;
@@ -1374,7 +1377,7 @@ bool com_mutex_unlock(Mutex* mutex)
 
 double com_cycle_perimeter(double diameter)
 {
-    return diameter * BCP_PI / 180.0;
+    return diameter * COM_PI / 180.0;
 }
 
 double com_gps_distance_m(double lon_a, double lat_a, double lon_b,
@@ -1386,7 +1389,7 @@ double com_gps_distance_m(double lon_a, double lat_a, double lon_b,
     double b = com_cycle_perimeter(lon_a) - com_cycle_perimeter(lon_b);
     double distance_km = 2 * asin(sqrt(pow(sin(a / 2), 2) +
                                        cos(radLat1) * cos(radLat2) * pow(sin(b / 2), 2)));
-    distance_km = distance_km * BCP_EARTH_RADIUS_KM;
+    distance_km = distance_km * COM_EARTH_RADIUS_KM;
     double distance_m = (round(distance_km * 10000) / 10000) * 1000;
     return distance_m;
 }
@@ -1408,10 +1411,10 @@ static double gps_transform_latitude(double x, double y)
 {
     double ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 *
                  sqrt(x > 0 ? x : -x);
-    ret += (20.0 * sin(6.0 * x * BCP_PI) + 20.0 * sin(2.0 * x * BCP_PI)) * 2.0 /
+    ret += (20.0 * sin(6.0 * x * COM_PI) + 20.0 * sin(2.0 * x * COM_PI)) * 2.0 /
            3.0;
-    ret += (20.0 * sin(y * BCP_PI) + 40.0 * sin(y / 3.0 * BCP_PI)) * 2.0 / 3.0;
-    ret += (160.0 * sin(y / 12.0 * BCP_PI) + 320 * sin(y * BCP_PI / 30.0)) * 2.0 /
+    ret += (20.0 * sin(y * COM_PI) + 40.0 * sin(y / 3.0 * COM_PI)) * 2.0 / 3.0;
+    ret += (160.0 * sin(y / 12.0 * COM_PI) + 320 * sin(y * COM_PI / 30.0)) * 2.0 /
            3.0;
     return ret;
 }
@@ -1420,10 +1423,10 @@ static double gps_transform_longitude(double x, double y)
 {
     double ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * sqrt(
                      x > 0 ? x : -x);
-    ret += (20.0 * sin(6.0 * x * BCP_PI) + 20.0 * sin(2.0 * x * BCP_PI)) * 2.0 /
+    ret += (20.0 * sin(6.0 * x * COM_PI) + 20.0 * sin(2.0 * x * COM_PI)) * 2.0 /
            3.0;
-    ret += (20.0 * sin(x * BCP_PI) + 40.0 * sin(x / 3.0 * BCP_PI)) * 2.0 / 3.0;
-    ret += (150.0 * sin(x / 12.0 * BCP_PI) + 300.0 * sin(x / 30.0 * BCP_PI)) * 2.0 /
+    ret += (20.0 * sin(x * COM_PI) + 40.0 * sin(x / 3.0 * COM_PI)) * 2.0 / 3.0;
+    ret += (150.0 * sin(x / 12.0 * COM_PI) + 300.0 * sin(x / 30.0 * COM_PI)) * 2.0 /
            3.0;
     return ret;
 }
@@ -1440,13 +1443,13 @@ GPS com_gps_wgs84_to_gcj02(double longitude, double latitude)
     }
     double dLat = gps_transform_latitude(longitude - 105.0, latitude - 35.0);
     double dLon = gps_transform_longitude(longitude - 105.0, latitude - 35.0);
-    double radLat = latitude / 180.0 * BCP_PI;
+    double radLat = latitude / 180.0 * COM_PI;
     double magic = sin(radLat);
-    magic = 1 - BCP_EARTH_OBLATENESS * magic * magic;
+    magic = 1 - COM_EARTH_OBLATENESS * magic * magic;
     double sqrtMagic = sqrt(magic);
-    dLat = (dLat * 180.0) / ((BCP_EARTH_RADIUS_M * (1 - BCP_EARTH_OBLATENESS)) /
-                             (magic * sqrtMagic) * BCP_PI);
-    dLon = (dLon * 180.0) / (BCP_EARTH_RADIUS_M / sqrtMagic * cos(radLat) * BCP_PI);
+    dLat = (dLat * 180.0) / ((COM_EARTH_RADIUS_M * (1 - COM_EARTH_OBLATENESS)) /
+                             (magic * sqrtMagic) * COM_PI);
+    dLon = (dLon * 180.0) / (COM_EARTH_RADIUS_M / sqrtMagic * cos(radLat) * COM_PI);
     gps.latitude = latitude + dLat;
     gps.longitude = longitude + dLon;
     return gps;
@@ -1485,8 +1488,8 @@ GPS com_gps_gcj02_to_wgs84(double longitude, double latitude)
 GPS com_gps_bd09_to_gcj02(double longitude, double latitude)
 {
     double x = longitude - 0.0065, y = latitude - 0.006;
-    double z = sqrt(x * x + y * y) - 0.00002 * sin(y * BCP_PI_GPS_BD);
-    double theta = atan2(y, x) - 0.000003 * cos(x * BCP_PI_GPS_BD);
+    double z = sqrt(x * x + y * y) - 0.00002 * sin(y * COM_PI_GPS_BD);
+    double theta = atan2(y, x) - 0.000003 * cos(x * COM_PI_GPS_BD);
     GPS gps;
     memset(&gps, 0, sizeof(GPS));
     gps.latitude = z * sin(theta);
@@ -1498,8 +1501,8 @@ GPS com_gps_gcj02_to_bd09(double longitude, double latitude)
 {
     double x = longitude;
     double y = latitude;
-    double z = sqrt(x * x + y * y) + 0.00002 * sin(y * BCP_PI_GPS_BD);
-    double theta = atan2(y, x) + 0.000003 * cos(x * BCP_PI_GPS_BD);
+    double z = sqrt(x * x + y * y) + 0.00002 * sin(y * COM_PI_GPS_BD);
+    double theta = atan2(y, x) + 0.000003 * cos(x * COM_PI_GPS_BD);
     GPS gps;
     memset(&gps, 0, sizeof(GPS));
     gps.latitude = z * sin(theta) + 0.006;
@@ -1529,6 +1532,31 @@ std::string com_ip_to_string(uint32 ip)
              "%u.%u.%u.%u", (ip) & 0xFF, ((ip) >> 8) & 0xFF,
              ((ip) >> 16) & 0xFF, ((ip) >> 24) & 0xFF);
     return str;
+}
+
+void com_init_app_path()
+{
+    #if __linux__ == 1
+    if (name.empty())
+    {
+        char buf[256];
+        memset(buf, 0, sizeof(buf));
+        int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+        if (ret < 0 || (ret >= (int)sizeof(buf) - 1))
+        {
+            return NULL;
+        }
+        for (int i = ret; i >= 0; i--)
+        {
+            if (buf[i] == '/')
+            {
+                name = buf + i + 1;
+                break;
+            }
+        }
+    }
+#endif
+
 }
 
 const char* com_get_bin_name()
@@ -1581,7 +1609,7 @@ const char* com_get_bin_path()
         }
     }
 #endif
-    return path.c_str();
+    return app_path.c_str();
 }
 
 std::string com_get_cwd()
@@ -1642,6 +1670,18 @@ std::string com_uuid_generator()
 int com_gcd(int x, int y)
 {
     return y ? com_gcd(y, x % y) : x;
+}
+
+std::string com_get_login_user()
+{
+    char buf[128] = {0};
+    int ret = getlogin_r(buf, sizeof(buf));
+    if(ret != 0)
+    {
+        return std::string();
+    }
+    buf[sizeof(buf) - 1] = '\0';
+    return buf;
 }
 
 ByteArray::ByteArray()

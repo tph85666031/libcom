@@ -11,14 +11,14 @@
  * 说明：基于sqlite3的数据库语句运行函数
  * 入参：fd:slite3操作句柄，sql：待执行的sql语句
  *
- * 返回值：错误码,参考BCP_SQL_ERR_XXX
+ * 返回值：错误码,参考COM_SQL_ERR_XXX
  ********************************************************/
 int com_sqlite_run_sql(void* fd, const char* sql)
 {
     if (fd == NULL || sql == NULL)
     {
         LOG_W("arg incorrect");
-        return BCP_SQL_ERR_FAILED;
+        return COM_SQL_ERR_FAILED;
     }
     int retry_count = 0;
     while (retry_count++ < 5)
@@ -41,7 +41,7 @@ int com_sqlite_run_sql(void* fd, const char* sql)
             {
                 sqlite3_free(err_msg);
             }
-            return BCP_SQL_ERR_OK;
+            return COM_SQL_ERR_OK;
         }
         else
         {
@@ -58,10 +58,10 @@ int com_sqlite_run_sql(void* fd, const char* sql)
                 LOG_E("file may not exist");
             }
 
-            return BCP_SQL_ERR_FAILED;
+            return COM_SQL_ERR_FAILED;
         }
     }
-    return BCP_SQL_ERR_BUSY;
+    return COM_SQL_ERR_BUSY;
 }
 
 void* com_sqlite_open(const char* file)
@@ -205,7 +205,7 @@ int com_sqlite_insert(void* fd, const char* sql)
         return 0;
     }
     int ret = com_sqlite_run_sql(fd, sql);
-    if (ret != BCP_SQL_ERR_OK)
+    if (ret != COM_SQL_ERR_OK)
     {
         return ret;
     }
@@ -231,7 +231,7 @@ int com_sqlite_delete(void* fd, const char* sql)
         return 0;
     }
     int ret = com_sqlite_run_sql(fd, sql);
-    if (ret != BCP_SQL_ERR_OK)
+    if (ret != COM_SQL_ERR_OK)
     {
         return ret;
     }
@@ -257,7 +257,7 @@ int com_sqlite_update(void* fd, const char* sql)
         return 0;
     }
     int ret = com_sqlite_run_sql(fd, sql);
-    if (ret != BCP_SQL_ERR_OK)
+    if (ret != COM_SQL_ERR_OK)
     {
         return ret;
     }
@@ -324,7 +324,7 @@ int com_sqlite_table_row_count(void* fd, const char* table_name)
  * 说明：清空数据表并保留数据表
  * 入参：fd:sqlite3句柄，table_name：表名
  *
- * 返回值：错误码,参考BCP_SQL_ERR_XXX
+ * 返回值：错误码,参考COM_SQL_ERR_XXX
  ********************************************************/
 bool com_sqlite_table_clean(void* fd, const char* table_name)
 {
@@ -337,7 +337,7 @@ bool com_sqlite_table_clean(void* fd, const char* table_name)
     snprintf(sql, sizeof(sql),
              "DELETE FROM \"%s\";UPDATE sqlite_sequence SET seq = 0 WHERE name = '%s';",
              table_name, table_name);
-    return (com_sqlite_run_sql(fd, sql) == BCP_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, sql) == COM_SQL_ERR_OK);
 }
 
 /********************************************************
@@ -345,7 +345,7 @@ bool com_sqlite_table_clean(void* fd, const char* table_name)
  * 说明：删除数据库
  * 入参：fd:sqlite3句柄，table_name：表名
  *
- * 返回值：错误码,参考BCP_SQL_ERR_XXX
+ * 返回值：错误码,参考COM_SQL_ERR_XXX
  ********************************************************/
 bool com_sqlite_table_remove(void* fd, const char* table_name)
 {
@@ -361,7 +361,7 @@ bool com_sqlite_table_remove(void* fd, const char* table_name)
     }
     char sql[256];
     snprintf(sql, sizeof(sql), "DROP TABLE \"%s\";", table_name);
-    return (com_sqlite_run_sql(fd, sql) == BCP_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, sql) == COM_SQL_ERR_OK);
 }
 
 /********************************************************
@@ -373,7 +373,7 @@ bool com_sqlite_table_remove(void* fd, const char* table_name)
  ********************************************************/
 bool com_sqlite_begin_transaction(void* fd)
 {
-    return (com_sqlite_run_sql(fd, "BEGIN TRANSACTION;") == BCP_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, "BEGIN TRANSACTION;") == COM_SQL_ERR_OK);
 }
 
 /********************************************************
@@ -385,7 +385,7 @@ bool com_sqlite_begin_transaction(void* fd)
  ********************************************************/
 bool com_sqlite_commit_transaction(void* fd)
 {
-    return (com_sqlite_run_sql(fd, "COMMIT TRANSACTION;") == BCP_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, "COMMIT TRANSACTION;") == COM_SQL_ERR_OK);
 }
 
 /********************************************************
@@ -397,7 +397,7 @@ bool com_sqlite_commit_transaction(void* fd)
  ********************************************************/
 bool com_sqlite_rollback_transaction(void* fd)
 {
-    return (com_sqlite_run_sql(fd, "ROLLBACK TRANSACTION;") == BCP_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, "ROLLBACK TRANSACTION;") == COM_SQL_ERR_OK);
 }
 
 DBQuery::DBQuery(const void* sqlite_fd, const char* sql)

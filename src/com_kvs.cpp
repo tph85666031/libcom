@@ -18,7 +18,7 @@ static bool kvs_create_table(void* fd)
                                         KVS_TABLE_ID,
                                         KVS_TABLE_UUID,
                                         KVS_TABLE_DATA);
-    return (com_sqlite_run_sql(fd, sql.c_str()) == BCP_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, sql.c_str()) == COM_SQL_ERR_OK);
 }
 
 static void* kvs_open(const char* file)

@@ -1,5 +1,5 @@
-﻿#ifndef __BCP_FILE_H__
-#define __BCP_FILE_H__
+﻿#ifndef __COM_FILE_H__
+#define __COM_FILE_H__
 
 #include <stdio.h>
 #include <string.h>
@@ -85,5 +85,5 @@ bool com_file_lock(FILE* file, bool read_share);
 bool com_file_is_locked(FILE* file, bool read_share);
 bool com_file_unlock(FILE* file);
 
-#endif // __BCP_FILE_H__
+#endif // __COM_FILE_H__
 

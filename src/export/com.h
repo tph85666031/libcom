@@ -1,5 +1,5 @@
-#ifndef __BCP_H__
-#define __BCP_H__
+#ifndef __COM_H__
+#define __COM_H__
 
 #include "com_base.h"
 #include "com_cache.h"
@@ -41,4 +41,4 @@ public:
     static void ManualInit();
 };
 
-#endif /* __BCP_H__ */
+#endif /* __COM_H__ */

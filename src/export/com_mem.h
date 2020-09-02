@@ -1,5 +1,5 @@
-#ifndef __BCP_MEM_H__
-#define __BCP_MEM_H__
+#ifndef __COM_MEM_H__
+#define __COM_MEM_H__
 
 #include "com_base.h"
 
@@ -61,4 +61,4 @@ void com_mem_from_message(Message msg);
 void com_mem_add_notify(const char* key, cb_mem_data_change cb);
 void com_mem_remove_notify(const char* key, cb_mem_data_change cb);
 
-#endif /* __BCP_MEM_H__ */
+#endif /* __COM_MEM_H__ */

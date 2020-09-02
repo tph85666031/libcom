@@ -278,7 +278,7 @@ bool CacheManager::initDB()
                                             CACHE_MANAGER_TABLE_EXPIRE,
                                             CACHE_MANAGER_TABLE_FLAG,
                                             CACHE_MANAGER_TABLE_DATA);
-        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) != BCP_SQL_ERR_OK)
+        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) != COM_SQL_ERR_OK)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -321,7 +321,7 @@ void CacheManager::insertHead(Cache& cache)
 
         initDB();
         mutex_sqlite_fd.lock();
-        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -378,9 +378,9 @@ void CacheManager::insertTail(Cache& cache)
         initDB();
         mutex_sqlite_fd.lock();
         int ret = com_sqlite_run_sql(sqlite_fd, sql.c_str());
-        if (ret != BCP_SQL_ERR_OK)
+        if (ret != COM_SQL_ERR_OK)
         {
-            if (ret == BCP_SQL_ERR_FAILED)
+            if (ret == COM_SQL_ERR_FAILED)
             {
                 com_sqlite_close(sqlite_fd);
                 sqlite_fd = NULL;
@@ -449,7 +449,7 @@ void CacheManager::removeByUUID(const std::string& uuid)
 
     initDB();
     mutex_sqlite_fd.lock();
-    if (com_sqlite_delete(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+    if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
     {
         com_sqlite_close(sqlite_fd);
         sqlite_fd = NULL;
@@ -473,7 +473,7 @@ void CacheManager::removeFirst(int count)
                                             CACHE_MANAGER_TABLE_NAME, CACHE_MANAGER_TABLE_ID,
                                             CACHE_MANAGER_TABLE_ID, CACHE_MANAGER_TABLE_NAME,
                                             CACHE_MANAGER_TABLE_ID, count);
-        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -515,7 +515,7 @@ void CacheManager::removeLast(int count)
                                             CACHE_MANAGER_TABLE_ID, count);
         initDB();
         mutex_sqlite_fd.lock();
-        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -534,7 +534,7 @@ void CacheManager::removeExpired()
                                             CACHE_MANAGER_TABLE_EXPIRE, com_time_rtc_ms());
         initDB();
         mutex_sqlite_fd.lock();
-        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -549,7 +549,7 @@ void CacheManager::removeRetryFinished()
                                         CACHE_MANAGER_TABLE_NAME, CACHE_MANAGER_TABLE_RETRY);
     initDB();
     mutex_sqlite_fd.lock();
-    if (com_sqlite_delete(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+    if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
     {
         com_sqlite_close(sqlite_fd);
         sqlite_fd = NULL;
@@ -586,7 +586,7 @@ void CacheManager::setRetryCount(const char* uuid, int count)
                                         CACHE_MANAGER_TABLE_UUID, uuid);
     initDB();
     mutex_sqlite_fd.lock();
-    if (com_sqlite_update(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+    if (com_sqlite_update(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
     {
         com_sqlite_close(sqlite_fd);
         sqlite_fd = NULL;
@@ -811,7 +811,7 @@ void CacheManager::dilution(int step)
                                     CACHE_MANAGER_TABLE_NAME,
                                     CACHE_MANAGER_TABLE_UUID, uuid);
 
-            if (com_sqlite_delete(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+            if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
             {
                 com_sqlite_close(sqlite_fd);
                 sqlite_fd = NULL;
@@ -922,7 +922,7 @@ void CacheManager::flushToDisk()
                                             it->getUserFlag(),
                                             it->toHexString().c_str());
 
-        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) == BCP_SQL_ERR_FAILED)
+        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;

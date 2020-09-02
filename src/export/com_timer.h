@@ -1,5 +1,5 @@
-#ifndef __BCP_TIMER_H__
-#define __BCP_TIMER_H__
+#ifndef __COM_TIMER_H__
+#define __COM_TIMER_H__
 
 #include "com_base.h"
 #include "com_task.h"
@@ -62,4 +62,4 @@ private:
     std::atomic<uint32> message_id = {0};
 };
 
-#endif /* __BCP_TIMER_H__ */
+#endif /* __COM_TIMER_H__ */

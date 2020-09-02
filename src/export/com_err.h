@@ -1,5 +1,5 @@
-#ifndef __BCP_ERR_H__
-#define __BCP_ERR_H__
+#ifndef __COM_ERR_H__
+#define __COM_ERR_H__
 
 typedef enum : uint16
 {
@@ -12,4 +12,4 @@ typedef enum : uint16
     ERR_IGNORE_ACK = 6,
 } ERRCODE;
 
-#endif /* __BCP_ERR_H__ */
+#endif /* __COM_ERR_H__ */

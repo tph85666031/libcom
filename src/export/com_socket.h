@@ -1,5 +1,5 @@
-#ifndef __BCP_SOCKET_H__
-#define __BCP_SOCKET_H__
+#ifndef __COM_SOCKET_H__
+#define __COM_SOCKET_H__
 
 #include <atomic>
 #include "com_base.h"
@@ -203,4 +203,4 @@ private:
 };
 #endif
 
-#endif /* __BCP_SOCKET_H__ */
+#endif /* __COM_SOCKET_H__ */

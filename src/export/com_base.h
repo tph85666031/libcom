@@ -1,5 +1,5 @@
-﻿#ifndef __BCP_COM_H__
-#define __BCP_COM_H__
+﻿#ifndef __COM_BASE_H__
+#define __COM_BASE_H__
 
 #include <stdint.h>
 typedef signed char        int8;
@@ -39,14 +39,14 @@ typedef unsigned long long uint64;
 #include <semaphore.h> //sem mutex
 #endif
 
-#define BCP_PI                   (3.14159265358979324)
-#define BCP_PI_GPS_BD            (52.35987755982988733)
-#define BCP_EARTH_RADIUS_M       (6378388.0)
-#define BCP_EARTH_RADIUS_KM      (6378.388)
-#define BCP_EARTH_OBLATENESS     (0.00669342162296594323)
+#define COM_PI                   (3.14159265358979324)
+#define COM_PI_GPS_BD            (52.35987755982988733)
+#define COM_EARTH_RADIUS_M       (6378388.0)
+#define COM_EARTH_RADIUS_KM      (6378.388)
+#define COM_EARTH_OBLATENESS     (0.00669342162296594323)
 
-#define BCP_MAX(a,b)    (((a) > (b)) ? (a) : (b))
-#define BCP_MIN(a,b)    (((a) < (b)) ? (a) : (b))
+#define COM_MAX(a,b)    (((a) > (b)) ? (a) : (b))
+#define COM_MIN(a,b)    (((a) < (b)) ? (a) : (b))
 
 #ifdef __cplusplus
 #define CAPI  extern "C"
@@ -283,6 +283,7 @@ void com_set_cwd(const char* dir);
 std::string com_uuid_generator();
 
 int com_gcd(int x, int y);
+std::string com_get_login_user();
 
 template <class... T>
 int com_gcd(int x, int y, T...ns)
@@ -497,5 +498,5 @@ private:
 
 ByteArray com_hexstring_to_bytes(const char* str);
 
-#endif /* __BCP_COM_H__ */
+#endif /* __COM_BASE_H__ */
 
