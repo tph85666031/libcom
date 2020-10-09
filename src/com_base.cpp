@@ -18,9 +18,6 @@
 
 #define FILE_COM_CONFIG  "com.ini"
 
-static std::string app_path;
-static std::string app_name;
-
 std::string com_com_search_config_file()
 {
     std::vector<std::string> config_files;
@@ -38,9 +35,9 @@ std::string com_com_search_config_file()
     config_files.push_back(com_string_format("%s/%s", bin_path, FILE_COM_CONFIG));
     config_files.push_back(com_string_format("./tmp/%s/depend/%s", HOST_TYPE, FILE_COM_CONFIG));
 
-    for (size_t i = 0; i < config_files.size(); i++)
+    for(size_t i = 0; i < config_files.size(); i++)
     {
-        if (com_file_type(config_files[i].c_str()) == FILE_TYPE_FILE)
+        if(com_file_type(config_files[i].c_str()) == FILE_TYPE_FILE)
         {
             //printf("Search COM Config File: %s ... FOUND\n", config_files[i].c_str());
             return config_files[i];
@@ -58,7 +55,7 @@ bool com_run_shell(const char* fmt, ...)
     va_start(args, fmt);
     int len = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
-    if (len <= 0)
+    if(len <= 0)
     {
         return false;
     }
@@ -67,7 +64,7 @@ bool com_run_shell(const char* fmt, ...)
     va_start(args, fmt);
     len = vsnprintf(cmd_buf.data(), len, fmt, args);
     va_end(args);
-    if (len <= 0)
+    if(len <= 0)
     {
         return false;
     }
@@ -130,16 +127,16 @@ std::string com_run_shell_with_output(const char* fmt, ...)
 std::vector<std::string> com_string_split(const char* str, const char* delim)
 {
     std::vector<std::string> vals;
-    if (str != NULL && delim != NULL)
+    if(str != NULL && delim != NULL)
     {
         std::string orgin = str;
         int delim_len = strlen(delim);
         std::string::size_type pos = 0;
         std::string::size_type pos_pre = 0;
-        while (true)
+        while(true)
         {
             pos = orgin.find_first_of(delim, pos_pre);
-            if (pos == std::string::npos)
+            if(pos == std::string::npos)
             {
                 vals.push_back(orgin.substr(pos_pre));
                 break;
@@ -153,7 +150,7 @@ std::vector<std::string> com_string_split(const char* str, const char* delim)
 
 char* com_strncpy(char* dst, const char* src, int dst_size)
 {
-    if (dst == NULL || src == NULL || dst_size <= 0)
+    if(dst == NULL || src == NULL || dst_size <= 0)
     {
         return NULL;
     }
@@ -164,14 +161,14 @@ char* com_strncpy(char* dst, const char* src, int dst_size)
 
 bool com_strncmp_ignore_case(const char* str1, const char* str2, int size)
 {
-    if (str1 == NULL || str2 == NULL || size <= 0)
+    if(str1 == NULL || str2 == NULL || size <= 0)
     {
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (_strnicmp(str1, str2, size) == 0)
+    if(_strnicmp(str1, str2, size) == 0)
 #else
-    if (strncasecmp(str1, str2, size) == 0)
+    if(strncasecmp(str1, str2, size) == 0)
 #endif
     {
         return true;
@@ -181,11 +178,11 @@ bool com_strncmp_ignore_case(const char* str1, const char* str2, int size)
 
 bool com_strncmp(const char* str1, const char* str2, int size)
 {
-    if (str1 == NULL || str2 == NULL || size <= 0)
+    if(str1 == NULL || str2 == NULL || size <= 0)
     {
         return false;
     }
-    if (strncmp(str1, str2, size) == 0)
+    if(strncmp(str1, str2, size) == 0)
     {
         return true;
     }
@@ -194,11 +191,11 @@ bool com_strncmp(const char* str1, const char* str2, int size)
 
 bool com_string_equal(const char* a, const char* b)
 {
-    if (a == NULL || b == NULL)
+    if(a == NULL || b == NULL)
     {
         return false;
     }
-    if (strcmp(a, b) == 0)
+    if(strcmp(a, b) == 0)
     {
         return true;
     }
@@ -207,14 +204,14 @@ bool com_string_equal(const char* a, const char* b)
 
 bool com_string_equal_ignore_case(const char* a, const char* b)
 {
-    if (a == NULL || b == NULL)
+    if(a == NULL || b == NULL)
     {
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (_stricmp(a, b) == 0)
+    if(_stricmp(a, b) == 0)
 #else
-    if (strcasecmp(a, b) == 0)
+    if(strcasecmp(a, b) == 0)
 #endif
     {
         return true;
@@ -224,7 +221,7 @@ bool com_string_equal_ignore_case(const char* a, const char* b)
 
 std::string& com_string_trim_left(std::string& str, const char* t)
 {
-    if (t == NULL)
+    if(t == NULL)
     {
         t = " \t\n\r\f\v";
     }
@@ -234,7 +231,7 @@ std::string& com_string_trim_left(std::string& str, const char* t)
 
 std::string& com_string_trim_right(std::string& str, const char* t)
 {
-    if (t == NULL)
+    if(t == NULL)
     {
         t = " \t\n\r\f\v";
     }
@@ -249,17 +246,17 @@ std::string& com_string_trim(std::string& str, const char* t)
 
 char* com_string_trim_left(char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return NULL;
     }
     char* p1 = str;
     char* p2 = str;
-    while (isspace(*p1))
+    while(isspace(*p1))
     {
         p1++;
     }
-    while (*p1 != '\0')
+    while(*p1 != '\0')
     {
         *p2 = *p1;
         p1++;
@@ -271,15 +268,15 @@ char* com_string_trim_left(char* str)
 
 char* com_string_trim_right(char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return NULL;
     }
     int len = strlen(str);
     int i = 0;
-    for (i = len - 1; i >= 0; i--)
+    for(i = len - 1; i >= 0; i--)
     {
-        if (isspace(str[i]) == false)
+        if(isspace(str[i]) == false)
         {
             break;
         }
@@ -297,11 +294,11 @@ char* com_string_trim(char* str)
 
 bool com_string_start_with(const char* str, const char* prefix)
 {
-    if (str == NULL || prefix == NULL)
+    if(str == NULL || prefix == NULL)
     {
         return false;
     }
-    if (strncmp(str, prefix, strlen(prefix)) == 0)
+    if(strncmp(str, prefix, strlen(prefix)) == 0)
     {
         return true;
     }
@@ -310,15 +307,15 @@ bool com_string_start_with(const char* str, const char* prefix)
 
 bool com_string_end_with(const char* str, const char* tail)
 {
-    if (str == NULL || tail == NULL)
+    if(str == NULL || tail == NULL)
     {
         return false;
     }
     int l1 = com_string_len(str);
     int l2 = com_string_len(tail);
-    if (l1 >= l2)
+    if(l1 >= l2)
     {
-        if (com_string_equal(str + l1 - l2, tail))
+        if(com_string_equal(str + l1 - l2, tail))
         {
             return true;
         }
@@ -328,11 +325,11 @@ bool com_string_end_with(const char* str, const char* tail)
 
 bool com_string_contain(const char* str, const char* sub)
 {
-    if (str == NULL || sub == NULL)
+    if(str == NULL || sub == NULL)
     {
         return false;
     }
-    if (strstr(str, sub))
+    if(strstr(str, sub))
     {
         return true;
     }
@@ -353,12 +350,12 @@ std::string& com_string_to_lower(std::string& str)
 
 char* com_string_to_upper(char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return str;
     }
     char* orignal = str;
-    for (; *str != '\0'; str++)
+    for(; *str != '\0'; str++)
     {
         *str = toupper(*str);
     }
@@ -367,12 +364,12 @@ char* com_string_to_upper(char* str)
 
 char* com_string_to_lower(char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return str;
     }
     char* orignal = str;
-    for (; *str != '\0'; str++)
+    for(; *str != '\0'; str++)
     {
         *str = tolower(*str);
     }
@@ -386,14 +383,14 @@ std::string com_string_format(const char* fmt, ...)
     va_start(args, fmt);
     int len = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
-    if (len > 0)
+    if(len > 0)
     {
         len += 1;  //上面返回的长度不包含\0，这里加上
         std::vector<char> buf(len);
         va_start(args, fmt);
         len = vsnprintf(buf.data(), len, fmt, args);
         va_end(args);
-        if (len > 0)
+        if(len > 0)
         {
             str.assign(buf.data(), len);
         }
@@ -415,9 +412,9 @@ std::string com_bytes_to_hexstring(const uint8* data, uint16 size)
 {
     char buf[8];
     std::string result;
-    if (data != NULL && size > 0)
+    if(data != NULL && size > 0)
     {
-        for (int i = 0; i < size; i++)
+        for(int i = 0; i < size; i++)
         {
             snprintf(buf, sizeof(buf), "%02x", data[i]);
             result.append(buf, 2);
@@ -429,7 +426,7 @@ std::string com_bytes_to_hexstring(const uint8* data, uint16 size)
 ByteArray com_hexstring_to_bytes(const char* str)
 {
     ByteArray bytes;
-    if (str == NULL)
+    if(str == NULL)
     {
         return bytes;
     }
@@ -438,7 +435,7 @@ ByteArray com_hexstring_to_bytes(const char* str)
 
     char tmp[4];
     memset(tmp, 0, sizeof(tmp));
-    for (size_t i = 0; i < val.length(); i = i + 2)
+    for(size_t i = 0; i < val.length(); i = i + 2)
     {
         memcpy(tmp, val.data() + i, 2);
         bytes.append(strtoul(tmp, NULL, 16));
@@ -454,11 +451,11 @@ int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size)
     int len = strlen(str) / 2;
     int i = 0;
     char tmp[4] = {0};
-    if (size < len)
+    if(size < len)
     {
         return -1;
     }
-    for (i = 0; i < len; i++)
+    for(i = 0; i < len; i++)
     {
         m = i * 2;
         memcpy(tmp, str + m, 2);
@@ -470,13 +467,13 @@ int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size)
 bool com_string_replace(char* str, char from, char to)
 {
     int len = com_string_len(str);
-    if (len <= 0)
+    if(len <= 0)
     {
         return false;
     }
-    for (int i = 0; i < len; i++)
+    for(int i = 0; i < len; i++)
     {
-        if (str[i] == from)
+        if(str[i] == from)
         {
             str[i] = to;
         }
@@ -486,7 +483,7 @@ bool com_string_replace(char* str, char from, char to)
 
 bool com_string_replace(std::string& str, const char* from, const char* to)
 {
-    if (from == NULL || to == NULL)
+    if(from == NULL || to == NULL)
     {
         return false;
     }
@@ -494,7 +491,7 @@ bool com_string_replace(std::string& str, const char* from, const char* to)
     std::string::size_type pos = 0;
     int from_len = com_string_len(from);
     int to_len = com_string_len(to);
-    while ((pos = str.find(from, pos)) != std::string::npos)
+    while((pos = str.find(from, pos)) != std::string::npos)
     {
         str.replace(pos, from_len, to);
         pos += to_len;
@@ -504,7 +501,7 @@ bool com_string_replace(std::string& str, const char* from, const char* to)
 
 int com_string_len(const char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return 0;
     }
@@ -513,7 +510,7 @@ int com_string_len(const char* str)
 
 int com_string_size(const char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return 0;
     }
@@ -522,19 +519,19 @@ int com_string_size(const char* str)
 
 bool com_string_is_ip(const char* ip)
 {
-    if (ip == NULL)
+    if(ip == NULL)
     {
         return false;
     }
     int ip_val[4];
-    if (sscanf(ip, "%d.%d.%d.%d", ip_val, ip_val + 1, ip_val + 2, ip_val + 3) != 4)
+    if(sscanf(ip, "%d.%d.%d.%d", ip_val, ip_val + 1, ip_val + 2, ip_val + 3) != 4)
     {
         return false;
     }
 
-    for (int i = 0; i < 4; i++)
+    for(int i = 0; i < 4; i++)
     {
-        if (ip_val[i] < 0 || ip_val[i] > 255)
+        if(ip_val[i] < 0 || ip_val[i] > 255)
         {
             return false;
         }
@@ -545,7 +542,7 @@ bool com_string_is_ip(const char* ip)
 //返回值为已写入buf的长度，不包括末尾的\0
 int com_snprintf(char* buf, int buf_size, const char* fmt, ...)
 {
-    if (buf == NULL || buf_size <= 0 || fmt == NULL)
+    if(buf == NULL || buf_size <= 0 || fmt == NULL)
     {
         return 0;
     }
@@ -553,11 +550,11 @@ int com_snprintf(char* buf, int buf_size, const char* fmt, ...)
     va_start(list, fmt);
     int ret = vsnprintf(buf, buf_size, fmt, list);
     va_end(list);
-    if (ret < 0)
+    if(ret < 0)
     {
         ret = 0;
     }
-    else if (ret >= buf_size)
+    else if(ret >= buf_size)
     {
         ret = buf_size - 1;
     }
@@ -567,7 +564,7 @@ int com_snprintf(char* buf, int buf_size, const char* fmt, ...)
 
 void com_sleep_ms(uint32 val)
 {
-    if (val == 0)
+    if(val == 0)
     {
         return;
     }
@@ -599,7 +596,7 @@ uint32 com_rand(uint32 min, uint32 max)
 
 bool com_gettimeofday(struct timeval* tp)
 {
-    if (tp == NULL)
+    if(tp == NULL)
     {
         return false;
     }
@@ -694,7 +691,7 @@ uint64 com_time_rtc_us()
 
 uint64 com_time_diff_ms(uint64 start, uint64 end)
 {
-    if (end < start)
+    if(end < start)
     {
         LOG_W("incorrect timestamp, start=%llu, end=%llu", start, end);
         return 0;
@@ -765,19 +762,19 @@ int32 com_timezone_china_s()
 std::string com_time_to_string(uint32 time_s, const char* format)
 {
     std::string str;
-    if (format == NULL)
+    if(format == NULL)
     {
         return str;
     }
     struct tm tm_val;
     memset(&tm_val, 0, sizeof(struct tm));
-    if (com_time_to_tm(time_s, &tm_val) == false)
+    if(com_time_to_tm(time_s, &tm_val) == false)
     {
         return str;
     }
     char buf[128];
     memset(buf, 0, sizeof(buf));
-    if (strftime(buf, sizeof(buf), format, &tm_val) > 0)
+    if(strftime(buf, sizeof(buf), format, &tm_val) > 0)
     {
         str = buf;
     }
@@ -792,15 +789,15 @@ std::string com_time_to_string(uint32 time_s)
 //UTC
 bool com_time_to_tm(uint32 time_s,  struct tm* tm_val)
 {
-    if (tm_val == NULL)
+    if(tm_val == NULL)
     {
         return false;
     }
     time_t val = time_s;
 #if defined(_WIN32) || defined(_WIN64)
-    if (gmtime_s(tm_val, &val) != 0)
+    if(gmtime_s(tm_val, &val) != 0)
 #else
-    if (gmtime_r(&val, tm_val) == NULL)
+    if(gmtime_r(&val, tm_val) == NULL)
 #endif
     {
         return false;
@@ -811,13 +808,13 @@ bool com_time_to_tm(uint32 time_s,  struct tm* tm_val)
 //UTC
 bool com_time_to_bcd(uint32 time_s, uint8 bcd_time[6])
 {
-    if (bcd_time == NULL)
+    if(bcd_time == NULL)
     {
         return false;
     }
     struct tm tm_val;
     memset(&tm_val, 0, sizeof(struct tm));
-    if (com_time_to_tm(time_s, &tm_val) == false)
+    if(com_time_to_tm(time_s, &tm_val) == false)
     {
         return false;
     }
@@ -826,7 +823,7 @@ bool com_time_to_bcd(uint32 time_s, uint8 bcd_time[6])
 
 uint32 com_time_from_bcd(uint8 bcd_date[6])
 {
-    if (bcd_date == NULL)
+    if(bcd_date == NULL)
     {
         return 0;
     }
@@ -846,7 +843,7 @@ uint32 com_time_from_bcd(uint8 bcd_date[6])
 //UTC
 uint32 com_tm_to_time(struct tm* tm_val)
 {
-    if (tm_val == NULL)
+    if(tm_val == NULL)
     {
         return 0;
     }
@@ -862,11 +859,11 @@ uint32 com_tm_to_time(struct tm* tm_val)
 //UTC
 bool com_tm_to_bcd_date(struct tm* tm_val, uint8 bcd_date[6])
 {
-    if (tm_val == NULL || bcd_date == NULL)
+    if(tm_val == NULL || bcd_date == NULL)
     {
         return false;
     }
-    if (tm_val->tm_year > 100)
+    if(tm_val->tm_year > 100)
     {
         bcd_date[0] = com_uint8_to_bcd(tm_val->tm_year - 100);
     }
@@ -885,7 +882,7 @@ bool com_tm_to_bcd_date(struct tm* tm_val, uint8 bcd_date[6])
 /* UTC date_str格式为 yyyy-mm-dd HH:MM:SS */
 uint32 com_string_to_time(const char* date_str)
 {
-    if (date_str == NULL)
+    if(date_str == NULL)
     {
         return 0;
     }
@@ -894,7 +891,7 @@ uint32 com_string_to_time(const char* date_str)
     int count = sscanf(date_str, "%d-%d-%d %d:%d:%d",
                        &tm_val.tm_year, &tm_val.tm_mon, &tm_val.tm_mday,
                        &tm_val.tm_hour, &tm_val.tm_min, &tm_val.tm_sec);
-    if (count != 6)
+    if(count != 6)
     {
         return false;
     }
@@ -917,11 +914,11 @@ uint8 com_bcd_to_uint8(uint8 bcd)
 
 bool com_sem_init(Sem* sem, const char* name)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         return false;
     }
-    if (name == NULL)
+    if(name == NULL)
     {
         name = "Unknown";
     }
@@ -934,7 +931,7 @@ bool com_sem_init(Sem* sem, const char* name)
                       NULL                // object name
                   );
 #else
-    if (sem_init(&sem->handle, 0, 0) != 0)
+    if(sem_init(&sem->handle, 0, 0) != 0)
     {
         LOG_E("failed");
         return false;
@@ -945,13 +942,13 @@ bool com_sem_init(Sem* sem, const char* name)
 
 bool com_sem_uninit(Sem* sem)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         LOG_E("failed");
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         LOG_E("failed");
         return false;
@@ -965,7 +962,7 @@ bool com_sem_uninit(Sem* sem)
 
 Sem* com_sem_create(const char* name)
 {
-    if (name == NULL)
+    if(name == NULL)
     {
         name = "Unknown";
     }
@@ -979,7 +976,7 @@ Sem* com_sem_create(const char* name)
                       NULL                // object name
                   );
 #else
-    if (sem_init(&sem->handle, 0, 0) != 0)
+    if(sem_init(&sem->handle, 0, 0) != 0)
     {
         LOG_E("failed");
         delete sem;
@@ -991,19 +988,19 @@ Sem* com_sem_create(const char* name)
 
 bool com_sem_post(Sem* sem)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         LOG_E("failed");
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         return false;
     }
     return SetEvent(sem->handle);
 #else
-    if (sem_post(&sem->handle) != 0)
+    if(sem_post(&sem->handle) != 0)
     {
         LOG_E("failed");
         return false;
@@ -1014,29 +1011,29 @@ bool com_sem_post(Sem* sem)
 
 bool com_sem_wait(Sem* sem, int timeout_ms)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         LOG_E("arg incorrect");
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         LOG_E("failed");
         return false;
     }
-    if (timeout_ms <= 0)
+    if(timeout_ms <= 0)
     {
         timeout_ms = INFINITE;
     }
     int rc = WaitForSingleObject(sem->handle, timeout_ms);
-    if (rc != WAIT_OBJECT_0)
+    if(rc != WAIT_OBJECT_0)
     {
         LOG_E("failed");
         return false;
     }
 #else
-    if (timeout_ms > 0)
+    if(timeout_ms > 0)
     {
         struct timespec ts;
         memset(&ts, 0, sizeof(struct timespec));
@@ -1047,9 +1044,9 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
         ts.tv_sec += tmp / (1000 * 1000 * 1000);
 
         int ret = sem_timedwait(&sem->handle, &ts);
-        if (ret != 0)
+        if(ret != 0)
         {
-            if (errno == ETIMEDOUT)
+            if(errno == ETIMEDOUT)
             {
                 //LOG_W("timeout:%s:%d", sem->name.c_str(), timeout_ms);
             }
@@ -1062,7 +1059,7 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
     }
     else
     {
-        if (sem_wait(&sem->handle) != 0)
+        if(sem_wait(&sem->handle) != 0)
         {
             LOG_E("failed");
             return false;
@@ -1074,13 +1071,13 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
 
 bool com_sem_destroy(Sem* sem)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         LOG_E("failed");
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         LOG_E("failed");
         return false;
@@ -1095,18 +1092,18 @@ bool com_sem_destroy(Sem* sem)
 
 bool com_condition_init(Condition* condition, const char* name)
 {
-    if (condition == NULL)
+    if(condition == NULL)
     {
         return false;
     }
-    if (name == NULL)
+    if(name == NULL)
     {
         name = "Unknown";
     }
     condition->name = name;
 #if defined(_WIN32) || defined(_WIN64)
 #else
-    if (pthread_cond_init(&condition->handle, NULL) != 0)
+    if(pthread_cond_init(&condition->handle, NULL) != 0)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
@@ -1117,7 +1114,7 @@ bool com_condition_init(Condition* condition, const char* name)
 
 bool com_condition_uninit(Condition* condition)
 {
-    if (condition == NULL)
+    if(condition == NULL)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
@@ -1132,7 +1129,7 @@ bool com_condition_uninit(Condition* condition)
 
 Condition* com_condition_create(const char* name)
 {
-    if (name == NULL)
+    if(name == NULL)
     {
         name = "Unknown";
     }
@@ -1140,7 +1137,7 @@ Condition* com_condition_create(const char* name)
     condition->name = name;
 #if defined(_WIN32) || defined(_WIN64)
 #else
-    if (pthread_cond_init(&condition->handle, NULL) != 0)
+    if(pthread_cond_init(&condition->handle, NULL) != 0)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         delete condition;
@@ -1152,7 +1149,7 @@ Condition* com_condition_create(const char* name)
 
 bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms)
 {
-    if (condition == NULL || mutex == NULL)
+    if(condition == NULL || mutex == NULL)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
@@ -1160,7 +1157,7 @@ bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms)
 #if defined(_WIN32) || defined(_WIN64)
     return false;
 #else
-    if (timeout_ms > 0)
+    if(timeout_ms > 0)
     {
         struct timespec ts;
         memset(&ts, 0, sizeof(struct timespec));
@@ -1168,7 +1165,7 @@ bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms)
         uint64 tmp = ts.tv_nsec + (int64)timeout_ms * 1000 * 1000;
         ts.tv_nsec = tmp % (1000 * 1000 * 1000);
         ts.tv_sec += tmp / (1000 * 1000 * 1000);
-        if (pthread_cond_timedwait(&condition->handle, &mutex->handle, &ts) != 0)
+        if(pthread_cond_timedwait(&condition->handle, &mutex->handle, &ts) != 0)
         {
             //LOG_I("%s:%d timeout or failed", __FUNC__, __LINE__);
             return false;
@@ -1176,7 +1173,7 @@ bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms)
     }
     else
     {
-        if (pthread_cond_wait(&condition->handle, &mutex->handle) != 0)
+        if(pthread_cond_wait(&condition->handle, &mutex->handle) != 0)
         {
             LOG_E("%s:%d failed", __FUNC__, __LINE__);
             return false;
@@ -1188,7 +1185,7 @@ bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms)
 
 bool com_condition_notify_one(Condition* condition)
 {
-    if (condition == NULL)
+    if(condition == NULL)
     {
         LOG_E("%s:%d arg incorrect", __FUNC__, __LINE__);
         return false;
@@ -1203,7 +1200,7 @@ bool com_condition_notify_one(Condition* condition)
 
 bool com_condition_notify_all(Condition* condition)
 {
-    if (condition == NULL)
+    if(condition == NULL)
     {
         LOG_E("%s:%d arg incorrect", __FUNC__, __LINE__);
         return false;
@@ -1218,7 +1215,7 @@ bool com_condition_notify_all(Condition* condition)
 
 bool com_condition_destroy(Condition* condition)
 {
-    if (condition == NULL)
+    if(condition == NULL)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
@@ -1234,11 +1231,11 @@ bool com_condition_destroy(Condition* condition)
 
 bool com_mutex_init(Mutex* mutex, const char* name)
 {
-    if (mutex == NULL)
+    if(mutex == NULL)
     {
         return false;
     }
-    if (name == NULL)
+    if(name == NULL)
     {
         name = "Unknown";
     }
@@ -1246,7 +1243,7 @@ bool com_mutex_init(Mutex* mutex, const char* name)
 #if defined(_WIN32) || defined(_WIN64)
     mutex->handle = CreateSemaphore(NULL, 1, 1, NULL);
 #else
-    if (pthread_mutex_init(&mutex->handle, NULL) != 0)
+    if(pthread_mutex_init(&mutex->handle, NULL) != 0)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
@@ -1257,13 +1254,13 @@ bool com_mutex_init(Mutex* mutex, const char* name)
 
 bool com_mutex_uninit(Mutex* mutex)
 {
-    if (mutex == NULL)
+    if(mutex == NULL)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (mutex->handle != NULL)
+    if(mutex->handle != NULL)
     {
         CloseHandle(mutex->handle);
     }
@@ -1275,7 +1272,7 @@ bool com_mutex_uninit(Mutex* mutex)
 
 Mutex* com_mutex_create(const char* name)
 {
-    if (name == NULL)
+    if(name == NULL)
     {
         name = "Unknown";
     }
@@ -1284,7 +1281,7 @@ Mutex* com_mutex_create(const char* name)
 #if defined(_WIN32) || defined(_WIN64)
     mutex->handle = CreateSemaphore(NULL, 1, 1, NULL);
 #else
-    if (pthread_mutex_init(&mutex->handle, NULL) != 0)
+    if(pthread_mutex_init(&mutex->handle, NULL) != 0)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         delete mutex;
@@ -1296,13 +1293,13 @@ Mutex* com_mutex_create(const char* name)
 
 bool com_mutex_destroy(Mutex* mutex)
 {
-    if (mutex == NULL)
+    if(mutex == NULL)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (mutex->handle != NULL)
+    if(mutex->handle != NULL)
     {
         CloseHandle(mutex->handle);
     }
@@ -1315,7 +1312,7 @@ bool com_mutex_destroy(Mutex* mutex)
 
 bool com_mutex_lock(Mutex* mutex)
 {
-    if (mutex == NULL)
+    if(mutex == NULL)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
@@ -1325,7 +1322,7 @@ bool com_mutex_lock(Mutex* mutex)
     LOG_D("mutex=%s thread=%s LOCKED", mutex->name, com_thread_get_name().c_str());
 #endif
 #if defined(_WIN32) || defined(_WIN64)
-    if (mutex->handle == NULL)
+    if(mutex->handle == NULL)
     {
         LOG_E("mutex->handle is NULL");
         return false;
@@ -1334,7 +1331,7 @@ bool com_mutex_lock(Mutex* mutex)
 #else
     ret = pthread_mutex_lock(&mutex->handle);
 #endif
-    if (ret != 0)
+    if(ret != 0)
     {
         LOG_E("pthread_mutex_lock lock failed,ret=%d", ret);
         return false;
@@ -1344,14 +1341,14 @@ bool com_mutex_lock(Mutex* mutex)
 
 bool com_mutex_unlock(Mutex* mutex)
 {
-    if (mutex == NULL)
+    if(mutex == NULL)
     {
         LOG_E("%s:%d failed", __FUNC__, __LINE__);
         return false;
     }
     int ret = -1;
 #if defined(_WIN32) || defined(_WIN64)
-    if (mutex->handle == NULL)
+    if(mutex->handle == NULL)
     {
         LOG_E("mutex->handle is NULL");
         return false;
@@ -1360,7 +1357,7 @@ bool com_mutex_unlock(Mutex* mutex)
 #else
     ret = pthread_mutex_unlock(&mutex->handle);
 #endif
-    if (ret != 0)
+    if(ret != 0)
     {
         LOG_E("pthread_mutex_lock lock failed, ret=%d", ret);
         return false;
@@ -1393,11 +1390,11 @@ double com_gps_distance_m(double lon_a, double lat_a, double lon_b,
 
 static bool com_gps_is_outsize_china(double longitude, double latitude)
 {
-    if (longitude < 72.004 || longitude > 137.8347)
+    if(longitude < 72.004 || longitude > 137.8347)
     {
         return true;
     }
-    if (latitude < 0.8293 || latitude > 55.8271)
+    if(latitude < 0.8293 || latitude > 55.8271)
     {
         return true;
     }
@@ -1432,7 +1429,7 @@ GPS com_gps_wgs84_to_gcj02(double longitude, double latitude)
 {
     GPS gps;
     memset(&gps, 0, sizeof(GPS));
-    if (com_gps_is_outsize_china(longitude, latitude))
+    if(com_gps_is_outsize_china(longitude, latitude))
     {
         gps.latitude = latitude;
         gps.longitude = longitude;
@@ -1462,13 +1459,13 @@ GPS com_gps_gcj02_to_wgs84(double longitude, double latitude)
     gps.longitude = longitude;
     memset(&gps_temp, 0, sizeof(GPS));
     memset(&gps_shift, 0, sizeof(GPS));
-    while (true)
+    while(true)
     {
         gps_temp = com_gps_wgs84_to_gcj02(gps.longitude, gps.latitude);
         gps_shift.latitude = latitude - gps_temp.latitude;
         gps_shift.longitude = longitude - gps_temp.longitude;
         // 1e-7 ~ centimeter level accuracy
-        if (fabs(gps_shift.latitude) < 1e-7 && fabs(gps_shift.longitude) < 1e-7)
+        if(fabs(gps_shift.latitude) < 1e-7 && fabs(gps_shift.longitude) < 1e-7)
         {
             // Result of experiment:
             //   Most of the time 2 iterations would be enough
@@ -1513,7 +1510,7 @@ uint32 com_string_to_ip(const char* ip_str)
     uint32 ip[4];
     int ret = sscanf(ip_str, "%u.%u.%u.%u",
                      &ip[0], &ip[1], &ip[2],  &ip[3]);
-    if (ret != 4)
+    if(ret != 4)
     {
         return 0;
     }
@@ -1531,47 +1528,22 @@ std::string com_ip_to_string(uint32 ip)
     return str;
 }
 
-void com_init_app_path()
-{
-    #if __linux__ == 1
-    if (name.empty())
-    {
-        char buf[256];
-        memset(buf, 0, sizeof(buf));
-        int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-        if (ret < 0 || (ret >= (int)sizeof(buf) - 1))
-        {
-            return NULL;
-        }
-        for (int i = ret; i >= 0; i--)
-        {
-            if (buf[i] == '/')
-            {
-                name = buf + i + 1;
-                break;
-            }
-        }
-    }
-#endif
-
-}
-
 const char* com_get_bin_name()
 {
     static std::string name;
 #if __linux__ == 1
-    if (name.empty())
+    if(name.empty())
     {
         char buf[256];
         memset(buf, 0, sizeof(buf));
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-        if (ret < 0 || (ret >= (int)sizeof(buf) - 1))
+        if(ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
             return NULL;
         }
-        for (int i = ret; i >= 0; i--)
+        for(int i = ret; i >= 0; i--)
         {
-            if (buf[i] == '/')
+            if(buf[i] == '/')
             {
                 name = buf + i + 1;
                 break;
@@ -1586,18 +1558,18 @@ const char* com_get_bin_path()
 {
     static std::string path;
 #if __linux__ == 1
-    if (path.empty())
+    if(path.empty())
     {
         char buf[256];
         memset(buf, 0, sizeof(buf));
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-        if (ret < 0 || (ret >= (int)sizeof(buf) - 1))
+        if(ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
             return NULL;
         }
-        for (int i = ret; i >= 0; i--)
+        for(int i = ret; i >= 0; i--)
         {
-            if (buf[i] == '/')
+            if(buf[i] == '/')
             {
                 buf[i + 1] = '\0';
                 path = buf;
@@ -1606,7 +1578,7 @@ const char* com_get_bin_path()
         }
     }
 #endif
-    return app_path.c_str();
+    return path.c_str();
 }
 
 std::string com_get_cwd()
@@ -1614,9 +1586,9 @@ std::string com_get_cwd()
     std::string dir;
     char tmp[1024];
 #if defined(_WIN32) || defined(_WIN64)
-    if (_getcwd(tmp, sizeof(tmp)) != NULL)
+    if(_getcwd(tmp, sizeof(tmp)) != NULL)
 #else
-    if (getcwd(tmp, sizeof(tmp)) != NULL)
+    if(getcwd(tmp, sizeof(tmp)) != NULL)
 #endif
     {
         dir = tmp;
@@ -1626,7 +1598,7 @@ std::string com_get_cwd()
 
 void com_set_cwd(const char* dir)
 {
-    if (dir != NULL)
+    if(dir != NULL)
     {
 #ifdef _WIN32
         _chdir(dir);
@@ -1688,7 +1660,7 @@ ByteArray::ByteArray()
 
 ByteArray::ByteArray(int reserve_size)
 {
-    if (reserve_size > 0)
+    if(reserve_size > 0)
     {
         buf.reserve(reserve_size);
     }
@@ -1696,9 +1668,9 @@ ByteArray::ByteArray(int reserve_size)
 
 ByteArray::ByteArray(const uint8* data, int data_size)
 {
-    if (data_size > 0 && data != NULL)
+    if(data_size > 0 && data != NULL)
     {
-        for (int i = 0; i < data_size; i++)
+        for(int i = 0; i < data_size; i++)
         {
             buf.push_back(data[i]);
         }
@@ -1707,9 +1679,9 @@ ByteArray::ByteArray(const uint8* data, int data_size)
 
 ByteArray::ByteArray(const char* data)
 {
-    if (data != NULL)
+    if(data != NULL)
     {
-        for (size_t i = 0; i < strlen(data); i++)
+        for(size_t i = 0; i < strlen(data); i++)
         {
             buf.push_back((uint8)data[i]);
         }
@@ -1718,9 +1690,9 @@ ByteArray::ByteArray(const char* data)
 
 ByteArray::ByteArray(const char* data, int data_size)
 {
-    if (data_size > 0 && data != NULL)
+    if(data_size > 0 && data != NULL)
     {
-        for (int i = 0; i < data_size; i++)
+        for(int i = 0; i < data_size; i++)
         {
             buf.push_back((uint8)data[i]);
         }
@@ -1746,17 +1718,17 @@ ByteArray& ByteArray::operator+=(uint8 val)
 
 bool ByteArray::operator==(ByteArray& bytes)
 {
-    if (this == &bytes)
+    if(this == &bytes)
     {
         return true;
     }
-    if (bytes.getDataSize() != this->getDataSize())
+    if(bytes.getDataSize() != this->getDataSize())
     {
         return false;
     }
-    for (int i = 0; i < bytes.getDataSize(); i++)
+    for(int i = 0; i < bytes.getDataSize(); i++)
     {
-        if (bytes.getData()[i] != this->getData()[i])
+        if(bytes.getData()[i] != this->getData()[i])
         {
             return false;
         }
@@ -1766,17 +1738,17 @@ bool ByteArray::operator==(ByteArray& bytes)
 
 bool ByteArray::operator!=(ByteArray& bytes)
 {
-    if (this == &bytes)
+    if(this == &bytes)
     {
         return false;
     }
-    if (bytes.getDataSize() != this->getDataSize())
+    if(bytes.getDataSize() != this->getDataSize())
     {
         return true;
     }
-    for (int i = 0; i < bytes.getDataSize(); i++)
+    for(int i = 0; i < bytes.getDataSize(); i++)
     {
-        if (bytes.getData()[i] != this->getData()[i])
+        if(bytes.getData()[i] != this->getData()[i])
         {
             return true;
         }
@@ -1791,7 +1763,7 @@ void ByteArray::clear()
 
 uint8* ByteArray::getData()
 {
-    if (empty())
+    if(empty())
     {
         return NULL;
     }
@@ -1816,9 +1788,9 @@ ByteArray& ByteArray::append(uint8 val)
 
 ByteArray& ByteArray::append(const uint8* data, int data_size)
 {
-    if (data_size > 0 && data != NULL)
+    if(data_size > 0 && data != NULL)
     {
-        for (int i = 0; i < data_size; i++)
+        for(int i = 0; i < data_size; i++)
         {
             buf.push_back(data[i]);
         }
@@ -1828,9 +1800,9 @@ ByteArray& ByteArray::append(const uint8* data, int data_size)
 
 ByteArray& ByteArray::append(const char* data)
 {
-    if (data != NULL)
+    if(data != NULL)
     {
-        for (size_t i = 0; i < strlen(data); i++)
+        for(size_t i = 0; i < strlen(data); i++)
         {
             buf.push_back(data[i]);
         }
@@ -1840,17 +1812,17 @@ ByteArray& ByteArray::append(const char* data)
 
 ByteArray& ByteArray::append(ByteArray& bytes)
 {
-    if (this == &bytes)
+    if(this == &bytes)
     {
         ByteArray tmp = bytes;
-        for (int i = 0; i < tmp.getDataSize(); i++)
+        for(int i = 0; i < tmp.getDataSize(); i++)
         {
             buf.push_back(tmp.getData()[i]);
         }
     }
     else
     {
-        for (int i = 0; i < bytes.getDataSize(); i++)
+        for(int i = 0; i < bytes.getDataSize(); i++)
         {
             buf.push_back(bytes.getData()[i]);
         }
@@ -1860,7 +1832,7 @@ ByteArray& ByteArray::append(ByteArray& bytes)
 
 uint8 ByteArray::getAt(int pos)
 {
-    if (pos < 0 || pos >= (int)buf.size())
+    if(pos < 0 || pos >= (int)buf.size())
     {
         return 0;
     }
@@ -1869,7 +1841,7 @@ uint8 ByteArray::getAt(int pos)
 
 void ByteArray::removeAt(int pos)
 {
-    if (pos < 0 || pos >= (int)buf.size())
+    if(pos < 0 || pos >= (int)buf.size())
     {
         return;
     }
@@ -1878,11 +1850,11 @@ void ByteArray::removeAt(int pos)
 
 void ByteArray::removeHead(int count)
 {
-    if (count <= 0)
+    if(count <= 0)
     {
         return;
     }
-    if (count > (int)buf.size())
+    if(count > (int)buf.size())
     {
         count = buf.size();
     }
@@ -1891,11 +1863,11 @@ void ByteArray::removeHead(int count)
 
 void ByteArray::removeTail(int count)
 {
-    if (count <= 0)
+    if(count <= 0)
     {
         return;
     }
-    while (count > 0 && buf.size() > 0)
+    while(count > 0 && buf.size() > 0)
     {
         buf.pop_back();
         count--;
@@ -1905,7 +1877,7 @@ void ByteArray::removeTail(int count)
 std::string ByteArray::toString()
 {
     std::string str;
-    if (getDataSize() > 0)
+    if(getDataSize() > 0)
     {
         str.append((char*)getData(), getDataSize());
     }
@@ -1915,7 +1887,7 @@ std::string ByteArray::toString()
 std::string ByteArray::toHexString(bool upper)
 {
     std::string str = com_bytes_to_hexstring(getData(), getDataSize());
-    if (upper)
+    if(upper)
     {
         com_string_to_upper(str);
     }
@@ -1929,7 +1901,7 @@ ByteArray ByteArray::FromHexString(const char* hex_str)
 
 CPPMutex::CPPMutex(const char* name)
 {
-    if (name != NULL)
+    if(name != NULL)
     {
         this->name = name;
     }
@@ -1941,7 +1913,7 @@ CPPMutex::~CPPMutex()
 
 void CPPMutex::setName(const char* name)
 {
-    if (name != NULL)
+    if(name != NULL)
     {
         this->name = name;
     }
@@ -1984,7 +1956,7 @@ AutoMutex::AutoMutex(std::mutex* mutex)
 {
     this->mutex_c = NULL;
     this->mutex_cpp = mutex;
-    if (this->mutex_cpp != NULL)
+    if(this->mutex_cpp != NULL)
     {
         this->mutex_cpp->lock();
     }
@@ -1994,7 +1966,7 @@ AutoMutex::AutoMutex(CPPMutex& mutex)
 {
     this->mutex_c = NULL;
     this->mutex_cpp = mutex.getMutex();
-    if (this->mutex_cpp != NULL)
+    if(this->mutex_cpp != NULL)
     {
         this->mutex_cpp->lock();
     }
@@ -2002,11 +1974,11 @@ AutoMutex::AutoMutex(CPPMutex& mutex)
 
 AutoMutex::~AutoMutex()
 {
-    if (this->mutex_c != NULL)
+    if(this->mutex_c != NULL)
     {
         com_mutex_unlock(this->mutex_c);
     }
-    if (this->mutex_cpp != NULL)
+    if(this->mutex_cpp != NULL)
     {
         mutex_cpp->unlock();
     }
@@ -2024,7 +1996,7 @@ CPPSem::~CPPSem()
 
 void CPPSem::setName(const char* name)
 {
-    if (name == NULL)
+    if(name == NULL)
     {
         return;
     }
@@ -2048,7 +2020,7 @@ bool CPPSem::wait(int timeout_ms)
 
 CPPCondition::CPPCondition(const char* name)
 {
-    if (name != NULL)
+    if(name != NULL)
     {
         this->name = name;
     }
@@ -2085,9 +2057,9 @@ bool CPPCondition::notifyAll()
 bool CPPCondition::wait(int timeout_ms)
 {
     std::unique_lock<std::mutex> lock(mutex_cv);
-    if (timeout_ms > 0)
+    if(timeout_ms > 0)
     {
-        if (condition.wait_for(lock, std::chrono::milliseconds(timeout_ms)) == std::cv_status::timeout)
+        if(condition.wait_for(lock, std::chrono::milliseconds(timeout_ms)) == std::cv_status::timeout)
         {
             return false;
         }
@@ -2132,7 +2104,7 @@ Message& Message::setID(uint32 id)
 
 bool Message::isKeyExist(const char* key)
 {
-    if (key == NULL || datas.count(key) == 0)
+    if(key == NULL || datas.count(key) == 0)
     {
         return false;
     }
@@ -2146,7 +2118,7 @@ bool Message::isEmpty()
 
 Message& Message::set(const char* key, const std::string& val)
 {
-    if (key != NULL)
+    if(key != NULL)
     {
         datas[key] = val;
     }
@@ -2155,7 +2127,7 @@ Message& Message::set(const char* key, const std::string& val)
 
 Message& Message::set(const char* key, const char* val)
 {
-    if (key != NULL && val != NULL)
+    if(key != NULL && val != NULL)
     {
         datas[key] = val;
     }
@@ -2164,7 +2136,7 @@ Message& Message::set(const char* key, const char* val)
 
 Message& Message::set(const char* key, const uint8* val, int val_size)
 {
-    if (key != NULL && val != NULL && val_size > 0)
+    if(key != NULL && val != NULL && val_size > 0)
     {
         std::string data;
         data.assign((char*)val, val_size);
@@ -2175,7 +2147,7 @@ Message& Message::set(const char* key, const uint8* val, int val_size)
 
 Message& Message::set(const char* key, ByteArray bytes)
 {
-    if (key != NULL && bytes.empty() == false)
+    if(key != NULL && bytes.empty() == false)
     {
         std::string data;
         data.assign((char*)bytes.getData(), bytes.getDataSize());
@@ -2187,7 +2159,7 @@ Message& Message::set(const char* key, ByteArray bytes)
 void Message::remove(const char* key)
 {
     std::map<std::string, std::string>::iterator it = datas.find(key);
-    if (it != datas.end())
+    if(it != datas.end())
     {
         datas.erase(it);
     }
@@ -2200,7 +2172,7 @@ void Message::removeAll()
 
 bool Message::getBool(const char* key, bool default_val)
 {
-    if (isKeyExist(key) == false)
+    if(isKeyExist(key) == false)
     {
         return default_val;
     }
@@ -2210,12 +2182,12 @@ bool Message::getBool(const char* key, bool default_val)
 
 char Message::getChar(const char* key, char default_val)
 {
-    if (isKeyExist(key) == false)
+    if(isKeyExist(key) == false)
     {
         return default_val;
     }
     std::string val = datas[key];
-    if (val.empty())
+    if(val.empty())
     {
         return default_val;
     }
@@ -2224,7 +2196,7 @@ char Message::getChar(const char* key, char default_val)
 
 float Message::getFloat(const char* key, float default_val)
 {
-    if (isKeyExist(key) == false)
+    if(isKeyExist(key) == false)
     {
         return default_val;
     }
@@ -2234,7 +2206,7 @@ float Message::getFloat(const char* key, float default_val)
 
 double Message::getDouble(const char* key, double default_val)
 {
-    if (isKeyExist(key) == false)
+    if(isKeyExist(key) == false)
     {
         return default_val;
     }
@@ -2259,7 +2231,7 @@ int32 Message::getInt32(const char* key, int32 default_val)
 
 int64 Message::getInt64(const char* key, int64 default_val)
 {
-    if (isKeyExist(key) == false)
+    if(isKeyExist(key) == false)
     {
         return default_val;
     }
@@ -2284,7 +2256,7 @@ uint32 Message::getUInt32(const char* key, uint32 default_val)
 
 uint64 Message::getUInt64(const char* key, uint64 default_val)
 {
-    if (isKeyExist(key) == false)
+    if(isKeyExist(key) == false)
     {
         return default_val;
     }
@@ -2294,7 +2266,7 @@ uint64 Message::getUInt64(const char* key, uint64 default_val)
 
 std::string Message::getString(const char* key, std::string default_val)
 {
-    if (isKeyExist(key) == false)
+    if(isKeyExist(key) == false)
     {
         return default_val;
     }
@@ -2304,7 +2276,7 @@ std::string Message::getString(const char* key, std::string default_val)
 ByteArray Message::getBytes(const char* key)
 {
     ByteArray bytes;
-    if (isKeyExist(key) == false)
+    if(isKeyExist(key) == false)
     {
         return bytes;
     }
@@ -2317,7 +2289,7 @@ std::string Message::toJSON()
     CJsonObject cjson;
 
     std::map<std::string, std::string>::iterator it;
-    for (it = datas.begin(); it != datas.end(); it++)
+    for(it = datas.begin(); it != datas.end(); it++)
     {
         cjson.Add(it->first, it->second);
     }
@@ -2330,9 +2302,9 @@ Message Message::FromJSON(std::string json)
     Message msg;
     std::string key;
     std::string value;
-    while (cjson.GetKey(key))
+    while(cjson.GetKey(key))
     {
-        if (cjson.Get(key, value))
+        if(cjson.Get(key, value))
         {
             msg.set(key.c_str(), value);
         }
@@ -2370,7 +2342,7 @@ void xstring::tolower()
 
 bool xstring::starts_with(const char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return false;
     }
@@ -2384,12 +2356,12 @@ bool xstring::starts_with(const xstring& str)
 
 bool xstring::ends_with(const char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return false;
     }
     size_t str_len = strlen(str);
-    if (length() < str_len)
+    if(length() < str_len)
     {
         return false;
     }
@@ -2398,7 +2370,7 @@ bool xstring::ends_with(const char* str)
 
 bool xstring::ends_with(const xstring& str)
 {
-    if (length() < str.length())
+    if(length() < str.length())
     {
         return false;
     }
@@ -2407,7 +2379,7 @@ bool xstring::ends_with(const xstring& str)
 
 bool xstring::contains(const char* str)
 {
-    if (str == NULL)
+    if(str == NULL)
     {
         return false;
     }
@@ -2421,7 +2393,7 @@ bool xstring::contains(const xstring& str)
 
 void xstring::replace(const char* from, const char* to)
 {
-    if (from == NULL || to == NULL)
+    if(from == NULL || to == NULL)
     {
         return;
     }
@@ -2429,7 +2401,7 @@ void xstring::replace(const char* from, const char* to)
     std::string::size_type pos = 0;
     int from_len = com_string_len(from);
     int to_len = com_string_len(to);
-    while ((pos = find(from, pos)) != std::string::npos)
+    while((pos = find(from, pos)) != std::string::npos)
     {
         std::string::replace(pos, from_len, to);
         pos += to_len;
@@ -2445,17 +2417,17 @@ void xstring::replace(const xstring& from, const xstring& to)
 std::vector<xstring> xstring::split(const char* delim)
 {
     std::vector<xstring> vals;
-    if (delim == NULL)
+    if(delim == NULL)
     {
         return vals;
     }
     std::string::size_type pos = 0;
     std::string::size_type pos_pre = 0;
     int delim_len = strlen(delim);
-    while (true)
+    while(true)
     {
         pos = find_first_of(delim, pos_pre);
-        if (pos == std::string::npos)
+        if(pos == std::string::npos)
         {
             vals.push_back(substr(pos_pre));
             break;
@@ -2471,10 +2443,10 @@ std::vector<xstring> xstring::split(const xstring& delim)
     std::vector<xstring> vals;
     std::string::size_type pos = 0;
     std::string::size_type pos_pre = 0;
-    while (true)
+    while(true)
     {
         pos = find_first_of(delim, pos_pre);
-        if (pos == std::string::npos)
+        if(pos == std::string::npos)
         {
             vals.push_back(substr(pos_pre));
             break;
@@ -2508,7 +2480,7 @@ void xstring::trim(const char* t)
 
 void xstring::trim_left(const char* t)
 {
-    if (t == NULL)
+    if(t == NULL)
     {
         t = " \t\n\r\f\v";
     }
@@ -2517,7 +2489,7 @@ void xstring::trim_left(const char* t)
 
 void xstring::trim_right(const char* t)
 {
-    if (t == NULL)
+    if(t == NULL)
     {
         t = " \t\n\r\f\v";
     }
@@ -2531,14 +2503,14 @@ xstring xstring::format(const char* fmt, ...)
     va_start(args, fmt);
     int len = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
-    if (len > 0)
+    if(len > 0)
     {
         len += 1;  //上面返回的长度不包含\0，这里加上
         std::vector<char> buf(len);
         va_start(args, fmt);
         len = vsnprintf(buf.data(), len, fmt, args);
         va_end(args);
-        if (len > 0)
+        if(len > 0)
         {
             str.assign(buf.data(), len);
         }
