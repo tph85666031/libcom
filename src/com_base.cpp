@@ -83,7 +83,7 @@ std::string com_run_shell_with_output(const char* fmt, ...)
 {
     std::string result;
 #if __linux__ == 1
-    if (fmt == NULL)
+    if(fmt == NULL)
     {
         //LOG_E("failed");
         return result;
@@ -93,7 +93,7 @@ std::string com_run_shell_with_output(const char* fmt, ...)
     va_start(args, fmt);
     int len = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
-    if (len <= 0)
+    if(len <= 0)
     {
         return result;
     }
@@ -102,30 +102,27 @@ std::string com_run_shell_with_output(const char* fmt, ...)
     va_start(args, fmt);
     len = vsnprintf(cmd_buf.data(), len, fmt, args);
     va_end(args);
-    if (len <= 0)
+    if(len <= 0)
     {
         return result;
     }
     cmd.assign(cmd_buf.data(), len);
 
     FILE* fp = popen(cmd.c_str(), "r");
-    if (fp == NULL)
+    if(fp == NULL)
     {
         //LOG_E("failed, cmd=%s", cmd.c_str());
         return result;
     }
-    char* output_buf = new char[8192]();
-    if (fgets(output_buf, 8192, fp) == NULL)
+    char buf[1024];
+    bzero(buf, sizeof(buf));
+    while(fgets(buf, sizeof(buf), fp) != NULL)
     {
-        delete[] output_buf;
-        //("failed, cmd=%s", cmd.c_str());
-        return result;
+        result.append(buf);
+        bzero(buf, sizeof(buf));
     }
     pclose(fp);
-    output_buf[8191] = '\0';
     //LOG_D("run shell succeed, cmd=%s", cmd.c_str());
-    result.assign(output_buf);
-    delete[] output_buf;
 #endif
     return result;
 }
