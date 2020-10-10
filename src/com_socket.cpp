@@ -175,7 +175,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
         }
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, interface_name, strlen(interface_name));
+        strncpy(ifr.ifr_name, interface_name, sizeof(ifr.ifr_name));
         setsockopt(socketfd, SOL_SOCKET, SO_BINDTODEVICE, (char*)&ifr, sizeof(ifr));
     }
 #endif
@@ -297,7 +297,7 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
         }
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, interface_name, strlen(interface_name));
+        strncpy(ifr.ifr_name, interface_name, strlen(ifr.ifr_name));
         setsockopt(socketfd, SOL_SOCKET, SO_BINDTODEVICE, (char*)&ifr, sizeof(ifr));
     }
 #endif

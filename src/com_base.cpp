@@ -39,10 +39,10 @@ std::string com_com_search_config_file()
     {
         if(com_file_type(config_files[i].c_str()) == FILE_TYPE_FILE)
         {
-            //printf("Search COM Config File: %s ... FOUND\n", config_files[i].c_str());
+            printf("Search COM Config File: %s ... FOUND\n", config_files[i].c_str());
             return config_files[i];
         }
-        //printf("Search COM Config File: %s ... NOT FOUND, try next one\n", config_files[i].c_str());
+        printf("Search COM Config File: %s ... NOT FOUND, try next one\n", config_files[i].c_str());
     }
     return std::string();
 }
