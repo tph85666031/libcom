@@ -206,86 +206,6 @@ int64 com_dir_size_freed(const char* dir)
     return free_size_byte;
 }
 
-FilePath::FilePath(const std::string& path)
-{
-    parse(path.c_str());
-}
-
-FilePath::FilePath(const char* path)
-{
-    parse(path);
-}
-
-FilePath::~FilePath()
-{
-}
-
-bool FilePath::parse(const char* path)
-{
-   if (path == NULL || path[0] == '\0')
-    {
-        return false;
-    }
-
-    std::string path_str = path;
-    if (path_str == PATH_DELIM_STR)
-    {
-        is_dir = true;
-        dir = PATH_DELIM_STR;
-        name = dir;
-        return false;
-    }
-
-    if (path_str == ".")
-    {
-        is_dir = true;
-        dir = ".";
-        name = dir;
-        return false;
-    }
-
-    if (path_str == "..")
-    {
-        is_dir = true;
-        dir = "..";
-        name = dir;
-        return false;
-    }
-
-    if (path_str.back() == PATH_DELIM_CHAR)
-    {
-        is_dir = true;
-        path_str.erase(path_str.length() - 1, 1);
-    }
-    //  ./1.txt   /1.txt  ./a/1.txt  /a/1.txt ./a/b/ /a/b/
-    std::string::size_type pos = path_str.find_last_of(PATH_DELIM_CHAR);
-    if (pos == std::string::npos)
-    {
-        dir = ".";
-        name = path_str;
-        return false;
-    }
-
-    name = path_str.substr(pos + 1);
-    dir = path_str.substr(0, pos + 1); 
-    return true;
-}
-
-std::string FilePath::getName()
-{
-    return name;
-}
-
-std::string FilePath::getLocationDirectory()
-{
-    return dir;
-}
-
-bool FilePath::isDirectory()
-{
-    return is_dir;
-}
-
 std::string com_path_name(const char* path)
 {
     FilePath file_path(path);
@@ -813,5 +733,85 @@ bool com_file_unlock(FILE* file)
 #else
 	return false;
 #endif
+}
+
+FilePath::FilePath(const std::string& path)
+{
+    parse(path.c_str());
+}
+
+FilePath::FilePath(const char* path)
+{
+    parse(path);
+}
+
+FilePath::~FilePath()
+{
+}
+
+bool FilePath::parse(const char* path)
+{
+   if (path == NULL || path[0] == '\0')
+    {
+        return false;
+    }
+
+    std::string path_str = path;
+    if (path_str == PATH_DELIM_STR)
+    {
+        is_dir = true;
+        dir = PATH_DELIM_STR;
+        name = dir;
+        return false;
+    }
+
+    if (path_str == ".")
+    {
+        is_dir = true;
+        dir = ".";
+        name = dir;
+        return false;
+    }
+
+    if (path_str == "..")
+    {
+        is_dir = true;
+        dir = "..";
+        name = dir;
+        return false;
+    }
+
+    if (path_str.back() == PATH_DELIM_CHAR)
+    {
+        is_dir = true;
+        path_str.erase(path_str.length() - 1, 1);
+    }
+    //  ./1.txt   /1.txt  ./a/1.txt  /a/1.txt ./a/b/ /a/b/
+    std::string::size_type pos = path_str.find_last_of(PATH_DELIM_CHAR);
+    if (pos == std::string::npos)
+    {
+        dir = ".";
+        name = path_str;
+        return false;
+    }
+
+    name = path_str.substr(pos + 1);
+    dir = path_str.substr(0, pos + 1); 
+    return true;
+}
+
+std::string FilePath::getName()
+{
+    return name;
+}
+
+std::string FilePath::getLocationDirectory()
+{
+    return dir;
+}
+
+bool FilePath::isDirectory()
+{
+    return is_dir;
 }
 

@@ -13,7 +13,7 @@ typedef struct
 } CACHE_FLAG;
 #pragma pack(pop)
 
-class Cache final
+class Cache
 {
 public:
     Cache();
@@ -21,7 +21,7 @@ public:
     Cache(const std::string& uuid);
     Cache(const char* uuid, uint8* data, int data_size);
     Cache(const std::string& uuid, uint8* data, int data_size);
-    ~Cache();
+    virtual ~Cache();
     std::string& getUUID();
     uint8* getData();
     int getDataSize();
@@ -53,11 +53,11 @@ CacheManager由一级内存缓存+二级磁盘存储构成
 数据增删改查优先从一级缓冲中获取，若一级缓存中没有命中再从磁盘缓存中获取
 一级缓存会定期刷写到磁盘缓存（顺序不定）
 */
-class CacheManager final
+class CacheManager
 {
 public:
     CacheManager();
-    ~CacheManager();
+    virtual ~CacheManager();
 
     CacheManager& setFlushInterval(int interval_s);
     CacheManager& setFlushCount(int count);

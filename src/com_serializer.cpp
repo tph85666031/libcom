@@ -10,9 +10,9 @@ Serializer::Serializer()
 Serializer::Serializer(uint8* data, int dataSize)
 {
     this->pos_detach = 0;
-    if (data != NULL && dataSize > 0)
+    if(data != NULL && dataSize > 0)
     {
-        for (int i = 0; i < dataSize; i++)
+        for(int i = 0; i < dataSize; i++)
         {
             buf.push_back(data[i]);
         }
@@ -61,7 +61,7 @@ Serializer& Serializer::append(int8 val)
 
 Serializer& Serializer::append(uint16 val)
 {
-    if (change_byte_order)
+    if(change_byte_order)
     {
         val = htons(val);
     }
@@ -78,7 +78,7 @@ Serializer& Serializer::append(int16 val)
 
 Serializer& Serializer::append(uint32 val)
 {
-    if (change_byte_order)
+    if(change_byte_order)
     {
         val = htonl(val);
     }
@@ -97,7 +97,7 @@ Serializer& Serializer::append(int32 val)
 
 Serializer& Serializer::append(uint64 val)
 {
-    if (change_byte_order)
+    if(change_byte_order)
     {
         val = htonll(val);
     }
@@ -118,16 +118,15 @@ Serializer& Serializer::append(int64 val)
     return append((uint64)val);
 }
 
-Serializer& Serializer::append(const char* val)
-{
-    return append((uint8*)val, strlen(val));
-}
-
 Serializer& Serializer::append(const char* val, int val_size)
 {
-    if (val != NULL && val_size > 0)
+    if(val_size < 0)
     {
-        for (int i = 0; i < val_size; i++)
+        val_size = strlen(val);
+    }
+    if(val != NULL && val_size > 0)
+    {
+        for(int i = 0; i < val_size; i++)
         {
             buf.push_back((uint8)val[i]);
         }
@@ -137,9 +136,9 @@ Serializer& Serializer::append(const char* val, int val_size)
 
 Serializer& Serializer::append(const uint8* val, int val_size)
 {
-    if (val != NULL && val_size > 0)
+    if(val != NULL && val_size > 0)
     {
-        for (int i = 0; i < val_size; i++)
+        for(int i = 0; i < val_size; i++)
         {
             buf.push_back(val[i]);
         }
@@ -147,8 +146,12 @@ Serializer& Serializer::append(const uint8* val, int val_size)
     return *this;
 }
 
-Serializer& Serializer::append(const std::string val)
+Serializer& Serializer::append(const std::string val, int val_size)
 {
+    if(val_size < 0)
+    {
+        val_size = val.length();
+    }
     append(val.data(), val.length());
     return *this;
 }
@@ -171,7 +174,7 @@ int Serializer::detach(char& val)
 
 int Serializer::detach(uint8& val)
 {
-    if (pos_detach >= (int)buf.size())
+    if(pos_detach >= (int)buf.size())
     {
         return -1;
     }
@@ -187,14 +190,14 @@ int Serializer::detach(int8& val)
 
 int Serializer::detach(uint16& val)
 {
-    if (pos_detach + sizeof(uint16) > buf.size())
+    if(pos_detach + sizeof(uint16) > buf.size())
     {
         return -1;
     }
     uint8* p = (uint8*)&val;
     p[0] = buf[pos_detach];
     p[1] = buf[pos_detach + 1];
-    if (change_byte_order)
+    if(change_byte_order)
     {
         val = ntohs(val);
     }
@@ -209,7 +212,7 @@ int Serializer::detach(int16& val)
 
 int Serializer::detach(uint32& val)
 {
-    if (pos_detach + sizeof(uint32) > buf.size())
+    if(pos_detach + sizeof(uint32) > buf.size())
     {
         return -1;
     }
@@ -218,7 +221,7 @@ int Serializer::detach(uint32& val)
     p[1] = buf[pos_detach + 1];
     p[2] = buf[pos_detach + 2];
     p[3] = buf[pos_detach + 3];
-    if (change_byte_order)
+    if(change_byte_order)
     {
         val = ntohl(val);
     }
@@ -233,7 +236,7 @@ int Serializer::detach(int32& val)
 
 int Serializer::detach(uint64& val)
 {
-    if (pos_detach + sizeof(uint64) > buf.size())
+    if(pos_detach + sizeof(uint64) > buf.size())
     {
         return -1;
     }
@@ -246,7 +249,7 @@ int Serializer::detach(uint64& val)
     p[5] = buf[pos_detach + 5];
     p[6] = buf[pos_detach + 6];
     p[7] = buf[pos_detach + 7];
-    if (change_byte_order)
+    if(change_byte_order)
     {
         val = ntohll(val);
     }
@@ -262,14 +265,14 @@ int Serializer::detach(int64& val)
 //读到\0结尾或val_size（val_size<0则读取到\0）
 int Serializer::detach(std::string& val, int val_size)
 {
-    if (pos_detach >= (int)buf.size())
+    if(pos_detach >= (int)buf.size())
     {
         return -1;
     }
 
-    if (val_size > 0)
+    if(val_size > 0)
     {
-        if (pos_detach + val_size > (int)buf.size())
+        if(pos_detach + val_size > (int)buf.size())
         {
             return -1;
         }
@@ -288,12 +291,12 @@ int Serializer::detach(std::string& val, int val_size)
 //读到\0结尾或val_size
 int Serializer::detach(char* val, int val_size)
 {
-    if (val == NULL || val_size <= 0)
+    if(val == NULL || val_size <= 0)
     {
         return -1;
     }
 
-    if (pos_detach >= (int)buf.size())
+    if(pos_detach >= (int)buf.size())
     {
         return -1;
     }
@@ -306,12 +309,12 @@ int Serializer::detach(char* val, int val_size)
 //读val_size
 int Serializer::detach(uint8* val, int val_size)
 {
-    if (val == NULL || val_size <= 0)
+    if(val == NULL || val_size <= 0)
     {
         return -1;
     }
 
-    if (pos_detach + val_size > (int)buf.size())
+    if(pos_detach + val_size > (int)buf.size())
     {
         return -1;
     }
@@ -324,12 +327,12 @@ int Serializer::detach(uint8* val, int val_size)
 //读val_size
 int Serializer::detach(ByteArray& bytes, int val_size)
 {
-    if (val_size <= 0)
+    if(val_size <= 0)
     {
         return -1;
     }
 
-    if (pos_detach + val_size > (int)buf.size())
+    if(pos_detach + val_size > (int)buf.size())
     {
         return -1;
     }

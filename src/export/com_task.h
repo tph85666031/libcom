@@ -64,11 +64,11 @@ private:
     CPPCondition condition = {"TASK:condition"};
 };
 
-class TaskManager final
+class TaskManager
 {
 public:
     TaskManager();
-    ~TaskManager();
+    virtual ~TaskManager();
     bool isTaskExist(std::string task_name);
     void destroyTask(std::string task_name);
     void sendMessage(std::string task_name_wildcard, Message& msg);

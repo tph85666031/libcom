@@ -7,11 +7,11 @@
 #define COM_SQL_ERR_FAILED  -1
 #define COM_SQL_ERR_BUSY    -2
 
-class DBQuery final
+class DBQuery
 {
 public:
     DBQuery(const void* sqlite_fd, const char* sql);
-    ~DBQuery();
+    virtual ~DBQuery();
     int getRowCount();
     int getColumnCount();
     /* row && column index begin will 0, example(row=0-2,column=0-3):

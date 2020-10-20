@@ -10,7 +10,7 @@ public:
     CPPConfig();
     CPPConfig(bool thread_safe);
     CPPConfig(const char* file, bool thread_safe = false, bool safe_mode = false, const char* safe_dir = NULL);
-    ~CPPConfig();
+    virtual ~CPPConfig();
     CPPConfig(CPPConfig&) = delete;//赋值构造函数
     CPPConfig& operator=(CPPConfig& config) = delete; //拷贝构造函数
     bool load(const char* file, bool safe_mode = false, const char* safe_dir = NULL);

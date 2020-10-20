@@ -6,7 +6,7 @@
 #include "com_socket.h"
 
 #if __linux__ == 1
-class TcpIpcMessage
+class TcpIpcMessage final
 {
 public:
     ByteArray toBytes();

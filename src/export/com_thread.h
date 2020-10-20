@@ -61,7 +61,7 @@ class ThreadPool
 {
 public:
     ThreadPool();
-    ~ThreadPool();
+    virtual ~ThreadPool();
     ThreadPool& setThreadsCount(int minThreads, int maxThreads);
     ThreadPool& setQueueSize(int queue_size_per_thread);
     bool pushMessage(Message& msg);
@@ -99,7 +99,7 @@ public:
     {
     }
 
-    ~EasyThread()
+    virtual ~EasyThread()
     {
         stopThread();
         //msgs.clear();

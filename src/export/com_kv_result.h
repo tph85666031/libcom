@@ -4,13 +4,13 @@
 #include <string>
 #include "com_base.h"
 
-class KVResult final
+class KVResult
 {
 public:
     KVResult(const char* key, uint8* data, int data_size);
     KVResult(const KVResult& result);
     KVResult& operator=(const KVResult& result);
-    ~KVResult();
+    virtual ~KVResult();
 public:
     std::string key;
     int data_size = 0;

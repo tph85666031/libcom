@@ -3,11 +3,11 @@
 
 #include "com_base.h"
 
-class URL final
+class URL
 {
 public:
     URL();
-    ~URL();
+    virtual ~URL();
     static std::string Encode(const char* str);
     static std::string Decode(const char* str);
 private:

@@ -10,11 +10,11 @@ typedef struct
     unsigned char buffer[64];
 } CPPMD5_CTX;
 
-class CPPMD5 final
+class CPPMD5
 {
 public:
     CPPMD5();
-    ~CPPMD5();
+    virtual ~CPPMD5();
     void append(const uint8* data, uint32 dataSize);
     void appendFile(const char* filePath);
     ByteArray finish();

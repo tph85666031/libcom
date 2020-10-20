@@ -60,5 +60,6 @@ KVResult::~KVResult()
     if (data != NULL)
     {
         delete[] data;
+        data = NULL;
     }
 }

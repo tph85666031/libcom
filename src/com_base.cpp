@@ -2431,6 +2431,10 @@ xstring::xstring(const xstring& str) : std::string(str.c_str())
 
 }
 
+xstring::~xstring()
+{
+}
+
 void xstring::toupper()
 {
     std::transform(begin(), end(), begin(), ::toupper);

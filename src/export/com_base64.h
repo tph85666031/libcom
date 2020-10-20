@@ -4,11 +4,11 @@
 #include "com_base.h"
 #include "com_serializer.h"
 
-class Base64 final
+class Base64
 {
 public:
     Base64();
-    ~Base64();
+    virtual ~Base64();
     static std::string Encode(ByteArray& bytes);
     static std::string Encode(const uint8* data, int data_size);
     static ByteArray Decode(const char* base64_data);

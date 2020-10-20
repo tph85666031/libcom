@@ -21,9 +21,8 @@ public:
     Serializer& append(uint64 val);
     Serializer& append(int64 val);
 
-    Serializer& append(const std::string val);
-    Serializer& append(const char* val);
-    Serializer& append(const char* val, int val_size);
+    Serializer& append(const std::string val, int val_size = -1);
+    Serializer& append(const char* val, int val_size = -1);
     Serializer& append(const uint8* val, int val_size);
     Serializer& append(ByteArray& bytes);
 
@@ -65,8 +64,8 @@ struct __struct_tuple_serializer
 {
     static void serializer(Serializer& s, const T& t)
     {
-        __struct_tuple_serializer<T, N-1>::serializer(s, t);
-        auto val = std::get<N-1> (t);
+        __struct_tuple_serializer < T, N - 1 >::serializer(s, t);
+        auto val = std::get < N - 1 > (t);
         s.append(val);
     }
 };

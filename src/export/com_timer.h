@@ -6,7 +6,7 @@
 
 typedef void (*fc_timer)(uint8 id, void* user_arg);
 
-class CPPTimer final
+class CPPTimer
 {
     friend class CPPTimerManager;
 public:
@@ -14,7 +14,7 @@ public:
     CPPTimer(uint8 id, const std::string& task_name);
     CPPTimer(uint8 id, const char* task_name);
     CPPTimer(uint8 id, fc_timer fc, void* user_arg);
-    ~CPPTimer();
+    virtual ~CPPTimer();
 
     CPPTimer& setType(const char* task_name);
     CPPTimer& setType(const std::string& task_name);
@@ -41,12 +41,12 @@ private:
     std::string uuid;
 };
 
-class CPPTimerManager final : private ThreadPool
+class CPPTimerManager : private ThreadPool
 {
     friend class CPPTimer;
 public:
     CPPTimerManager();
-    ~CPPTimerManager();
+    virtual ~CPPTimerManager();
 
     void updateTimer(CPPTimer& timer);
     void removeTimer(std::string uuid);

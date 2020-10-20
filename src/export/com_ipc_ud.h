@@ -15,7 +15,7 @@ class UnixDomainIPCServer : public UnixDomainTcpServer
 {
 public:
     UnixDomainIPCServer(const char* file_name);
-    ~UnixDomainIPCServer();
+    virtual ~UnixDomainIPCServer();
 private:
     virtual void onMessage(std::string& from_file_name, uint8* data, int data_size);
     void onConnectionChanged(std::string& client_file_name, int socketfd, bool connected);

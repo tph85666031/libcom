@@ -23,7 +23,7 @@ public:
     std::string ip_broadcast;
 public:
     NicInfo();
-    ~NicInfo();
+    virtual ~NicInfo();
 };
 
 void com_socket_set_recv_timeout(int sock, int timeout_ms);

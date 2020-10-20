@@ -72,35 +72,38 @@ typedef unsigned long long uint64;
 #define DEPRECATED(msg)
 #endif
 
-typedef struct
+class Mutex
 {
+public:
     std::string name;
 #if defined(_WIN32) || defined(_WIN64)
     void* handle = NULL;
 #else
     pthread_mutex_t handle;
 #endif
-} Mutex;
+};
 
-typedef struct
+class Sem
 {
+public:
     std::string name;
 #if defined(_WIN32) || defined(_WIN64)
     void* handle = NULL;
 #else
     sem_t handle;
 #endif
-} Sem;
+};
 
-typedef struct
+class Condition
 {
+public:
     std::string name;
 #if defined(_WIN32) || defined(_WIN64)
     void* handle = NULL;
 #else
     pthread_cond_t handle;
 #endif
-} Condition;
+};
 
 #ifndef htonll
 #define htonll(n) (htons(0x1234)==0x1234 ? ((uint64)(n)) : (uint64)(((((uint64)htonl(n)) << 32) | (uint64)htonl((n) >> 32))))
@@ -150,6 +153,7 @@ public:
     xstring(const char* str);
     xstring(const std::string& str);
     xstring(const xstring& str);
+    virtual ~xstring();
 
     void toupper();
     void tolower();
@@ -330,7 +334,7 @@ CAPI const char* MACRO_CONCAT(MODULE_NAME_X,_depend)() {return MODULE_DEPEND;}
 #define LIB_HEADER_EXPORT
 #endif
 
-class ByteArray final
+class ByteArray
 {
 public:
     ByteArray();
@@ -338,7 +342,7 @@ public:
     ByteArray(const char* data, int data_size);
     ByteArray(const uint8* data, int data_size);
     ByteArray(int reserve_size);
-    ~ByteArray();
+    virtual ~ByteArray();
     ByteArray& operator+(uint8 val);
     ByteArray& operator+=(uint8 val);
     bool operator==(ByteArray& bytes);
@@ -362,11 +366,11 @@ private:
     std::vector<uint8> buf;
 };
 
-class CPPMutex final
+class CPPMutex
 {
 public:
     CPPMutex(const char* name = "Unknown");
-    ~CPPMutex();
+    virtual ~CPPMutex();
     void setName(const char* name);
     const char* getName();
     void lock();
@@ -377,11 +381,11 @@ private :
     std::mutex mutex;
 };
 
-class CPPSem final
+class CPPSem
 {
 public:
     CPPSem(const char* name = "Unknown");
-    ~CPPSem();
+    virtual ~CPPSem();
     void setName(const char* name);
     const char* getName();
     bool post();
@@ -390,11 +394,11 @@ private :
     Sem sem;
 };
 
-class CPPCondition final
+class CPPCondition
 {
 public:
     CPPCondition(const char* name = "Unknown");
-    ~CPPCondition();
+    virtual ~CPPCondition();
     void setName(const char* name);
     const char* getName();
     bool notifyOne();
@@ -406,13 +410,13 @@ private :
     std::condition_variable condition;
 };
 
-class AutoMutex final
+class AutoMutex
 {
 public:
     AutoMutex(CPPMutex& mutex);
     AutoMutex(Mutex* mutex);
     AutoMutex(std::mutex* mutex);
-    ~AutoMutex();
+    virtual ~AutoMutex();
 private:
     Mutex* mutex_c = NULL;
     std::mutex* mutex_cpp = NULL;
@@ -423,7 +427,7 @@ class Message
 public:
     Message();
     Message(uint32 id);
-    ~Message();
+    virtual ~Message();
 
     void reset();
 
@@ -487,7 +491,7 @@ public:
         }
         this->__code = code;
     };
-    ~ComException() throw ()
+    virtual ~ComException() throw ()
     {
     };
     const char* what() const throw()
