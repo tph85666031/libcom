@@ -7,6 +7,11 @@
 #include <unistd.h> //usleep readlink
 #include <sys/time.h>
 #include <netdb.h> //gethostbyname
+#include <pwd.h>
+#include <locale>
+#if __GNUC__>4
+#include <codecvt>
+#endif
 #endif
 
 #include "CJsonObject.h"
@@ -39,10 +44,10 @@ std::string com_com_search_config_file()
     {
         if(com_file_type(config_files[i].c_str()) == FILE_TYPE_FILE)
         {
-            printf("Search COM Config File: %s ... FOUND\n", config_files[i].c_str());
+            //printf("Search COM Config File: %s ... FOUND\n", config_files[i].c_str());
             return config_files[i];
         }
-        printf("Search COM Config File: %s ... NOT FOUND, try next one\n", config_files[i].c_str());
+        //printf("Search COM Config File: %s ... NOT FOUND, try next one\n", config_files[i].c_str());
     }
     return std::string();
 }
@@ -408,6 +413,62 @@ bool com_string_match(const char* str, const char* pattern)
 #endif
 }
 
+std::string com_string_from_wstring(const wchar_t* s)
+{
+    if(s == NULL)
+    {
+        return std::string();
+    }
+#if __GNUC__>4
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
+    return conv_.to_bytes(s);
+#else
+    int buf_size = wcslen(s);
+    char buf[buf_size];
+    int ret = std::wcstombs(buf, s, buf_size);
+    if(ret <= 0)
+    {
+        return std::string();
+    }
+    std::string result;
+    result.assign(buf, ret);
+    return result;
+#endif
+}
+
+std::string com_string_from_wstring(const std::wstring& s)
+{
+    return com_string_from_wstring(s.c_str());
+}
+
+std::wstring com_string_to_wstring(const char* s)
+{
+    if(s == NULL)
+    {
+        return std::wstring();
+    }
+#if __GNUC__>4
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
+    return conv_.from_bytes(s);
+#else
+    int buf_size = strlen(s);
+    wchar_t buf[buf_size];
+    int ret = std::mbstowcs(buf, s, buf_size);
+    if(ret <= 0)
+    {
+        return std::wstring();
+    }
+    std::wstring result;
+    result.assign(buf, ret);
+    return result;
+#endif
+}
+
+std::wstring com_string_to_wstring(const std::string& s)
+{
+    return com_string_to_wstring(s.c_str());
+}
+
 std::string com_bytes_to_hexstring(const uint8* data, uint16 size)
 {
     char buf[8];
@@ -497,6 +558,20 @@ bool com_string_replace(std::string& str, const char* from, const char* to)
         pos += to_len;
     }
     return true;
+}
+
+int com_string_len_utf8(const char* str)
+{
+    int i = 0, j = 0;
+    while(str[i])
+    {
+        if((str[i] & 0xc0) != 0x80)
+        {
+            j++;
+        }
+        i++;
+    }
+    return j;
 }
 
 int com_string_len(const char* str)
@@ -1641,7 +1716,7 @@ int com_gcd(int x, int y)
     return y ? com_gcd(y, x % y) : x;
 }
 
-std::string com_get_login_user()
+std::string com_get_login_user_name()
 {
     char buf[128] = {0};
     int ret = getlogin_r(buf, sizeof(buf));
@@ -1651,6 +1726,32 @@ std::string com_get_login_user()
     }
     buf[sizeof(buf) - 1] = '\0';
     return buf;
+}
+
+int com_get_login_user_id()
+{
+    return getuid();
+}
+
+std::string com_get_login_user_home()
+{
+    const char* home_dir = getenv("HOME");
+    if(home_dir != NULL)
+    {
+        return home_dir;
+    }
+    char buf[16384] = {0};
+
+    struct passwd pw;
+    struct passwd *result = NULL;
+    memset(&pw, 0, sizeof(struct passwd));
+    getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result);
+    getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result);
+    if(result == NULL || result->pw_dir == NULL)
+    {
+        return std::string();
+    }
+    return result->pw_dir;
 }
 
 ByteArray::ByteArray()

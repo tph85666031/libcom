@@ -36,11 +36,14 @@
 class FilePath
 {
 public:
+    FilePath(const std::string& path);
     FilePath(const char* path);
     ~FilePath();
     std::string getName(); //file name or dir name without dir prefix
     std::string getLocationDirectory();//endwith '/' or '\'
     bool isDirectory();// path endwith '/' or '\' is directory
+private:
+    bool parse(const char* path);
 private:
     std::string name;
     std::string dir;

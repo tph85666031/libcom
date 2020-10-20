@@ -206,10 +206,15 @@ uint32 com_string_to_ip(const char* ip_str);
 std::string com_ip_to_string(uint32 ip);
 bool com_string_replace(char* str, char from, char to);
 bool com_string_replace(std::string& str, const char* from, const char* to);
+int com_string_len_utf8(const char* str);
 int com_string_len(const char* str);
 int com_string_size(const char* str);
 bool com_string_is_ip(const char* ip);
 std::string com_string_format(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
+std::string com_string_from_wstring(const wchar_t* s);
+std::string com_string_from_wstring(const std::wstring& s);
+std::wstring com_string_to_wstring(const char* s);
+std::wstring com_string_to_wstring(const std::string& s);
 int com_snprintf(char* buf, int buf_size, const char* fmt, ...) __attribute__((format(printf, 3, 4)));
 std::string com_bytes_to_hexstring(const uint8* data, uint16 size);
 int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size);
@@ -283,7 +288,9 @@ void com_set_cwd(const char* dir);
 std::string com_uuid_generator();
 
 int com_gcd(int x, int y);
-std::string com_get_login_user();
+std::string com_get_login_user_name();
+int com_get_login_user_id();
+std::string com_get_login_user_home();
 
 template <class... T>
 int com_gcd(int x, int y, T...ns)

@@ -206,11 +206,25 @@ int64 com_dir_size_freed(const char* dir)
     return free_size_byte;
 }
 
+FilePath::FilePath(const std::string& path)
+{
+    parse(path.c_str());
+}
+
 FilePath::FilePath(const char* path)
 {
-    if (path == NULL || path[0] == '\0')
+    parse(path);
+}
+
+FilePath::~FilePath()
+{
+}
+
+bool FilePath::parse(const char* path)
+{
+   if (path == NULL || path[0] == '\0')
     {
-        return;
+        return false;
     }
 
     std::string path_str = path;
@@ -219,7 +233,7 @@ FilePath::FilePath(const char* path)
         is_dir = true;
         dir = PATH_DELIM_STR;
         name = dir;
-        return;
+        return false;
     }
 
     if (path_str == ".")
@@ -227,7 +241,7 @@ FilePath::FilePath(const char* path)
         is_dir = true;
         dir = ".";
         name = dir;
-        return;
+        return false;
     }
 
     if (path_str == "..")
@@ -235,7 +249,7 @@ FilePath::FilePath(const char* path)
         is_dir = true;
         dir = "..";
         name = dir;
-        return;
+        return false;
     }
 
     if (path_str.back() == PATH_DELIM_CHAR)
@@ -249,16 +263,12 @@ FilePath::FilePath(const char* path)
     {
         dir = ".";
         name = path_str;
-        return;
+        return false;
     }
 
     name = path_str.substr(pos + 1);
-    dir = path_str.substr(0, pos + 1);
-    return;
-}
-
-FilePath::~FilePath()
-{
+    dir = path_str.substr(0, pos + 1); 
+    return true;
 }
 
 std::string FilePath::getName()
