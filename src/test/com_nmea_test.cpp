@@ -1,4 +1,6 @@
-#include "com.h"
+#include "com_nmea.h"
+#include "com_file.h"
+#include "com_log.h"
 
 void com_nmea_unit_test_suit(void** state)
 {

@@ -2259,6 +2259,10 @@ Message& Message::set(const char* key, ByteArray bytes)
 
 void Message::remove(const char* key)
 {
+    if(key == NULL)
+    {
+        return;
+    }
     std::map<std::string, std::string>::iterator it = datas.find(key);
     if(it != datas.end())
     {

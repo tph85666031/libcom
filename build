@@ -5,20 +5,23 @@ SCRIPT_CMAKE_URL="http://git.wisper.com.cn:9000/wisper/publish/raw/master/config
 
 mkdir -pv tmp > /dev/null
 
-if [ ! -f ./tmp/.xbuild ]; then
-	wget ${SCRIPT_BUILD_URL} -q -O ./tmp/.xbuild && chmod +x ./tmp/.xbuild
+if [ ! -s ./tmp/.xbuild ]; then
+	wget ${SCRIPT_BUILD_URL} -q -O ./tmp/.xbuild
 
 	if [ $? != 0 ]; then
 		echo "[-----------------Failed to get build script-----------------]"
+		rm -rf ./tmp/.xbuild
 		exit -1
 	fi
+	chmod +x ./tmp/.xbuild
 fi
 
-if [ ! -f ./CMakeLists.txt ]; then
+if [ ! -s ./CMakeLists.txt ]; then
 	wget ${SCRIPT_CMAKE_URL} -q -O ./CMakeLists.txt
 
 	if [ $? != 0 ]; then
 	    echo "[-----------------Failed to get cmake file-----------------]"
+	    rm -rf ./CMakeLists.txt
 	    exit -1
 	fi
 fi
@@ -26,5 +29,6 @@ fi
 if [ -x ./tmp/.xbuild ];then
     ./tmp/.xbuild $@
 else
+    rm -rf ./tmp/.xbuild
     echo failed to donwload build script ...
 fi

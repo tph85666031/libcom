@@ -14,7 +14,7 @@ typedef pid_t ProcessID;
 typedef pthread_t ThreadID;
 typedef void* (*ThreadFun)(void*);
 #else
-typedef uint64 ProcessID;
+typedef int64 ProcessID;
 typedef void* ThreadID;
 typedef void* (*ThreadFun)(void*);
 #endif
