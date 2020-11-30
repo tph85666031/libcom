@@ -46,8 +46,6 @@ typedef struct
 } TEST_GROUP_DES;
 #pragma pack(pop)
 
-#ifdef UNIT_TEST
-
 #ifdef MODULE_IS_LIB
 #define UNIT_TEST_LOAD(test_cases) \
 int main(void) \
@@ -97,12 +95,5 @@ int ret = _cmocka_run_group_tests(cmocka_group.name,\
                                   NULL, NULL);\
 exit(ret);\
 }while(0)
-
-#define ZH_UT_VIRTUAL virtual
-
-#else /* UNIT_TEST */
-#define UNIT_TEST_RUN(test_cases)
-#define ZH_UT_VIRTUAL
-#endif /* UNIT_TEST */
 
 #endif /* __COM_TEST_H__ */

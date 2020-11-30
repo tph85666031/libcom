@@ -84,9 +84,12 @@ int com_file_seek(FILE* file, int64 pos);
 bool com_file_crop(const char* file_name, uint8 start_percent_keeped, uint8 end_percent_keeped);
 
 int com_file_get_fd(FILE* file);
-bool com_file_lock(FILE* file, bool read_share);
+bool com_file_lock(FILE* file, bool read_share, bool wait);
+bool com_file_lock(int fd, bool read_share, bool wait);
 bool com_file_is_locked(FILE* file, bool read_share);
+bool com_file_is_locked(int fd, bool read_share);
 bool com_file_unlock(FILE* file);
+bool com_file_unlock(int fd);
 
 #endif // __COM_FILE_H__
 

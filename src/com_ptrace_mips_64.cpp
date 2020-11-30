@@ -1,6 +1,6 @@
-#if __x86_64==1
+#if __mips64==1
 #include <assert.h>
-#include <sys/reg.h>
+#include <arch_regs.h>
 #include <sys/wait.h>
 #include <sys/user.h>
 #include <sys/ptrace.h>
@@ -9,11 +9,11 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <link.h>
-#include "com_ptrace_x86_64.h"
+#include "com_ptrace_mips_64.h"
 #include "com_log.h"
 #include "com_file.h"
 
-void __asm_call_start_x86_64__()
+void __asm_call_start_mips_64__()
 {
     asm
     (
@@ -22,11 +22,11 @@ void __asm_call_start_x86_64__()
     );
 }
 
-void __asm_call_end_x86_64__()
+void __asm_call_end_mips_64__()
 {
 }
 
-PTrace_x86_64::PTrace_x86_64(pid_t pid) : PTrace(pid)
+PTrace_mips_64::PTrace_mips_64(pid_t pid) : PTrace(pid)
 {
     std::string file_map = com_string_format("/proc/%d/maps", pid);
     FILE* file = com_file_open(file_map.c_str(), "r");
@@ -58,12 +58,12 @@ PTrace_x86_64::PTrace_x86_64(pid_t pid) : PTrace(pid)
     LOG_D("entry address is %p", addr_entry);
 }
 
-PTrace_x86_64::~PTrace_x86_64()
+PTrace_mips_64::~PTrace_mips_64()
 {
     detach();
 }
 
-bool PTrace_x86_64::attach()
+bool PTrace_mips_64::attach()
 {
     if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0)
     {
@@ -81,17 +81,17 @@ bool PTrace_x86_64::attach()
     return true;
 }
 
-bool PTrace_x86_64::detach()
+bool PTrace_mips_64::detach()
 {
     return (ptrace(PTRACE_DETACH, pid, NULL, NULL) >= 0);
 }
 
-void* PTrace_x86_64::getEntryAddrBin()
+void* PTrace_mips_64::getEntryAddrBin()
 {
     return addr_entry;
 }
 
-void* PTrace_x86_64::getFreexAddr()
+void* PTrace_mips_64::getFreexAddr()
 {
     std::string file_map = "/proc/self/maps";
     if(pid > 0)
@@ -128,7 +128,7 @@ void* PTrace_x86_64::getFreexAddr()
     return (void*)(addr + 8);
 }
 
-void* PTrace_x86_64::getEntryAddrLib(pid_t pid, const char* file_lib)
+void* PTrace_mips_64::getEntryAddrLib(pid_t pid, const char* file_lib)
 {
     std::string file_map = "/proc/self/maps";
     if(pid > 0)
@@ -169,7 +169,7 @@ void* PTrace_x86_64::getEntryAddrLib(pid_t pid, const char* file_lib)
     return (void*)addr;
 }
 
-void* PTrace_x86_64::getSymbolAddr(const char* file_lib, const void* addr_func)
+void* PTrace_mips_64::getSymbolAddr(const char* file_lib, const void* addr_func)
 {
     void* remote_addr_base = getEntryAddrLib(pid, file_lib);
     void* local_addr_base = getEntryAddrLib(0, file_lib);
@@ -182,7 +182,7 @@ void* PTrace_x86_64::getSymbolAddr(const char* file_lib, const void* addr_func)
     return (void*)((uint64)remote_addr_base + ((uint64)addr_func - (uint64)local_addr_base));
 }
 
-void* PTrace_x86_64::getSymbolAddr(const char* sym_name)
+void* PTrace_mips_64::getSymbolAddr(const char* sym_name)
 {
     Elf_Dyn dyn;
     Elf_Sym sym;
@@ -244,7 +244,7 @@ void* PTrace_x86_64::getSymbolAddr(const char* sym_name)
     return NULL;
 }
 
-void* PTrace_x86_64::getGotAddr(const char* sym_name)
+void* PTrace_mips_64::getGotAddr(const char* sym_name)
 {
     if(sym_name == NULL)
     {
@@ -282,7 +282,7 @@ void* PTrace_x86_64::getGotAddr(const char* sym_name)
     return NULL;
 }
 
-bool PTrace_x86_64::getRegs(struct user_regs_struct* regs)
+bool PTrace_mips_64::getRegs(USER_REGS* regs)
 {
     if(ptrace(PTRACE_GETREGS, pid, NULL, regs) < 0)
     {
@@ -292,7 +292,7 @@ bool PTrace_x86_64::getRegs(struct user_regs_struct* regs)
     return true;
 }
 
-bool PTrace_x86_64::setRegs(struct user_regs_struct* regs)
+bool PTrace_mips_64::setRegs(USER_REGS* regs)
 {
     if(ptrace(PTRACE_SETREGS, pid, NULL, regs) < 0)
     {
@@ -302,7 +302,7 @@ bool PTrace_x86_64::setRegs(struct user_regs_struct* regs)
     return true;
 }
 
-bool PTrace_x86_64::psyscall()
+bool PTrace_mips_64::psyscall()
 {
     if(ptrace(PTRACE_SYSCALL, pid, NULL, 0) < 0)
     {
@@ -312,7 +312,7 @@ bool PTrace_x86_64::psyscall()
     return true;
 }
 
-bool PTrace_x86_64::pcontinue()
+bool PTrace_mips_64::pcontinue()
 {
     if(ptrace(PTRACE_CONT, pid, NULL, 0) < 0)
     {
@@ -322,14 +322,14 @@ bool PTrace_x86_64::pcontinue()
     return true;
 }
 
-int PTrace_x86_64::pwait()
+int PTrace_mips_64::pwait()
 {
     int status = 0;
     waitpid(pid, &status, 0);
     return status;
 }
 
-bool PTrace_x86_64::pstep()
+bool PTrace_mips_64::pstep()
 {
     if(ptrace(PTRACE_SINGLESTEP, pid, NULL, 0) < 0)
     {
@@ -339,7 +339,7 @@ bool PTrace_x86_64::pstep()
     return true;
 }
 
-bool PTrace_x86_64::pwrite(void* addr, const void* data, int data_size)
+bool PTrace_mips_64::pwrite(void* addr, const void* data, int data_size)
 {
     union
     {
@@ -374,7 +374,7 @@ bool PTrace_x86_64::pwrite(void* addr, const void* data, int data_size)
     return true;
 }
 
-bool PTrace_x86_64::pread(void* addr, void* buf, int buf_size)
+bool PTrace_mips_64::pread(void* addr, void* buf, int buf_size)
 {
     union
     {
@@ -402,7 +402,7 @@ bool PTrace_x86_64::pread(void* addr, void* buf, int buf_size)
     return true;
 }
 
-std::string PTrace_x86_64::preadString(void* addr)
+std::string PTrace_mips_64::preadString(void* addr)
 {
     union
     {
@@ -443,7 +443,7 @@ std::string PTrace_x86_64::preadString(void* addr)
     return result;
 }
 
-unsigned long PTrace_x86_64::pcall(void* addr_func, unsigned long* params, int params_count)
+unsigned long PTrace_mips_64::pcall(void* addr_func, unsigned long* params, int params_count)
 {
     struct user_regs_struct regs;
     struct user_regs_struct regs_bak;
@@ -479,10 +479,10 @@ unsigned long PTrace_x86_64::pcall(void* addr_func, unsigned long* params, int p
     }
 
     void* freex_addr = getFreexAddr();
-    int shellcode_size = (unsigned long)__asm_call_end_x86_64__ - (unsigned long)__asm_call_start_x86_64__;
+    int shellcode_size = (unsigned long)__asm_call_end_mips_64__ - (unsigned long)__asm_call_start_mips_64__;
     char buf[shellcode_size];
     pread(freex_addr, buf, sizeof(buf));
-    pwrite(freex_addr, (void*)__asm_call_start_x86_64__, shellcode_size);
+    pwrite(freex_addr, (void*)__asm_call_start_mips_64__, shellcode_size);
 
     regs.r12 = (unsigned long)addr_func;
     regs.rip = (unsigned long)freex_addr + 2;
@@ -499,7 +499,7 @@ unsigned long PTrace_x86_64::pcall(void* addr_func, unsigned long* params, int p
     return regs.rax;
 }
 
-void* PTrace_x86_64::pmalloc(int size)
+void* PTrace_mips_64::pmalloc(int size)
 {
     void* addr_malloc = getSymbolAddr("libc", (void*)malloc);
     unsigned long params[] = {(unsigned long)size};
@@ -511,14 +511,14 @@ void* PTrace_x86_64::pmalloc(int size)
     return (void*)val;
 }
 
-void PTrace_x86_64::pfree(void* val)
+void PTrace_mips_64::pfree(void* val)
 {
     void* addr_free = getSymbolAddr("libc", (void*)free);
     unsigned long params[] = {(unsigned long)val};
     pcall(addr_free, params, 1);
 }
 
-void* PTrace_x86_64::pdlopen(const char* file_lib)
+void* PTrace_mips_64::pdlopen(const char* file_lib)
 {
     void* addr_dlopen = getSymbolAddr("libdl", (void*)dlopen);
     LOG_D("addr_dlopen=%p,file=%s", addr_dlopen, file_lib);
@@ -542,7 +542,7 @@ void* PTrace_x86_64::pdlopen(const char* file_lib)
     return handle;
 }
 
-void* PTrace_x86_64::pdlsym(void* handle, const char* symbol)
+void* PTrace_mips_64::pdlsym(void* handle, const char* symbol)
 {
     void* addr_dlsym = getSymbolAddr("libdl", (void*)dlsym);
     if(addr_dlsym == NULL)
@@ -564,7 +564,7 @@ void* PTrace_x86_64::pdlsym(void* handle, const char* symbol)
     return func;
 }
 
-void PTrace_x86_64::pdlclose(void* handle)
+void PTrace_mips_64::pdlclose(void* handle)
 {
     void* addr_dlclose = getSymbolAddr("libdl", (void*)dlclose);
     if(addr_dlclose == NULL)
@@ -577,7 +577,7 @@ void PTrace_x86_64::pdlclose(void* handle)
     pcall(addr_dlclose, params, 2);
 }
 
-bool PTrace_x86_64::loadElf()
+bool PTrace_mips_64::loadElf()
 {
     Elf_Ehdr ehdr;
     Elf_Phdr phdr;
@@ -696,7 +696,7 @@ bool PTrace_x86_64::loadElf()
     return true;
 }
 
-void PTrace_x86_64::showSym()
+void PTrace_mips_64::showSym()
 {
     Elf_Dyn dyn;
     Elf_Sym sym;
@@ -745,7 +745,7 @@ void PTrace_x86_64::showSym()
     while(map.l_next != NULL);
 }
 
-bool PTrace_x86_64::replace(const char* func_name, const char* func_name_new)
+bool PTrace_mips_64::replace(const char* func_name, const char* func_name_new)
 {
     if(func_name == NULL || func_name_new == NULL)
     {
@@ -764,7 +764,7 @@ bool PTrace_x86_64::replace(const char* func_name, const char* func_name_new)
     return pwrite(addr_plt, &addr_new, sizeof(addr_new));
 }
 
-bool PTrace_x86_64::replace(const char* func_name, Elf_Addr addr_new)
+bool PTrace_mips_64::replace(const char* func_name, Elf_Addr addr_new)
 {
     if(func_name == NULL || addr_new == 0)
     {
@@ -782,3 +782,4 @@ bool PTrace_x86_64::replace(const char* func_name, Elf_Addr addr_new)
 }
 
 #endif
+

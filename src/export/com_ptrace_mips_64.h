@@ -1,11 +1,11 @@
 #include "com_base.h"
 #include "com_ptrace.h"
 
-class PTrace_x86_64 : public PTrace
+class PTrace_mips_64 : public PTrace
 {
 public:
-    PTrace_x86_64(pid_t pid);
-    virtual ~PTrace_x86_64();
+    PTrace_mips_64(pid_t pid);
+    virtual ~PTrace_mips_64();
     bool attach();
     bool detach();
     void* getEntryAddrBin();
@@ -36,4 +36,5 @@ public:
 private:
 
 };
+
 

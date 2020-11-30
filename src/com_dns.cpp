@@ -9,28 +9,28 @@ static std::atomic<uint16> dns_id = {0};
 
 std::vector<std::string> dns_get_server_list(const char* file_dns)
 {
-    if (file_dns == NULL)
+    if(file_dns == NULL)
     {
         file_dns = "/etc/resolv.conf";
     }
 
     std::vector<std::string> list;
     FILE* file = com_file_open(file_dns, "r");
-    if (file != NULL)
+    if(file != NULL)
     {
         char line[1024];
-        while (com_file_readline(file, line, sizeof(line)))
+        while(com_file_readline(file, line, sizeof(line)))
         {
-            if (!com_string_start_with(line, "nameserver"))
+            if(!com_string_start_with(line, "nameserver"))
             {
                 continue;
             }
             std::vector<std::string> vals = com_string_split(line, " ");
-            if (vals.size() != 2)
+            if(vals.size() != 2)
             {
                 continue;
             }
-            if (com_string_is_ip(vals[1].c_str()))
+            if(com_string_is_ip(vals[1].c_str()))
             {
                 list.push_back(vals[1]);
             }
@@ -51,7 +51,7 @@ ByteArray dns_query_encode(const char* domain_name, uint16 id, bool is_tcp)
     s.append((uint16)0);
     s.append((uint16)0);
     std::vector<std::string> name_parts = com_string_split(domain_name, ".");
-    for (size_t i = 0; i < name_parts.size(); i++)
+    for(size_t i = 0; i < name_parts.size(); i++)
     {
         s.append((uint8)name_parts[i].size());
         s.append(name_parts[i]);
@@ -61,7 +61,7 @@ ByteArray dns_query_encode(const char* domain_name, uint16 id, bool is_tcp)
     s.append((uint8)0x01);
     s.append((uint8)0x00);
     s.append((uint8)0x01);
-    if (is_tcp == false)
+    if(is_tcp == false)
     {
         return s.toBytes();
     }
@@ -73,7 +73,7 @@ ByteArray dns_query_encode(const char* domain_name, uint16 id, bool is_tcp)
 
 std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is_tcp)
 {
-    if (buf == NULL || buf_size <= 0)
+    if(buf == NULL || buf_size <= 0)
     {
         return std::string();
     }
@@ -85,7 +85,7 @@ std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is
     uint16 answer_count = 0;
     uint16 auth_count = 0;
     uint16 extra_count = 0;
-    if (is_tcp)
+    if(is_tcp)
     {
         uint16 size_rev = 0;
         s.detach(size_rev);//跳过长度字段
@@ -97,25 +97,25 @@ std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is
     s.detach(auth_count);
     s.detach(extra_count);
 
-    if (id_expect != id)
+    if(id_expect != id)
     {
         return std::string();
     }
-    if (answer_count == 0)
+    if(answer_count == 0)
     {
         return std::string();
     }
 
-    for (int i = 0; i < question_count; i++)
+    for(int i = 0; i < question_count; i++)
     {
         uint8 tmp;
-        while (true)
+        while(true)
         {
-            if (s.detach(tmp) < 0)
+            if(s.detach(tmp) < 0)
             {
                 return std::string();
             }
-            if (tmp == 0)
+            if(tmp == 0)
             {
                 s.detach(tmp);
                 s.detach(tmp);
@@ -126,24 +126,24 @@ std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is
         }
     }
 
-    for (int i = 0; i < answer_count; i++)
+    for(int i = 0; i < answer_count; i++)
     {
         uint8 tmp;
         s.detach(tmp);
-        if (tmp & 0xC0) //pointer
+        if(tmp & 0xC0)  //pointer
         {
             uint8 offset = 0;
             s.detach(offset);
         }
         else
         {
-            while (true)
+            while(true)
             {
-                if (s.detach(tmp) < 0)
+                if(s.detach(tmp) < 0)
                 {
                     return std::string();
                 }
-                if (tmp == 0)
+                if(tmp == 0)
                 {
                     break;
                 }
@@ -159,7 +159,7 @@ std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is
         s.detach(answer_ttl);
         s.detach(answer_size);
 
-        if (answer_size > s.getDetachRemainSize())
+        if(answer_size > s.getDetachRemainSize())
         {
             return std::string();
         }
@@ -167,7 +167,7 @@ std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is
         uint8 bytes_tmp[answer_size];
         s.detach(bytes_tmp, sizeof(bytes_tmp));
 
-        if (answer_type == 1 && answer_size == 4) //ip address
+        if(answer_type == 1 && answer_size == 4)  //ip address
         {
             return com_string_format("%u.%u.%u.%u", bytes_tmp[0], bytes_tmp[1], bytes_tmp[2], bytes_tmp[3]);
         }
@@ -179,7 +179,7 @@ std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is
 std::string dns_via_udp(const char* domain_name, const char* interface, const char* dns_server_ip)
 {
     int socket_fd = com_socket_udp_open(interface, 10053, false);
-    if (socket_fd <= 0)
+    if(socket_fd <= 0)
     {
         LOG_E("udp open failed");
         return std::string();
@@ -188,7 +188,7 @@ std::string dns_via_udp(const char* domain_name, const char* interface, const ch
     uint16 id = dns_id++;
     ByteArray bytes = dns_query_encode(domain_name, id, false);
     int ret = com_socket_udp_send(socket_fd, dns_server_ip, DNS_PORT, bytes.getData(), bytes.getDataSize());
-    if (ret <= 0)
+    if(ret <= 0)
     {
         com_socket_close(socket_fd);
         return std::string();
@@ -196,7 +196,7 @@ std::string dns_via_udp(const char* domain_name, const char* interface, const ch
 
     uint8 buf[1024];
     ret = com_socket_udp_read(socket_fd, buf, sizeof(buf), 5 * 1000, NULL, 0);
-    if (ret <= 0)
+    if(ret <= 0)
     {
         com_socket_close(socket_fd);
         return std::string();
@@ -210,7 +210,7 @@ std::string dns_via_tcp(const char* domain_name, const char* interface, const ch
 {
     LOG_E("called");
     int socket_fd = com_socket_tcp_open(dns_server_ip, DNS_PORT, 5 * 1000, interface);
-    if (socket_fd <= 0)
+    if(socket_fd <= 0)
     {
         LOG_E("tcp open failed");
         return std::string();
@@ -219,7 +219,7 @@ std::string dns_via_tcp(const char* domain_name, const char* interface, const ch
     uint16 id = dns_id++;
     ByteArray bytes = dns_query_encode(domain_name, id, true);
     int ret = com_socket_tcp_send(socket_fd, bytes.getData(), bytes.getDataSize());
-    if (ret <= 0)
+    if(ret <= 0)
     {
         com_socket_close(socket_fd);
         return std::string();
@@ -227,7 +227,7 @@ std::string dns_via_tcp(const char* domain_name, const char* interface, const ch
 
     uint8 buf[1024];
     ret = com_socket_tcp_read(socket_fd, buf, sizeof(buf), 5 * 1000, false);
-    if (ret <= 0)
+    if(ret <= 0)
     {
         com_socket_close(socket_fd);
         return std::string();
@@ -239,20 +239,20 @@ std::string dns_via_tcp(const char* domain_name, const char* interface, const ch
 
 std::string com_dns_query(const char* domain_name, const char* interface_name, const char* dns_server_ip)
 {
-    if (domain_name == NULL)
+    if(domain_name == NULL)
     {
         LOG_E("domain_name is NULL");
         return std::string();
     }
 
-    if (com_string_len(interface_name) <= 0)
+    if(com_string_len(interface_name) <= 0)
     {
         addrinfo hints;
         addrinfo* res = NULL;
         memset(&hints, 0, sizeof(addrinfo));
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_family = AF_INET;
-        if (getaddrinfo(domain_name, NULL, &hints, &res) != 0)
+        if(getaddrinfo(domain_name, NULL, &hints, &res) != 0)
         {
             return std::string();
         }
@@ -263,11 +263,11 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
     }
 
     std::vector<std::string> dns_server_list;
-    if (dns_server_ip == NULL)
+    if(dns_server_ip == NULL)
     {
         dns_server_list = dns_get_server_list(NULL);
     }
-    else if (com_string_is_ip(dns_server_ip))
+    else if(com_string_is_ip(dns_server_ip))
     {
         dns_server_list.push_back(dns_server_ip);
     }
@@ -279,7 +279,7 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
     }
 
     NicInfo nic;
-    if (com_net_get_nic(interface_name, nic) == false)
+    if(com_net_get_nic(interface_name, nic) == false)
     {
         LOG_E("failed to get %s info", interface_name);
         return std::string();
@@ -288,25 +288,25 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
 
     bool rp_set = false;
     uint8 rpfilter_flag = com_net_get_rpfilter(interface_name);
-    if (rpfilter_flag != 2)
+    if(rpfilter_flag != 2)
     {
         com_net_set_rpfilter(interface_name, 2);
         rp_set = true;
     }
     std::string ip;
-    for (size_t i = 0; i < dns_server_list.size(); i++)
+    for(size_t i = 0; i < dns_server_list.size() && ip.empty(); i++)
     {
         ip = dns_via_udp(domain_name, interface_name, dns_server_list[i].c_str());
     }
 
-    if (ip.empty())
+    if(ip.empty())
     {
-        for (size_t i = 0; i < dns_server_list.size(); i++)
+        for(size_t i = 0; i < dns_server_list.size() && ip.empty(); i++)
         {
             ip = dns_via_tcp(domain_name, interface_name, dns_server_list[i].c_str());
         }
     }
-    if (rp_set)
+    if(rp_set)
     {
         com_net_set_rpfilter(interface_name, rpfilter_flag);
     }
