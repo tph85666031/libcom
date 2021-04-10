@@ -318,8 +318,6 @@ int com_gcd(int x, int y, T...ns)
 #define MACRO_CONCAT(x,y)
 #endif
 
-#define MODULE_DEPEND ("depend_lib=" MODULE_DEPEND_LIB "\ndepend_app=" MODULE_DEPEND_APP)
-
 #ifdef LIB_HEADER_EXPORT
 #undef LIB_HEADER_EXPORT
 #endif
@@ -328,7 +326,6 @@ int com_gcd(int x, int y, T...ns)
 #define LIB_HEADER_EXPORT \
 CAPI const char* MACRO_CONCAT(MODULE_NAME_X,_name)() {return MODULE_NAME;}\
 CAPI const char* MACRO_CONCAT(MODULE_NAME_X,_ver)() {return MODULE_VER;}\
-CAPI const char* MACRO_CONCAT(MODULE_NAME_X,_type)() {return MODULE_TYPE;}\
 CAPI const char* MACRO_CONCAT(MODULE_NAME_X,_depend)() {return MODULE_DEPEND;}
 #else
 #define LIB_HEADER_EXPORT
