@@ -12,10 +12,12 @@
 #if __linux__ == 1
 typedef pid_t ProcessID;
 typedef pthread_t ThreadID;
+typedef pthread_t ThreadHandle;
 typedef void* (*ThreadFun)(void*);
 #else
 typedef int64 ProcessID;
 typedef void* ThreadID;
+typedef void* ThreadHandle;
 typedef void* (*ThreadFun)(void*);
 #endif
 
@@ -42,6 +44,7 @@ std::string com_thread_get_name();
 uint64 com_thread_get_tid_posix();
 uint64 com_thread_get_tid();
 uint64 com_thread_get_pid();
+ThreadHandle com_thread_get_handle();
 
 ThreadID com_thread_start(ThreadFun fp, void* arg = NULL);
 void com_thread_detach();
@@ -120,7 +123,7 @@ public:
 
     void startThread()
     {
-        if (thread_runner.native_handle() == com_thread_get_tid_posix())
+        if (thread_runner.native_handle() == com_thread_get_handle())
         {
             return;
         }
@@ -131,7 +134,7 @@ public:
     void stopThread()
     {
         running = false;
-        if (thread_runner.native_handle() != com_thread_get_tid_posix())
+        if (thread_runner.native_handle() != com_thread_get_handle())//在其它线程停止此线程
         {
             if (thread_runner.joinable())
             {

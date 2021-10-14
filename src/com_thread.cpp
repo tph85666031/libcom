@@ -103,6 +103,15 @@ void com_thread_cancel_mark()
 #endif
 }
 
+ThreadHandle com_thread_get_handle()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return GetCurrentThread();
+#else
+    return com_thread_get_tid_posix();
+#endif
+}
+
 uint64 com_thread_get_tid()
 {
 #if defined(_WIN32) || defined(_WIN64)
@@ -238,7 +247,7 @@ void com_thread_set_name(const char* name)
 std::string com_thread_get_name()
 {
     std::string name;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32) && !defined(_WIN64)
     char* nameCache = NULL;
     __asm
     {
@@ -252,7 +261,7 @@ std::string com_thread_get_name()
     }
     //strncpy(name, nameCache, size);
     name.append(nameCache);
-#else
+#elif __linux__ == 1
     char buf[32];
     memset(buf, 0, sizeof(buf));
     prctl(PR_GET_NAME, buf);

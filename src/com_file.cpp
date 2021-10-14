@@ -68,7 +68,7 @@ int64 com_dir_size_max(const char* dir)
     int64 total_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     int64 free_size_byte = 0;
-    if(GetDiskFreeSpaceEx((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
                           (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
@@ -99,7 +99,7 @@ int64 com_dir_size_used(const char* dir)
     int64 total_size_byte = 0;
     int64 free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    if(GetDiskFreeSpaceEx((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
                           (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
@@ -184,7 +184,7 @@ int64 com_dir_size_freed(const char* dir)
     int64 free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     int64 total_size_byte = 0;
-    if(GetDiskFreeSpaceEx((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
                           (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;

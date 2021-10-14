@@ -1,3 +1,4 @@
+#if __linux__ == 1
 #include <netdb.h>
 #include "com_dns.h"
 #include "com_socket.h"
@@ -313,3 +314,4 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
 
     return ip;
 }
+#endif

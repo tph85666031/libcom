@@ -1,5 +1,5 @@
-#ifndef __BCP_CACHE_H__
-#define __BCP_CACHE_H__
+#ifndef __COM_CACHE_H__
+#define __COM_CACHE_H__
 
 #include "com_base.h"
 
@@ -118,4 +118,4 @@ private:
     std::atomic<bool> thread_flush_running;
 };
 
-#endif /* __BCP_CACHE_H__ */
+#endif /* __COM_CACHE_H__ */

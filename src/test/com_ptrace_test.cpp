@@ -1,6 +1,8 @@
 #include "com_ptrace_x86_64.h"
 #include "com_log.h"
 
+#if __linux__ == 1
+
 void com_ptrace_unit_test_suit(void** state)
 {
     std::string result = com_run_shell_with_output("pidof a.out");
@@ -20,3 +22,4 @@ void com_ptrace_unit_test_suit(void** state)
     trace.detach();
 }
 
+#endif

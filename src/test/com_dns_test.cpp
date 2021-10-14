@@ -3,6 +3,7 @@
 #include "com_log.h"
 #include "com_test.h"
 
+#if __linux__ == 1
 void com_dns_unit_test_suit(void** state)
 {
     std::string ip;
@@ -27,4 +28,5 @@ void com_dns_unit_test_suit(void** state)
     ASSERT_TRUE(com_string_is_ip("127.23.247.6"));
     ASSERT_FALSE(com_string_is_ip("127.0247.4467.6"));
 }
+#endif
 

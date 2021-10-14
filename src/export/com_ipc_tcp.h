@@ -62,7 +62,6 @@ private:
     void buildMessage(uint8* data, int data_size);
     void onConnectionChanged(bool connected);
     void onRecv(uint8* data, int data_size);
-    static void ThreadReceiver(TcpIpcClient* client);
 private:
     ByteArray bytes;
     std::string name;

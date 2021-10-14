@@ -1,6 +1,11 @@
+#ifndef __COM_PTRACE_X86_64_h__
+#define __COM_PTRACE_X86_64_h__
+
+
 #include "com_base.h"
 #include "com_ptrace.h"
 
+#if __linux__ == 1
 class PTrace_x86_64 : public PTrace
 {
 public:
@@ -36,4 +41,7 @@ public:
 private:
 
 };
+#endif
 
+
+#endif /* __COM_PTRACE_X86_64_h__ */

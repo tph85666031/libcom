@@ -424,14 +424,18 @@ std::string com_string_from_wstring(const wchar_t* s)
     return conv_.to_bytes(s);
 #else
     int buf_size = wcslen(s);
-    char buf[buf_size];
-    int ret = std::wcstombs(buf, s, buf_size);
+    if (buf_size <= 0)
+    {
+        return std::string();
+    }
+    std::vector<char> buf(buf_size);
+    int ret = std::wcstombs(buf.data(), s, buf_size);
     if(ret <= 0)
     {
         return std::string();
     }
     std::string result;
-    result.assign(buf, ret);
+    result.assign(buf.data(), buf.size());
     return result;
 #endif
 }
@@ -452,14 +456,18 @@ std::wstring com_string_to_wstring(const char* s)
     return conv_.from_bytes(s);
 #else
     int buf_size = strlen(s);
-    wchar_t buf[buf_size];
-    int ret = std::mbstowcs(buf, s, buf_size);
+    if (buf_size <= 0)
+    {
+        return std::wstring();
+    }
+    std::vector<wchar_t> buf(buf_size);
+    int ret = std::mbstowcs(buf.data(), s, buf_size);
     if(ret <= 0)
     {
         return std::wstring();
     }
     std::wstring result;
-    result.assign(buf, ret);
+    result.assign(buf.data(), buf.size());
     return result;
 #endif
 }
@@ -989,26 +997,31 @@ uint8 com_bcd_to_uint8(uint8 bcd)
 
 bool com_sem_init(Sem* sem, const char* name)
 {
-    if(sem == NULL)
+    if (sem == NULL)
     {
         return false;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         name = "Unknown";
     }
     sem->name = name;
 #if defined(_WIN32) || defined(_WIN64)
     sem->handle = CreateEvent(
-                      NULL,               // default security attributes
-                      FALSE,              // manual-reset event?
-                      FALSE,              // initial state is nonsignaled
-                      NULL                // object name
-                  );
-#else
-    if(sem_init(&sem->handle, 0, 0) != 0)
+        NULL,               // default security attributes
+        FALSE,              // manual-reset event?
+        FALSE,              // initial state is nonsignaled
+        NULL                // object name
+    );
+#elif __linux__ == 1
+    if (sem_init(&sem->handle, 0, 0) != 0)
     {
-        LOG_E("failed");
+        return false;
+    }
+#elif defined(__APPLE__)
+    sem->handle = dispatch_semaphore_create(0);
+#else
+    {
         return false;
     }
 #endif
@@ -1017,27 +1030,30 @@ bool com_sem_init(Sem* sem, const char* name)
 
 bool com_sem_uninit(Sem* sem)
 {
-    if(sem == NULL)
+    if (sem == NULL)
     {
-        LOG_E("failed");
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(sem->handle == NULL)
+    if (sem->handle == NULL)
     {
-        LOG_E("failed");
         return false;
     }
     CloseHandle(sem->handle);
-#else
-    sem_destroy(&sem->handle);
-#endif
     return true;
-}
+#elif __linux__ == 1
+    sem_destroy(&sem->handle);
+    return true;
+#elif defined(__APPLE__)
+    return true;// not need destory sem
+#else
+    return false;
+#endif
+    }
 
 Sem* com_sem_create(const char* name)
 {
-    if(name == NULL)
+    if (name == NULL)
     {
         name = "Unknown";
     }
@@ -1045,70 +1061,76 @@ Sem* com_sem_create(const char* name)
     sem->name = name;
 #if defined(_WIN32) || defined(_WIN64)
     sem->handle = CreateEvent(
-                      NULL,               // default security attributes
-                      FALSE,              // manual-reset event?
-                      FALSE,              // initial state is nonsignaled
-                      NULL                // object name
-                  );
-#else
-    if(sem_init(&sem->handle, 0, 0) != 0)
+        NULL,               // default security attributes
+        FALSE,              // manual-reset event?
+        FALSE,              // initial state is nonsignaled
+        NULL                // object name
+    );
+#elif __linux__ == 1
+    if (sem_init(&sem->handle, 0, 0) != 0)
     {
-        LOG_E("failed");
         delete sem;
         return NULL;
     }
+#elif defined(__APPLE__)
+    sem->handle = dispatch_semaphore_create(0);
+#else
 #endif
     return sem;
 }
 
 bool com_sem_post(Sem* sem)
 {
-    if(sem == NULL)
+    if (sem == NULL)
     {
-        LOG_E("failed");
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(sem->handle == NULL)
+    if (sem->handle == NULL)
     {
         return false;
-    }
+}
     return SetEvent(sem->handle);
-#else
-    if(sem_post(&sem->handle) != 0)
+#elif __linux__ == 1
+    if (sem_post(&sem->handle) != 0)
     {
-        LOG_E("failed");
         return false;
     }
     return true;
+#elif defined(__APPLE__)
+    if (sem->handle == NULL)
+    {
+        return false;
+    }
+    dispatch_semaphore_signal(sem->handle);
+#else
+    return false;
 #endif
 }
 
 bool com_sem_wait(Sem* sem, int timeout_ms)
 {
-    if(sem == NULL)
+    if (sem == NULL)
     {
-        LOG_E("arg incorrect");
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(sem->handle == NULL)
+    if (sem->handle == NULL)
     {
-        LOG_E("failed");
         return false;
     }
-    if(timeout_ms <= 0)
+    if (timeout_ms <= 0)
     {
         timeout_ms = INFINITE;
     }
     int rc = WaitForSingleObject(sem->handle, timeout_ms);
-    if(rc != WAIT_OBJECT_0)
+    if (rc != WAIT_OBJECT_0)
     {
-        LOG_E("failed");
         return false;
     }
-#else
-    if(timeout_ms > 0)
+    return true;
+#elif __linux__ == 1
+    if (timeout_ms > 0)
     {
         struct timespec ts;
         memset(&ts, 0, sizeof(struct timespec));
@@ -1119,46 +1141,56 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
         ts.tv_sec += tmp / (1000 * 1000 * 1000);
 
         int ret = sem_timedwait(&sem->handle, &ts);
-        if(ret != 0)
+        if (ret != 0)
         {
-            if(errno == ETIMEDOUT)
+            if (errno == ETIMEDOUT)
             {
                 //LOG_W("timeout:%s:%d", sem->name.c_str(), timeout_ms);
             }
             else
             {
-                LOG_E("failed,ret=%d,errno=%d", ret, errno);
+                //LOG_E("failed,ret=%d,errno=%d", ret, errno);
             }
             return false;
-        }
+}
     }
     else
     {
-        if(sem_wait(&sem->handle) != 0)
+        if (sem_wait(&sem->handle) != 0)
         {
-            LOG_E("failed");
             return false;
         }
     }
-#endif
     return true;
-}
+#elif defined(__APPLE__)
+    if (sem->handle == NULL)
+    {
+        return false;
+    }
+    dispatch_time_t timeout = DISPATCH_TIME_FOREVER;
+    if (timeout_ms > 0)
+    {
+        timeout = dispatch_time(DISPATCH_TIME_NOW, (int64_t)timeout_ms * NSEC_PER_MSEC);
+    }
+    return dispatch_semaphore_wait(sem->handle, timeout) == 0;
+#else
+    return false;
+#endif
+    }
 
 bool com_sem_destroy(Sem* sem)
 {
-    if(sem == NULL)
+    if (sem == NULL)
     {
-        LOG_E("failed");
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(sem->handle == NULL)
+    if (sem->handle == NULL)
     {
-        LOG_E("failed");
         return false;
     }
     CloseHandle(sem->handle);
-#else
+#elif __linux__ == 1
     sem_destroy(&sem->handle);
 #endif
     delete sem;
@@ -1718,6 +1750,7 @@ int com_gcd(int x, int y)
 
 std::string com_get_login_user_name()
 {
+#if __linux__ == 1
     char buf[128] = {0};
     int ret = getlogin_r(buf, sizeof(buf));
     if(ret != 0)
@@ -1726,15 +1759,23 @@ std::string com_get_login_user_name()
     }
     buf[sizeof(buf) - 1] = '\0';
     return buf;
+#else
+    return std::string();
+#endif
 }
 
 int com_get_login_user_id()
 {
+#if __linux__ == 1
     return getuid();
+#else
+    return -1;
+#endif
 }
 
 std::string com_get_login_user_home()
 {
+#if __linux__ == 1
     const char* home_dir = getenv("HOME");
     if(home_dir != NULL)
     {
@@ -1752,6 +1793,9 @@ std::string com_get_login_user_home()
         return std::string();
     }
     return result->pw_dir;
+#else
+    return std::string();
+#endif
 }
 
 ByteArray::ByteArray()
