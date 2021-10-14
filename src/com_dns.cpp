@@ -4,6 +4,7 @@
 #include "com_socket.h"
 #include "com_file.h"
 #include "com_log.h"
+#include "com_serializer.h"
 
 #define DNS_PORT 53
 static std::atomic<uint16> dns_id = {0};

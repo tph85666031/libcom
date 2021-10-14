@@ -15,10 +15,20 @@ class MemDataSyncManager final
 public:
     MemDataSyncManager()
     {
+    };
+    ~MemDataSyncManager()
+    {
+        stopMemDataSyncManager();
+    };
+
+    void startMemDataSyncManager()
+    {
+        stopMemDataSyncManager();
         running = true;
         thread_runner = std::thread(ThreadRunner, this);
     };
-    ~MemDataSyncManager()
+
+    void stopMemDataSyncManager()
     {
         mutex.lock();
         sem_keys.post();
@@ -29,6 +39,7 @@ public:
             thread_runner.join();
         }
     };
+    
     void notify(const char* key, int flag)
     {
         if (key == NULL)
@@ -136,7 +147,12 @@ static MemDataSyncManager& GetMemDataSyncManager()
 
 void InitMemDataSyncManager()
 {
-    GetMemDataSyncManager();
+    GetMemDataSyncManager().startMemDataSyncManager();
+}
+
+void UninitMemDataSyncManager()
+{
+    GetMemDataSyncManager().stopMemDataSyncManager();
 }
 
 bool com_mem_is_key_exist(const char* key)

@@ -36,9 +36,18 @@
 class ComInitializer
 {
 public:
-    ComInitializer();
-    ~ComInitializer();
-    static void ManualInit();
+    ComInitializer()
+    {
+        InitTaskManager();
+        InitTimerManager();
+        InitMemDataSyncManager();
+    };
+    ~ComInitializer()
+    {
+        UninitMemDataSyncManager();
+        UninitTimerManager();
+        UninitTaskManager();
+    };
 };
 
 #endif /* __COM_H__ */

@@ -178,7 +178,6 @@ public:
     static xstring format(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 };
 
-std::string com_com_search_config_file();
 bool com_run_shell(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 std::string com_run_shell_with_output(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 
@@ -280,8 +279,8 @@ bool com_condition_notify_one(Condition* condition);
 bool com_condition_notify_all(Condition* condition);
 bool com_condition_destroy(Condition* condition);//通过create创建的由destroy删除
 
-const char* com_get_bin_name();
-const char* com_get_bin_path();
+std::string com_get_bin_name();
+std::string com_get_bin_path();
 
 uint64 com_ptr_to_number(const void* ptr);
 void* com_number_to_ptr(const uint64 val);

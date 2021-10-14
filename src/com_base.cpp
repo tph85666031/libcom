@@ -21,36 +21,7 @@
 #include "com_thread.h"
 #include "com_log.h"
 
-#define FILE_COM_CONFIG  "com.ini"
-
-std::string com_com_search_config_file()
-{
-    std::vector<std::string> config_files;
-
-    const char* bin_path = com_get_bin_path();
-    const char* bin_name = com_get_bin_name();
-
-    config_files.push_back(com_string_format("./config/%s_com.ini", bin_name));
-    config_files.push_back(com_string_format("./config/%s", FILE_COM_CONFIG));
-    config_files.push_back(com_string_format("./%s_com.ini", bin_name));
-    config_files.push_back(com_string_format("./%s", FILE_COM_CONFIG));
-    config_files.push_back(com_string_format("%s/config/%s_com.ini", bin_path, bin_name));
-    config_files.push_back(com_string_format("%s/config/%s", bin_path, FILE_COM_CONFIG));
-    config_files.push_back(com_string_format("%s/%s_com.ini", bin_path, bin_name));
-    config_files.push_back(com_string_format("%s/%s", bin_path, FILE_COM_CONFIG));
-    config_files.push_back(com_string_format("./tmp/%s/depend/%s", HOST_TYPE, FILE_COM_CONFIG));
-
-    for(size_t i = 0; i < config_files.size(); i++)
-    {
-        if(com_file_type(config_files[i].c_str()) == FILE_TYPE_FILE)
-        {
-            //printf("Search COM Config File: %s ... FOUND\n", config_files[i].c_str());
-            return config_files[i];
-        }
-        //printf("Search COM Config File: %s ... NOT FOUND, try next one\n", config_files[i].c_str());
-    }
-    return std::string();
-}
+static std::mutex mutex_app_path;
 
 bool com_run_shell(const char* fmt, ...)
 {
@@ -424,7 +395,7 @@ std::string com_string_from_wstring(const wchar_t* s)
     return conv_.to_bytes(s);
 #else
     int buf_size = wcslen(s);
-    if (buf_size <= 0)
+    if(buf_size <= 0)
     {
         return std::string();
     }
@@ -456,7 +427,7 @@ std::wstring com_string_to_wstring(const char* s)
     return conv_.from_bytes(s);
 #else
     int buf_size = strlen(s);
-    if (buf_size <= 0)
+    if(buf_size <= 0)
     {
         return std::wstring();
     }
@@ -804,43 +775,43 @@ int32 com_timezone_china_s()
     return 8 * 3600;
 }
 
-/* UTC
-%a 星期几的简写
-%A 星期几的全称
-%b 月份的简写
-%B 月份的全称
-%c 标准的日期的时间串
-%C 年份的前两位数字
-%d 十进制表示的每月的第几天
-%D 月/天/年
-%e 在两字符域中，十进制表示的每月的第几天
-%F 年-月-日
-%g 年份的后两位数字，使用基于周的年
-%G 年份，使用基于周的年
-%h 简写的月份名
-%H 24小时制的小时
-%I 12小时制的小时
-%j 十进制表示的每年的第几天
-%m 十进制表示的月份
-%M 十时制表示的分钟数
-%n 新行符
-%p 本地的AM或PM的等价显示
-%r 12小时的时间
-%R 显示小时和分钟：hh:mm
-%S 十进制的秒数
-%t 水平制表符
-%T 显示时分秒：hh:mm:ss
-%u 每周的第几天，星期一为第一天 （值从1到7，星期一为1）
-%U 第年的第几周，把星期日作为第一天（值从0到53）
-%V 每年的第几周，使用基于周的年
-%w 十进制表示的星期几（值从0到6，星期天为0）
-%W 每年的第几周，把星期一做为第一天（值从0到53）
-%x 标准的日期串
-%X 标准的时间串
-%y 不带世纪的十进制年份（值从0到99）
-%Y 带世纪部分的十制年份
-%z，%Z 时区名称，如果不能得到时区名称则返回空字符
-%% 百分号
+/*  UTC
+    %a 星期几的简写
+    %A 星期几的全称
+    %b 月份的简写
+    %B 月份的全称
+    %c 标准的日期的时间串
+    %C 年份的前两位数字
+    %d 十进制表示的每月的第几天
+    %D 月/天/年
+    %e 在两字符域中，十进制表示的每月的第几天
+    %F 年-月-日
+    %g 年份的后两位数字，使用基于周的年
+    %G 年份，使用基于周的年
+    %h 简写的月份名
+    %H 24小时制的小时
+    %I 12小时制的小时
+    %j 十进制表示的每年的第几天
+    %m 十进制表示的月份
+    %M 十时制表示的分钟数
+    %n 新行符
+    %p 本地的AM或PM的等价显示
+    %r 12小时的时间
+    %R 显示小时和分钟：hh:mm
+    %S 十进制的秒数
+    %t 水平制表符
+    %T 显示时分秒：hh:mm:ss
+    %u 每周的第几天，星期一为第一天 （值从1到7，星期一为1）
+    %U 第年的第几周，把星期日作为第一天（值从0到53）
+    %V 每年的第几周，使用基于周的年
+    %w 十进制表示的星期几（值从0到6，星期天为0）
+    %W 每年的第几周，把星期一做为第一天（值从0到53）
+    %x 标准的日期串
+    %X 标准的时间串
+    %y 不带世纪的十进制年份（值从0到99）
+    %Y 带世纪部分的十制年份
+    %z，%Z 时区名称，如果不能得到时区名称则返回空字符
+    %% 百分号
 */
 std::string com_time_to_string(uint32 time_s, const char* format)
 {
@@ -997,24 +968,24 @@ uint8 com_bcd_to_uint8(uint8 bcd)
 
 bool com_sem_init(Sem* sem, const char* name)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         return false;
     }
-    if (name == NULL)
+    if(name == NULL)
     {
         name = "Unknown";
     }
     sem->name = name;
 #if defined(_WIN32) || defined(_WIN64)
     sem->handle = CreateEvent(
-        NULL,               // default security attributes
-        FALSE,              // manual-reset event?
-        FALSE,              // initial state is nonsignaled
-        NULL                // object name
-    );
+                      NULL,               // default security attributes
+                      FALSE,              // manual-reset event?
+                      FALSE,              // initial state is nonsignaled
+                      NULL                // object name
+                  );
 #elif __linux__ == 1
-    if (sem_init(&sem->handle, 0, 0) != 0)
+    if(sem_init(&sem->handle, 0, 0) != 0)
     {
         return false;
     }
@@ -1030,12 +1001,12 @@ bool com_sem_init(Sem* sem, const char* name)
 
 bool com_sem_uninit(Sem* sem)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         return false;
     }
@@ -1049,11 +1020,11 @@ bool com_sem_uninit(Sem* sem)
 #else
     return false;
 #endif
-    }
+}
 
 Sem* com_sem_create(const char* name)
 {
-    if (name == NULL)
+    if(name == NULL)
     {
         name = "Unknown";
     }
@@ -1061,13 +1032,13 @@ Sem* com_sem_create(const char* name)
     sem->name = name;
 #if defined(_WIN32) || defined(_WIN64)
     sem->handle = CreateEvent(
-        NULL,               // default security attributes
-        FALSE,              // manual-reset event?
-        FALSE,              // initial state is nonsignaled
-        NULL                // object name
-    );
+                      NULL,               // default security attributes
+                      FALSE,              // manual-reset event?
+                      FALSE,              // initial state is nonsignaled
+                      NULL                // object name
+                  );
 #elif __linux__ == 1
-    if (sem_init(&sem->handle, 0, 0) != 0)
+    if(sem_init(&sem->handle, 0, 0) != 0)
     {
         delete sem;
         return NULL;
@@ -1081,24 +1052,24 @@ Sem* com_sem_create(const char* name)
 
 bool com_sem_post(Sem* sem)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         return false;
-}
+    }
     return SetEvent(sem->handle);
 #elif __linux__ == 1
-    if (sem_post(&sem->handle) != 0)
+    if(sem_post(&sem->handle) != 0)
     {
         return false;
     }
     return true;
 #elif defined(__APPLE__)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         return false;
     }
@@ -1110,27 +1081,27 @@ bool com_sem_post(Sem* sem)
 
 bool com_sem_wait(Sem* sem, int timeout_ms)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         return false;
     }
-    if (timeout_ms <= 0)
+    if(timeout_ms <= 0)
     {
         timeout_ms = INFINITE;
     }
     int rc = WaitForSingleObject(sem->handle, timeout_ms);
-    if (rc != WAIT_OBJECT_0)
+    if(rc != WAIT_OBJECT_0)
     {
         return false;
     }
     return true;
 #elif __linux__ == 1
-    if (timeout_ms > 0)
+    if(timeout_ms > 0)
     {
         struct timespec ts;
         memset(&ts, 0, sizeof(struct timespec));
@@ -1141,9 +1112,9 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
         ts.tv_sec += tmp / (1000 * 1000 * 1000);
 
         int ret = sem_timedwait(&sem->handle, &ts);
-        if (ret != 0)
+        if(ret != 0)
         {
-            if (errno == ETIMEDOUT)
+            if(errno == ETIMEDOUT)
             {
                 //LOG_W("timeout:%s:%d", sem->name.c_str(), timeout_ms);
             }
@@ -1152,23 +1123,23 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
                 //LOG_E("failed,ret=%d,errno=%d", ret, errno);
             }
             return false;
-}
+        }
     }
     else
     {
-        if (sem_wait(&sem->handle) != 0)
+        if(sem_wait(&sem->handle) != 0)
         {
             return false;
         }
     }
     return true;
 #elif defined(__APPLE__)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         return false;
     }
     dispatch_time_t timeout = DISPATCH_TIME_FOREVER;
-    if (timeout_ms > 0)
+    if(timeout_ms > 0)
     {
         timeout = dispatch_time(DISPATCH_TIME_NOW, (int64_t)timeout_ms * NSEC_PER_MSEC);
     }
@@ -1176,16 +1147,16 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
 #else
     return false;
 #endif
-    }
+}
 
 bool com_sem_destroy(Sem* sem)
 {
-    if (sem == NULL)
+    if(sem == NULL)
     {
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if (sem->handle == NULL)
+    if(sem->handle == NULL)
     {
         return false;
     }
@@ -1635,18 +1606,28 @@ std::string com_ip_to_string(uint32 ip)
     return str;
 }
 
-const char* com_get_bin_name()
+std::string com_get_bin_name()
 {
+    mutex_app_path.lock();
     static std::string name;
-#if __linux__ == 1
     if(name.empty())
     {
+#if defined(_WIN32) || defined(_WIN64)
+        char szName[260] = { 0 };
+        GetModuleFileNameA(NULL, szName, 260);
+        char* szRes = strrchr(szName, '\\');
+        if(szRes)
+        {
+            szRes++;
+            name = szRes;
+        }
+#else
         char buf[256];
         memset(buf, 0, sizeof(buf));
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
         if(ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
-            return NULL;
+            return std::string();
         }
         for(int i = ret; i >= 0; i--)
         {
@@ -1656,23 +1637,33 @@ const char* com_get_bin_name()
                 break;
             }
         }
-    }
 #endif
-    return name.c_str();
+    }
+    mutex_app_path.unlock();
+    return name;
 }
 
-const char* com_get_bin_path()
+std::string com_get_bin_path()
 {
+    mutex_app_path.lock();
     static std::string path;
-#if __linux__ == 1
     if(path.empty())
     {
+#if defined(_WIN32) || defined(_WIN64)
+        char szName[260] = { 0 };
+        GetModuleFileNameA(NULL, szName, 260);
+        char* szRes = strrchr(szName, '\\');
+        if(szRes)
+        {
+            path = std::string(szName).assign(szName, strlen(szName) - strlen(szRes) + 1);
+        }
+#else
         char buf[256];
         memset(buf, 0, sizeof(buf));
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
         if(ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
-            return NULL;
+            return std::string();
         }
         for(int i = ret; i >= 0; i--)
         {
@@ -1683,9 +1674,10 @@ const char* com_get_bin_path()
                 break;
             }
         }
-    }
 #endif
-    return path.c_str();
+    }
+    mutex_app_path.unlock();
+    return path;
 }
 
 std::string com_get_cwd()
@@ -1784,7 +1776,7 @@ std::string com_get_login_user_home()
     char buf[16384] = {0};
 
     struct passwd pw;
-    struct passwd *result = NULL;
+    struct passwd* result = NULL;
     memset(&pw, 0, sizeof(struct passwd));
     getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result);
     getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result);

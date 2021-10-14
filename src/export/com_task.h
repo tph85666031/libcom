@@ -71,6 +71,7 @@ public:
     virtual ~TaskManager();
     bool isTaskExist(std::string task_name);
     void destroyTask(std::string task_name);
+    void destroyTaskAll();
     void sendMessage(std::string task_name_wildcard, Message& msg);
     void sendBroadcastMessage(Message& msg);
     template<class T>
@@ -96,6 +97,8 @@ private:
 };
 
 TaskManager& GetTaskManager();
+void InitTaskManager();
+void UninitTaskManager();
 
 inline bool com_task_exist(std::string task_name)
 {

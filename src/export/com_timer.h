@@ -41,12 +41,15 @@ private:
     std::string uuid;
 };
 
-class CPPTimerManager : private ThreadPool
+class CPPTimerManager : public ThreadPool
 {
     friend class CPPTimer;
 public:
     CPPTimerManager();
     virtual ~CPPTimerManager();
+
+    void startTimerManager();
+    void stopTimerManager();
 
     void updateTimer(CPPTimer& timer);
     void removeTimer(std::string uuid);
@@ -61,5 +64,8 @@ private:
     CPPMutex mutex_timers{"mutex_timers"};
     std::atomic<uint32> message_id = {0};
 };
+
+void InitTimerManager();
+void UninitTimerManager();
 
 #endif /* __COM_TIMER_H__ */

@@ -2,7 +2,6 @@
 #include "com_file.h"
 #include "com_config.h"
 #include "com_log.h"
-#include "com_md5.h"
 #include "iniparser.h"
 
 static CPPConfig global_config(true);
@@ -12,7 +11,6 @@ CPPConfig::CPPConfig()
     this->data = NULL;
     this->data_changed = false;
     this->auto_save = true;
-    this->safe_mode = true;
     this->thread_safe = false;
 }
 
@@ -21,30 +19,24 @@ CPPConfig::CPPConfig(bool thread_safe)
     this->data = NULL;
     this->data_changed = false;
     this->auto_save = true;
-    this->safe_mode = true;
     this->thread_safe = thread_safe;
 }
 
-CPPConfig::CPPConfig(const char* file, bool thread_safe, bool safe_mode, const char* safe_dir)
+CPPConfig::CPPConfig(const char* file, bool thread_safe)
 {
     this->data = NULL;
     this->data_changed = false;
     this->auto_save = true;
-    this->safe_mode = safe_mode;
     this->thread_safe = thread_safe;
-    if (safe_dir != NULL)
-    {
-        this->safe_dir = safe_dir;
-    }
-    if (file != NULL)
+    if(file != NULL)
     {
         this->config_file = file;
         int file_type = com_file_type(file);
-        if (file_type == FILE_TYPE_FILE)
+        if(file_type == FILE_TYPE_FILE)
         {
-            load(file, safe_mode, safe_dir);
+            load(file);
         }
-        else if (file_type == FILE_TYPE_NOT_EXIST)
+        else if(file_type == FILE_TYPE_NOT_EXIST)
         {
             this->data = (void*)dictionary_new(0);
         }
@@ -59,7 +51,7 @@ CPPConfig::CPPConfig(const char* file, bool thread_safe, bool safe_mode, const c
 //存在多地方存储到文件的风险
 CPPConfig::CPPConfig(CPPConfig& config)//赋值构造函数
 {
-    if (this->data != NULL)
+    if(this->data != NULL)
     {
         iniparser_freedict((dictionary*)this->data);
         this->data = NULL;
@@ -72,18 +64,18 @@ CPPConfig::CPPConfig(CPPConfig& config)//赋值构造函数
     this->safe_mode = config.safe_mode.load();
     this->safe_dir = config.safe_dir;
     this->data = (void*)dictionary_new(0);
-    if (this->data != NULL)
+    if(this->data != NULL)
     {
         std::vector<std::string> groups = config.getAllGroups();
-        for (int i = 0; i < groups.size(); i++)
+        for(int i = 0; i < groups.size(); i++)
         {
             std::vector<std::string> keys = config.getAllKeysByGroup(groups[i].c_str());
-            if (keys.empty() == false)
+            if(keys.empty() == false)
             {
-                for (int j = 0; j < keys.size(); j++)
+                for(int j = 0; j < keys.size(); j++)
                 {
                     std::string value = config.getString(groups[i].c_str(), keys[j].c_str());
-                    if (value.empty() == false)
+                    if(value.empty() == false)
                     {
                         set(groups[i].c_str(), keys[j].c_str(), value);
                     }
@@ -96,11 +88,11 @@ CPPConfig::CPPConfig(CPPConfig& config)//赋值构造函数
 //存在多地方存储到文件的风险
 CPPConfig& CPPConfig::operator=(CPPConfig& config)//拷贝构造函数
 {
-    if (this == &config)
+    if(this == &config)
     {
         return *this;
     }
-    if (this->data != NULL)
+    if(this->data != NULL)
     {
         iniparser_freedict((dictionary*)this->data);
         this->data = NULL;
@@ -113,18 +105,18 @@ CPPConfig& CPPConfig::operator=(CPPConfig& config)//拷贝构造函数
     this->safe_mode = config.safe_mode.load();
     this->safe_dir = config.safe_dir;
     this->data = (void*)dictionary_new(0);
-    if (this->data != NULL)
+    if(this->data != NULL)
     {
         std::vector<std::string> groups = config.getAllGroups();
-        for (int i = 0; i < groups.size(); i++)
+        for(int i = 0; i < groups.size(); i++)
         {
             std::vector<std::string> keys = config.getAllKeysByGroup(groups[i].c_str());
-            if (keys.empty() == false)
+            if(keys.empty() == false)
             {
-                for (int j = 0; j < keys.size(); j++)
+                for(int j = 0; j < keys.size(); j++)
                 {
                     std::string value = config.getString(groups[i].c_str(), keys[j].c_str());
-                    if (value.empty() == false)
+                    if(value.empty() == false)
                     {
                         set(groups[i].c_str(), keys[j].c_str(), value);
                     }
@@ -138,25 +130,25 @@ CPPConfig& CPPConfig::operator=(CPPConfig& config)//拷贝构造函数
 
 CPPConfig::~CPPConfig()
 {
-    if (safe_mode || auto_save)
+    if(auto_save)
     {
         save();
     }
-    if (this->data != NULL)
+    if(this->data != NULL)
     {
         iniparser_freedict((dictionary*)this->data);
         this->data = NULL;
     }
 }
 
-bool CPPConfig::load(const char* file, bool safe_mode, const char* safe_dir)
+bool CPPConfig::load(const char* file)
 {
-    if (file == NULL)
+    if(file == NULL)
     {
         return false;
     }
     lock();
-    if (this->data != NULL)
+    if(this->data != NULL)
     {
         iniparser_freedict((dictionary*)this->data);
         this->data = NULL;
@@ -165,50 +157,11 @@ bool CPPConfig::load(const char* file, bool safe_mode, const char* safe_dir)
     bool ret = false;
     this->config_file = file;
     this->data_changed = false;
-    this->safe_mode = safe_mode;
-    this->safe_dir.clear();
-    if (safe_dir != NULL)
-    {
-        this->safe_dir = safe_dir;
-    }
 
-    if (safe_mode)
-    {
-        std::string config_file_swap = getSwapFileName(file);
-        std::string config_file_swap_bak = config_file_swap + ".bak";
-
-        if (com_file_type(config_file_swap.c_str()) == FILE_TYPE_NOT_EXIST)
-        {
-            if (com_file_type(config_file_swap_bak.c_str()) == FILE_TYPE_FILE)
-            {
-                //从bak恢复
-                com_file_copy(config_file_swap.c_str(), config_file_swap_bak.c_str());
-            }
-            else
-            {
-                //从初始文件恢复并生成signature
-                CreateSignature(config_file_swap.c_str(), config_file.c_str());
-            }
-        }
-
-        if (CheckSignature(config_file_swap.c_str()) == false)
-        {
-            return false;
-        }
-        this->config_file_swap = config_file_swap;
-        this->config_file_swap_bak = config_file_swap_bak;
-        lock();
-        this->data = (void*)iniparser_load(this->config_file_swap.c_str());
-        ret = (this->data != NULL);
-        unlock();
-    }
-    else
-    {
-        lock();
-        this->data = (void*)iniparser_load(this->config_file.c_str());
-        ret = (this->data != NULL);
-        unlock();
-    }
+    lock();
+    this->data = (void*)iniparser_load(this->config_file.c_str());
+    ret = (this->data != NULL);
+    unlock();
 
     return ret;
 }
@@ -216,28 +169,20 @@ bool CPPConfig::load(const char* file, bool safe_mode, const char* safe_dir)
 
 bool CPPConfig::save()
 {
-    if (data_changed == false)
+    if(data_changed == false)
     {
         return true;
     }
 
-    if (config_file.empty() || config_file.length() <= 0)
+    if(config_file.empty() || config_file.length() <= 0)
     {
         LOG_W("config file name not set");
         return false;
     }
 
     bool ret = false;
-    if (safe_mode)
-    {
-        ret = saveAs(config_file_swap_bak.c_str());
-        ret = saveAs(config_file_swap.c_str());
-    }
-    else
-    {
-        ret = saveAs(config_file.c_str());
-    }
-    if (ret)
+    ret = saveAs(config_file.c_str());
+    if(ret)
     {
         data_changed = false;
     }
@@ -247,26 +192,26 @@ bool CPPConfig::save()
 
 bool CPPConfig::saveAs(const char* config_file)
 {
-    if (com_string_len(config_file) <= 0)
+    if(com_string_len(config_file) <= 0)
     {
-        return NULL;
+        return false;
     }
     std::string val = toString();
-    if (val.empty())
+    if(val.empty())
     {
         return false;
     }
 
     lock();
     FILE* file = com_file_open(config_file, "w+");
-    if (file == NULL)
+    if(file == NULL)
     {
         unlock();
         return false;
     }
 
     int ret = com_file_write(file, val.data(), val.size());
-    if (ret != (int)val.size())
+    if(ret != (int)val.size())
     {
         com_file_close(file);
         unlock();
@@ -277,12 +222,12 @@ bool CPPConfig::saveAs(const char* config_file)
     com_file_close(file);
     unlock();
 
-    return CheckSignature(config_file);
+    return true;
 }
 
 void CPPConfig::lock()
 {
-    if (thread_safe)
+    if(thread_safe)
     {
         mutex_data.lock();
     }
@@ -290,7 +235,7 @@ void CPPConfig::lock()
 
 void CPPConfig::unlock()
 {
-    if (thread_safe)
+    if(thread_safe)
     {
         mutex_data.unlock();
     }
@@ -310,15 +255,15 @@ Message CPPConfig::toMessage()
 {
     Message msg;
     std::vector<std::string> groups = getAllGroups();
-    for (size_t i = 0; i < groups.size(); i++)
+    for(size_t i = 0; i < groups.size(); i++)
     {
         std::vector<std::string> keys = getAllKeysByGroup(groups[i].c_str());
-        if (keys.empty() == false)
+        if(keys.empty() == false)
         {
-            for (size_t j = 0; j < keys.size(); j++)
+            for(size_t j = 0; j < keys.size(); j++)
             {
                 std::string value = getString(groups[i].c_str(), keys[j].c_str());
-                if (value.empty() == false)
+                if(value.empty() == false)
                 {
                     msg.set(com_string_format("%s.%s", groups[i].c_str(), keys[j].c_str()).c_str(), value);
                 }
@@ -333,16 +278,16 @@ std::string CPPConfig::toString()
 {
     std::string val;
     std::vector<std::string> groups = getAllGroups();
-    for (size_t i = 0; i < groups.size(); i++)
+    for(size_t i = 0; i < groups.size(); i++)
     {
         std::vector<std::string> keys = getAllKeysByGroup(groups[i].c_str());
-        if (keys.empty() == false)
+        if(keys.empty() == false)
         {
             val += "[" + groups[i] + "]\n";
-            for (size_t j = 0; j < keys.size(); j++)
+            for(size_t j = 0; j < keys.size(); j++)
             {
                 std::string value = getString(groups[i].c_str(), keys[j].c_str());
-                if (value.empty() == false)
+                if(value.empty() == false)
                 {
                     val += keys[j] + "=" + value + "\n";
                 }
@@ -350,12 +295,6 @@ std::string CPPConfig::toString()
         }
     }
 
-    CPPMD5 md5_tool;
-    md5_tool.append((uint8*)val.data(), val.size());
-    std::string header = ";md5=";
-    std::string md5 = md5_tool.finish().toHexString(false) + "\n";
-    header.append(md5);
-    val.insert(0, header);
     return val;
 }
 
@@ -364,135 +303,23 @@ std::string CPPConfig::getConfigFile() const
     return config_file;
 }
 
-std::string CPPConfig::getSwapFileName(const char* file)
-{
-    if (file == NULL)
-    {
-        return std::string();
-    }
-    std::string config_file_path = safe_dir;
-    if (config_file_path.empty())
-    {
-        config_file_path = com_path_dir(file);
-    }
-    std::string config_file_name = com_path_name(file);
-    if (config_file_path.empty() || config_file_name.empty())
-    {
-        return std::string();
-    }
-    return config_file_path + "/." + config_file_name;
-}
-
-bool CPPConfig::CheckSignature(const char* config_file)
-{
-    if (com_string_len(config_file) <= 0)
-    {
-        return false;
-    }
-    ByteArray bytes = com_file_readall(config_file);
-    std::string val = bytes.toString();
-    if (val.empty() || com_string_start_with(val.c_str(), ";md5=") == false)
-    {
-        LOG_E("signature missing for %s", config_file);
-        return false;
-    }
-    size_t pos = val.find_first_of("\n");
-    if (pos == std::string::npos)
-    {
-        LOG_E("signature not found for %s", config_file);
-        return false;
-    }
-
-    std::string md5_required = val.substr(sizeof(";md5=") - 1, pos - 5);
-    std::string content = val.substr(pos + 1);
-    CPPMD5 md5_tool;
-    md5_tool.append((uint8*)content.data(), content.size());
-    std::string md5_calc = md5_tool.finish().toHexString(false);
-
-    if (md5_calc != md5_required)
-    {
-        LOG_E("signature incorrect for (%s),md5_requied=%s,md5_calc=%s",
-              config_file, md5_required.c_str(), md5_calc.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-bool CPPConfig::CreateSignature(const char* config_file_to, const char* config_file_from)
-{
-    if (com_string_len(config_file_to) <= 0 || com_string_len(config_file_from) <= 0)
-    {
-        return false;
-    }
-    ByteArray bytes = com_file_readall(config_file_from);
-    std::string val = bytes.toString();
-    std::string content;
-    if (com_string_start_with(val.c_str(), ";md5="))
-    {
-        size_t pos = val.find_first_of("\n");
-        if (pos == std::string::npos)
-        {
-            LOG_E("file content is empty(only md5 exist)");
-            return false;
-        }
-        content = val.substr(pos);
-    }
-    else
-    {
-        content = val;
-    }
-
-    CPPMD5 md5_tool;
-    md5_tool.append((uint8*)content.data(), content.size());
-    std::string header = ";md5=";
-    std::string md5 = md5_tool.finish().toHexString(false) + "\n";
-    header.append(md5);
-    content.insert(0, header);
-
-    FILE* file = com_file_open(config_file_to, "w+");
-    if (file == NULL)
-    {
-        LOG_E("failed to open file");
-        return false;
-    }
-
-    int ret = com_file_write(file, content.data(), content.size());
-    if (ret != (int)content.size())
-    {
-        com_file_close(file);
-        LOG_E("failed to write content to file");
-        return false;
-    }
-
-    com_file_flush(file);
-    com_file_sync(file);
-    com_file_close(file);
-
-    return true;
-}
-
-bool CPPConfig::CreateSignature(const char* config_file)
-{
-    return CreateSignature(config_file, config_file);
-}
-
 std::string CPPConfig::getString(const char* group, const char* key, std::string default_val)
 {
-    if (key == NULL)
+    if(key == NULL)
     {
         return default_val;
     }
-    if (group == NULL)
-    {
-        group = "";
-    }
     std::string tag;
-    tag.append(group).append(":").append(key);
+    if(group != NULL)
+    {
+        tag.append(group);
+    }
+
+    tag.append(":").append(key);
     lock();
     const char* val = iniparser_getstring((const dictionary*)this->data, tag.c_str(), default_val.c_str());
     unlock();
-    if (val == NULL)
+    if(val == NULL)
     {
         return default_val;
     }
@@ -532,11 +359,11 @@ uint32 CPPConfig::getUInt32(const char* group, const char* key, uint32 default_v
 int64 CPPConfig::getInt64(const char* group, const char* key, int64 default_val)
 {
     std::string val = getString(group, key);
-    if (val.empty())
+    if(val.empty())
     {
         return default_val;
     }
-    if (com_string_start_with(val.c_str(), "0x") || com_string_start_with(val.c_str(), "0X"))
+    if(com_string_start_with(val.c_str(), "0x") || com_string_start_with(val.c_str(), "0X"))
     {
         return strtoll(val.c_str(), NULL, 16);
     }
@@ -549,11 +376,11 @@ int64 CPPConfig::getInt64(const char* group, const char* key, int64 default_val)
 uint64 CPPConfig::getUInt64(const char* group, const char* key, uint64 default_val)
 {
     std::string val = getString(group, key);
-    if (val.empty())
+    if(val.empty())
     {
         return default_val;
     }
-    if (com_string_start_with(val.c_str(), "0x") || com_string_start_with(val.c_str(), "0X"))
+    if(com_string_start_with(val.c_str(), "0x") || com_string_start_with(val.c_str(), "0X"))
     {
         return strtoull(val.c_str(), NULL, 16);
     }
@@ -565,16 +392,17 @@ uint64 CPPConfig::getUInt64(const char* group, const char* key, uint64 default_v
 
 bool CPPConfig::getBool(const char* group, const char* key, bool default_val)
 {
-    if (key == NULL)
+    if(key == NULL)
     {
         return default_val;
     }
-    if (group == NULL)
-    {
-        group = "";
-    }
     std::string tag;
-    tag.append(group).append(":").append(key);
+    if(group != NULL)
+    {
+        tag.append(group);
+    }
+
+    tag.append(":").append(key);
     lock();
     int ret = iniparser_getboolean((const dictionary*)this->data, tag.c_str(), default_val ? 1 : 0);
     unlock();
@@ -584,7 +412,7 @@ bool CPPConfig::getBool(const char* group, const char* key, bool default_val)
 float CPPConfig::getFloat(const char* group, const char* key, float default_val)
 {
     std::string val = getString(group, key);
-    if (val.empty())
+    if(val.empty())
     {
         return default_val;
     }
@@ -594,7 +422,7 @@ float CPPConfig::getFloat(const char* group, const char* key, float default_val)
 double CPPConfig::getDouble(const char* group, const char* key, double default_val)
 {
     std::string val = getString(group, key);
-    if (val.empty())
+    if(val.empty())
     {
         return default_val;
     }
@@ -603,7 +431,7 @@ double CPPConfig::getDouble(const char* group, const char* key, double default_v
 
 bool CPPConfig::isGroupExist(const char* group_name)
 {
-    if (group_name == NULL)
+    if(group_name == NULL)
     {
         return false;
     }
@@ -624,10 +452,10 @@ std::vector<std::string> CPPConfig::getAllGroups()
     lock();
     std::vector<std::string> groups;
     int count = iniparser_getnsec((const dictionary*)this->data);
-    for (int i = 0; i < count; i++)
+    for(int i = 0; i < count; i++)
     {
         const char* name = iniparser_getsecname((const dictionary*)this->data, i);
-        if (name != NULL)
+        if(name != NULL)
         {
             groups.push_back(name);
         }
@@ -640,7 +468,7 @@ std::vector<std::string> CPPConfig::getAllKeysByGroup(const char* group_name)
 {
     std::vector<std::string> keys;
     int key_count = getGroupKeyCount(group_name);
-    if (key_count <= 0)
+    if(key_count <= 0)
     {
         return keys;
     }
@@ -654,16 +482,16 @@ std::vector<std::string> CPPConfig::getAllKeysByGroup(const char* group_name)
 #endif
     int len = strlen(group_name);
     const char** ret = iniparser_getseckeys((const dictionary*)this->data, group_name, (const char**)keys_tmp);
-    if (ret != NULL)
+    if(ret != NULL)
     {
-        for (int i = 0; i < key_count; i++)
+        for(int i = 0; i < key_count; i++)
         {
-            if (keys_tmp[i] == NULL)
+            if(keys_tmp[i] == NULL)
             {
                 continue;
             }
             //key 默认包含了$group:需要去除
-            if ((int)strlen(keys_tmp[i]) > len + 1)
+            if((int)strlen(keys_tmp[i]) > len + 1)
             {
                 keys.push_back(keys_tmp[i] + len + 1);
             }
@@ -678,7 +506,7 @@ std::vector<std::string> CPPConfig::getAllKeysByGroup(const char* group_name)
 
 int CPPConfig::getGroupKeyCount(const char* group_name)
 {
-    if (group_name == NULL)
+    if(group_name == NULL)
     {
         return -1;
     }
@@ -700,31 +528,39 @@ bool CPPConfig::set(const char* group, const char* key, char* val)
 
 bool CPPConfig::set(const char* group, const char* key, const char* val)
 {
-    if (group == NULL || key == NULL || val == NULL)
+    if(key == NULL || val == NULL)
     {
+        LOG_E("arg incorrect");
         return false;
     }
-    std::string tag;
-    tag.append(group).append(":").append(key);
 
-    if (isGroupExist(group) == false)
+    if(group != NULL && isGroupExist(group) == false)
     {
-        if (addGroup(group) == false)
+        if(addGroup(group) == false)
         {
+            LOG_E("failed to add group");
             return false;
         }
     }
 
+    std::string tag;
+    if(group != NULL)
+    {
+        tag.append(group);
+    }
+    tag.append(":").append(key);
+
     lock();
     int ret = iniparser_set((dictionary*)this->data, tag.c_str(), val);
     unlock();
-    if (ret != 0)
+    if(ret != 0)
     {
+        LOG_E("failed to set ini data");
         return false;
     }
 
     data_changed = true;
-    if (auto_save)
+    if(auto_save)
     {
         save();
     }
@@ -733,7 +569,7 @@ bool CPPConfig::set(const char* group, const char* key, const char* val)
 
 bool CPPConfig::addGroup(const char* group_name)
 {
-    if (group_name == NULL)
+    if(group_name == NULL)
     {
         return false;
     }
@@ -742,13 +578,13 @@ bool CPPConfig::addGroup(const char* group_name)
     lock();
     int ret = iniparser_set((dictionary*)this->data, tag.c_str(), NULL);
     unlock();
-    if (ret != 0)
+    if(ret != 0)
     {
         return false;
     }
 
     data_changed = true;
-    if (auto_save)
+    if(auto_save)
     {
         save();
     }
@@ -757,7 +593,7 @@ bool CPPConfig::addGroup(const char* group_name)
 
 bool CPPConfig::removeGroup(const char* group_name)
 {
-    if (group_name == NULL)
+    if(group_name == NULL)
     {
         return false;
     }
@@ -767,7 +603,7 @@ bool CPPConfig::removeGroup(const char* group_name)
     iniparser_unset((dictionary*)this->data, tag.c_str());
     unlock();
     data_changed = true;
-    if (auto_save)
+    if(auto_save)
     {
         save();
     }
@@ -776,17 +612,21 @@ bool CPPConfig::removeGroup(const char* group_name)
 
 bool CPPConfig::removeItem(const char* group_name, const char* key)
 {
-    if (group_name == NULL || key == NULL)
+    if(key == NULL)
     {
         return false;
     }
     std::string tag;
-    tag.append(group_name).append(":").append(key);
+    if(group_name != NULL)
+    {
+        tag.append(group_name);
+    }
+    tag.append(":").append(key);
     lock();
     iniparser_unset((dictionary*)this->data, tag.c_str());
     unlock();
     data_changed = true;
-    if (auto_save)
+    if(auto_save)
     {
         save();
     }
@@ -798,10 +638,10 @@ Message com_global_config_to_message()
     return global_config.toMessage();
 }
 
-bool com_global_config_load(const char* config_file, bool safe_mode, const char* safe_dir)
+bool com_global_config_load(const char* config_file)
 {
     global_config.enableAutoSave();
-    return global_config.load(config_file, safe_mode, safe_dir);
+    return global_config.load(config_file);
 }
 
 bool com_global_config_save()

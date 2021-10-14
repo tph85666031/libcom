@@ -40,7 +40,7 @@ extern void com_ptrace_unit_test_suit(void** state);
 
 CMUnitTest test_cases_com_lib[] =
 {
-#if 0
+#if 1
     cmocka_unit_test(com_base_unit_test_suit),
     cmocka_unit_test(com_base_string_split_unit_test_suit),
     cmocka_unit_test(com_base_string_unit_test_suit),

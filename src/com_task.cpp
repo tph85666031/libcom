@@ -1,11 +1,20 @@
 #include "com_task.h"
 #include "com_log.h"
 
-static TaskManager taskManager;
-
 TaskManager& GetTaskManager()
 {
-    return taskManager;
+    static TaskManager task_manager;
+    return task_manager;
+}
+
+void InitTaskManager()
+{
+    GetTaskManager();
+}
+
+void UninitTaskManager()
+{
+    GetTaskManager().destroyTaskAll();
 }
 
 Task::Task(std::string name, Message init_msg)
@@ -102,19 +111,7 @@ TaskManager::TaskManager()
 
 TaskManager::~TaskManager()
 {
-    mutex_tasks.lock();
-    std::map<std::string, Task*>::iterator it;
-    for (it = tasks.begin(); it != tasks.end(); it++)
-    {
-        Task* t = it->second;
-        if (t != NULL)
-        {
-            t->stopTask();
-            delete t;
-        }
-    }
-    tasks.clear();
-    mutex_tasks.unlock();
+    destroyTaskAll();
 }
 
 bool TaskManager::isTaskExist(std::string task_name)
@@ -140,6 +137,23 @@ void TaskManager::destroyTask(std::string task_name)
             break;
         }
     }
+    mutex_tasks.unlock();
+}
+
+void TaskManager::destroyTaskAll()
+{
+    mutex_tasks.lock();
+    std::map<std::string, Task*>::iterator it;
+    for (it = tasks.begin(); it != tasks.end(); it++)
+    {
+        Task* t = it->second;
+        if (t != NULL)
+        {
+            t->stopTask();
+            delete t;
+        }
+    }
+    tasks.clear();
     mutex_tasks.unlock();
 }
 

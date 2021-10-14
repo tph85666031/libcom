@@ -41,7 +41,7 @@ void com_config_unit_test_suit(void** state)
     com_file_writef(file, "empty=\n");
     com_file_flush(file);
     com_file_close(file);
-    CPPConfig config("1.ini", false, true, "/tmp/");
+    CPPConfig config("1.ini", false);
     ASSERT_FALSE(config.isGroupExist(NULL));
     ASSERT_TRUE(config.isGroupExist("GROUP_1"));
     ASSERT_TRUE(config.isGroupExist("GROUP_2"));
@@ -72,10 +72,10 @@ void com_config_unit_test_suit(void** state)
     ASSERT_FALSE(config.getBool("GROUP_3", "bool", false));
     ASSERT_STR_EQUAL(config.getString("GROUP_3", "empty").c_str(), "");
     com_file_remove("1.ini");
-    LOG_D("bin name=%s", com_get_bin_name());
-    LOG_D("bin name=%s", com_get_bin_name());
-    LOG_D("bin path=%s", com_get_bin_path());
-    LOG_D("bin path=%s", com_get_bin_path());
+    LOG_D("bin name=%s", com_get_bin_name().c_str());
+    LOG_D("bin name=%s", com_get_bin_name().c_str());
+    LOG_D("bin path=%s", com_get_bin_path().c_str());
+    LOG_D("bin path=%s", com_get_bin_path().c_str());
 
     config.removeGroup("group_3");
     config.removeItem("group_2", "bool");
@@ -86,18 +86,10 @@ void com_config_unit_test_suit(void** state)
     config.set("group_4", "string", std::string("string"));
     config.set("group_4", "double", 123.5735);
 
-    Message msg = config.toMessage();
-    std::string val = config.toString();
-
-    ASSERT_STR_EQUAL(val.c_str(), ";md5=3987241a82a2884619d0bd96ee1cdd7a\n[group_1]\nid=1\nname=abc\nfloat=1.632473\ndouble=1.632193922996521\nint=-101\nuint=101\nbool=trUe\n[group_2]\nid=2\nname=def\nfloat=2.230000\ndouble=2.632193803787231\nint=-102\nuint=102\n[group_4]\nbool=0\nint=6\nchar*=char*\nstring=string\ndouble=123.573500\n");
-
     ASSERT_TRUE(config.saveAs("1.ini.bak"));
-    ASSERT_TRUE(CPPConfig::CheckSignature("1.ini.bak"));
     com_file_remove("1.ini.bak");
 
     ASSERT_TRUE(config.save());
-    ASSERT_TRUE(CPPConfig::CheckSignature("/tmp/.1.ini"));
-    ASSERT_TRUE(CPPConfig::CheckSignature("/tmp/.1.ini.bak"));
     com_file_remove("1.ini");
     com_file_remove("/tmp/.1.ini");
     com_file_remove("/tmp/.1.ini.bak");

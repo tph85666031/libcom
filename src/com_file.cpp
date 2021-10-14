@@ -429,11 +429,18 @@ int com_file_seek_tail(FILE* file)
 
 int com_file_seek(FILE* file, int64 pos)
 {
-    if(file == NULL || pos < 0)
+    if(file == NULL)
     {
         return -1;
     }
-    return fseek(file, pos, SEEK_SET);
+    if(pos > 0)
+    {
+        return fseek(file, pos, SEEK_SET);
+    }
+    else
+    {
+        return fseek(file, pos, SEEK_END);
+    }
 }
 
 bool com_file_create(const char* file_path)
@@ -467,13 +474,13 @@ int com_file_read(FILE* file, void* buf, int size)
     {
         return 0;
     }
-    int len = fread(buf, 1, size, file);
-    if(len > 0)
+    int size_readed = 0;
+    do
     {
-        return len;
+        size_readed += fread((uint8*)buf + size_readed, 1, size - size_readed, file);
     }
-    int err = ferror(file);
-    return err == 0 ? 0 : -1;
+    while(feof(file) == 0 && ferror(file) == 0 && size_readed < size);
+    return size_readed;
 }
 
 bool com_file_readline(FILE* file, char* buf, int size)
@@ -667,25 +674,24 @@ int com_file_get_fd(FILE* file)
     return fileno(file);
 }
 
-bool com_file_lock(FILE* file, bool read_share, bool wait)
+bool com_file_lock(FILE* file, bool read_lock, bool wait)
 {
     if(file == NULL)
     {
         return false;
     }
-    return com_file_lock(fileno(file), read_share, wait);
+    return com_file_lock(fileno(file), read_lock, wait);
 }
-
-bool com_file_lock(int fd, bool read_share, bool wait)
+bool com_file_lock(int fd, bool read_lock, bool wait)
 {
-    if(fd <= 0)
+    if(fd < 0)
     {
         return false;
     }
 #if __linux__ == 1
     struct flock fl;
     memset(&fl, 0, sizeof(struct flock));
-    fl.l_type = read_share ? F_RDLCK : F_WRLCK;
+    fl.l_type = read_lock ? F_RDLCK : F_WRLCK;
     fl.l_whence = SEEK_SET;
     fl.l_start = 0;
     fl.l_len = 0;//意味着加锁一直加到EOF
@@ -697,25 +703,24 @@ bool com_file_lock(int fd, bool read_share, bool wait)
 #endif
 }
 
-bool com_file_is_locked(FILE* file, bool read_share)
+bool com_file_is_locked(FILE* file, bool read_lock)
 {
     if(file == NULL)
     {
         return false;
     }
-    return com_file_is_locked(fileno(file), read_share);
+    return com_file_is_locked(fileno(file), read_lock);
 }
-
-bool com_file_is_locked(int fd, bool read_share)
+bool com_file_is_locked(int fd, bool read_lock)
 {
-    if(fd <= 0)
+    if(fd < 0)
     {
         return false;
     }
 #if __linux__ == 1
     struct flock fl;
     memset(&fl, 0, sizeof(struct flock));
-    fl.l_type = read_share ? F_RDLCK : F_WRLCK;
+    fl.l_type = read_lock ? F_RDLCK : F_WRLCK;
     fl.l_whence = SEEK_SET;
     fl.l_start = 0;
     fl.l_len = 0;//意味着加锁一直加到EOF
@@ -747,7 +752,7 @@ bool com_file_unlock(FILE* file)
 
 bool com_file_unlock(int fd)
 {
-    if(fd <= 0)
+    if(fd < 0)
     {
         return false;
     }

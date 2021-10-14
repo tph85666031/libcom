@@ -11,7 +11,7 @@
 #define LOGGER_NAME      "default"
 
 static std::atomic<log_hook_fc> log_hook = {NULL};
-//static std::shared_ptr<spdlog::logger> my_logger;
+#define LOG_FORMAT "%^[%Y-%m-%d %H:%M:%S.%e] [%L] [%t] %v%$"
 
 static spdlog::level::level_enum level_convert(int level)
 {
@@ -46,54 +46,32 @@ void com_log_set_hook(log_hook_fc hook_fc)
     log_hook = hook_fc;
 }
 
-void com_log_init()
+void com_log_init(const char* file, const char* file_err, bool console_enable,
+                  int file_size_max, int file_count, int level, int flush_interval_s)
 {
-    const char* group_name = com_get_bin_name();
-    std::string config_file = com_com_search_config_file();
-    CPPConfig config(config_file.c_str(), false, false, NULL);
-    if(config.isGroupExist(group_name) == false)
-    {
-        group_name = "default";
-    }
-
-    bool log_enable = config.getBool(group_name, "log.enable", false);
-    if(log_enable == false)
-    {
-        spdlog::set_default_logger(NULL);
-        return;
-    }
-    bool console_enable = config.getBool(group_name, "log.console", false);
-    std::string format = config.getString(group_name, "log.format", "%^[%Y-%m-%d %H:%M:%S.%e] [%L] [%t] %v%$");
-    std::string file = config.getString(group_name, "log.file");
-    std::string file_err = config.getString(group_name, "log.file_err");
-    int level = config.getInt32(group_name, "log.level", 0);
-    int file_size = config.getInt32(group_name, "log.file_size", 1024 * 1024 * 2);
-    int file_count = config.getInt32(group_name, "log.file_count", 3);
-    int flush_interval = config.getInt32(group_name, "log.flush_interval", 15);
-
     std::vector<spdlog::sink_ptr> sink_list;
 
     if(console_enable)
     {
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console_sink->set_level(level_convert(level));
-        console_sink->set_pattern(format);
+        console_sink->set_pattern(LOG_FORMAT);
         sink_list.push_back(console_sink);
     }
 
-    if(file.empty() == false)
+    if(file != NULL)
     {
-        auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(file, file_size, file_count);
+        auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(file, file_size_max, file_count);
         file_sink->set_level(level_convert(level));
-        file_sink->set_pattern(format);
+        file_sink->set_pattern(LOG_FORMAT);
         sink_list.push_back(file_sink);
     }
 
-    if(file_err.empty() == false)
+    if(file_err != NULL)
     {
-        auto file_sink_err = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(file_err, file_size, file_count);
+        auto file_sink_err = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(file_err, file_size_max, file_count);
         file_sink_err->set_level(spdlog::level::warn);
-        file_sink_err->set_pattern(format);
+        file_sink_err->set_pattern(LOG_FORMAT);
         sink_list.push_back(file_sink_err);
     }
 
@@ -106,7 +84,7 @@ void com_log_init()
     std::shared_ptr<spdlog::logger> my_logger = std::make_shared<spdlog::logger>(LOGGER_NAME, begin(sink_list), end(sink_list));
     my_logger->set_level(level_convert(level));
     my_logger->flush_on(spdlog::level::warn);
-    spdlog::flush_every(std::chrono::seconds(flush_interval));
+    spdlog::flush_every(std::chrono::seconds(flush_interval_s));
     spdlog::drop(LOGGER_NAME);
     spdlog::register_logger(my_logger);
     spdlog::set_default_logger(my_logger);

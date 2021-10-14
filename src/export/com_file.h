@@ -7,11 +7,17 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <io.h>
 #include <direct.h>
-#else
+#elif __linux__ == 1
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/vfs.h>
+#include <dirent.h>
+#elif defined(__APPLE__)
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mount.h>
 #include <dirent.h>
 #endif
 
@@ -85,11 +91,11 @@ bool com_file_crop(const char* file_name, uint8 start_percent_keeped, uint8 end_
 
 int com_file_get_fd(FILE* file);
 bool com_file_lock(FILE* file, bool read_share, bool wait);
-bool com_file_lock(int fd, bool read_share, bool wait);
+bool com_file_lock(int fd, bool read_lock = false, bool wait = false);
 bool com_file_is_locked(FILE* file, bool read_share);
-bool com_file_is_locked(int fd, bool read_share);
+bool com_file_is_locked(int fd, bool read_lock = false);
 bool com_file_unlock(FILE* file);
 bool com_file_unlock(int fd);
 
-#endif // __COM_FILE_H__
+#endif /* __COM_FILE_H__ */
 

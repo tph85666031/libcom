@@ -1,4 +1,5 @@
 #include "com_ipc_tcp.h"
+#include "com_serializer.h"
 #include "com_log.h"
 
 #if __linux__ == 1

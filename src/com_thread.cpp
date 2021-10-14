@@ -20,98 +20,6 @@ typedef struct
 #include "com_thread.h"
 #include "com_log.h"
 
-ThreadID com_thread_start(ThreadFun fp, void* arg)
-{
-#if defined(_WIN32) || defined(_WIN64)
-    return NULL;
-#else
-    ThreadID tid_tmp = 0;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
-    if (pthread_create(&tid_tmp, &attr, fp, arg) != 0)
-    {
-        tid_tmp  = 0;
-    }
-    pthread_attr_destroy(&attr);
-    return tid_tmp;
-#endif
-}
-
-void com_thread_detach()//调用后无需使用join等待线程退出
-{
-#if __linux__ == 1
-    pthread_detach(pthread_self());
-#endif
-}
-
-bool com_thread_join(ThreadID tid)
-{
-#if defined(_WIN32) || defined(_WIN64)
-    return false;
-#else
-    void* status;
-    if (pthread_join(tid, &status) != 0)
-    {
-        return false;
-    }
-    return true;
-#endif
-}
-
-/***************************谨慎使用**************************/
-/*
- * pthread_cancel一个正在退出的线程会随机触发SIGSEGV
- * pthread_cancel一个不存在的线程也会触发SIGSEGV
- */
-bool com_thread_cancel(ThreadID tid)
-{
-#ifdef __ANDROID__
-    return false;
-#elif defined(_WIN32) || defined(_WIN64)
-    return false;
-#else
-    int ret = pthread_cancel(tid);
-    if (ret != 0)
-    {
-        return false;
-    }
-    return true;
-#endif
-}
-
-void com_thread_cancel_enable()
-{
-#if __linux__ == 1
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);//允许cancle
-    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);//运行到取消点才退出
-    //pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);//立即退出
-#endif
-}
-
-void com_thread_cancel_disable()
-{
-#if __linux__ == 1
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);//不允许cancle
-#endif
-}
-
-void com_thread_cancel_mark()
-{
-#if __linux__ == 1
-    pthread_testcancel();//设置cancel信号检查点
-#endif
-}
-
-ThreadHandle com_thread_get_handle()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    return GetCurrentThread();
-#else
-    return com_thread_get_tid_posix();
-#endif
-}
-
 uint64 com_thread_get_tid()
 {
 #if defined(_WIN32) || defined(_WIN64)
@@ -192,7 +100,7 @@ std::string com_thread_get_name(std::thread& t)
     return name;
 }
 
-void com_thread_set_name(ThreadID tid_posix, const char* name)
+void com_thread_set_name(int tid_posix, const char* name)
 {
 #if __linux__ == 1
     if (tid_posix > 0 && name != NULL)
@@ -205,7 +113,7 @@ void com_thread_set_name(ThreadID tid_posix, const char* name)
 #endif
 }
 
-std::string com_thread_get_name(ThreadID tid_posix)
+std::string com_thread_get_name(int tid_posix)
 {
     char buf[32];
     memset(buf, 0, sizeof(buf));
@@ -584,6 +492,7 @@ bool ThreadPool::pushMessage(Message& msg)
     if ((int)msgs.size() > count)
     {
         mutex_msgs.unlock();
+        LOG_W("thread pool queue is full");
         return false;
     }
     msgs.push(msg);

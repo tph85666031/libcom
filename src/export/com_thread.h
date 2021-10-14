@@ -7,52 +7,18 @@
 #include <thread>
 #include "com_base.h"
 #include "com_log.h"
-#include "com_serializer.h"
-
-#if __linux__ == 1
-typedef pid_t ProcessID;
-typedef pthread_t ThreadID;
-typedef pthread_t ThreadHandle;
-typedef void* (*ThreadFun)(void*);
-#else
-typedef int64 ProcessID;
-typedef void* ThreadID;
-typedef void* ThreadHandle;
-typedef void* (*ThreadFun)(void*);
-#endif
-
-typedef void (*fp_thread_cleanup)(void* arg); //线程退出后的回调函数
-
-#if __linux__ == 1
-//定义线程在异常退出或者被cancle退出时的回调函数，用于资源清理
-//fp参考fp_thread_cleanup的定义
-#define com_thread_cleanup_push(fp, arg) pthread_cleanup_push(fp, arg)
-#define com_thread_cleanup_pop()         pthread_cleanup_pop(0)
-#else
-#define com_thread_cleanup_push(fp, arg)
-#define com_thread_cleanup_pop()
-#endif
 
 void com_thread_set_name(std::thread* t, const char* name);
 void com_thread_set_name(std::thread& t, const char* name);
-void com_thread_set_name(ThreadID tid_posix, const char* name);
+void com_thread_set_name(int tid, const char* name);
 void com_thread_set_name(const char* name);
 std::string com_thread_get_name(std::thread* t);
 std::string com_thread_get_name(std::thread& t);
-std::string com_thread_get_name(ThreadID tid_posix);
+std::string com_thread_get_name(int tid);
 std::string com_thread_get_name();
 uint64 com_thread_get_tid_posix();
 uint64 com_thread_get_tid();
 uint64 com_thread_get_pid();
-ThreadHandle com_thread_get_handle();
-
-ThreadID com_thread_start(ThreadFun fp, void* arg = NULL);
-void com_thread_detach();
-bool com_thread_join(ThreadID tid);
-bool com_thread_cancel(ThreadID tid);
-void com_thread_cancel_enable();
-void com_thread_cancel_disable();
-void com_thread_cancel_mark();
 
 typedef struct
 {
@@ -84,8 +50,8 @@ private:
 private:
     std::queue<Message> msgs;
     std::map<std::thread::id, THREAD_POLL_INFO> threads;
-    CPPMutex mutex_msgs;
-    CPPMutex mutex_threads;
+    std::mutex mutex_msgs;
+    std::mutex mutex_threads;
     CPPCondition condition;
     std::atomic<int> min_thread_count;
     std::atomic<int> max_thread_count;
@@ -123,7 +89,7 @@ public:
 
     void startThread()
     {
-        if (thread_runner.native_handle() == com_thread_get_handle())
+        if (thread_runner.native_handle() == com_thread_get_tid_posix())
         {
             return;
         }
@@ -134,7 +100,7 @@ public:
     void stopThread()
     {
         running = false;
-        if (thread_runner.native_handle() != com_thread_get_handle())//在其它线程停止此线程
+        if (thread_runner.native_handle() != com_thread_get_tid_posix())
         {
             if (thread_runner.joinable())
             {
@@ -195,7 +161,7 @@ private:
         LOG_D("%s quit", thread->name.c_str());
     }
 private:
-    CPPMutex mutex_msgs;
+    std::mutex mutex_msgs;
     std::queue<T> msgs;
     std::atomic<bool> running = {false};
     std::thread thread_runner;

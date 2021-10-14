@@ -15,35 +15,34 @@ static CPPTimerManager& GetTimerManager()
 
 void InitTimerManager()
 {
-    GetTimerManager();
+    CPPTimerManager& timer_manager = GetTimerManager();
+    timer_manager.setThreadsCount(1, 10).setQueueSize(10);
+    timer_manager.startTimerManager();
+}
+
+void UninitTimerManager()
+{
+    GetTimerManager().stopTimerManager();
 }
 
 CPPTimerManager::CPPTimerManager()
 {
-    const char* group_name = com_get_bin_name();
-    std::string config_file = com_com_search_config_file();
-    CPPConfig config(config_file.c_str(), false, false, NULL);
-    if(config.isGroupExist(group_name) == false)
-    {
-        group_name = "default";
-    }
-
-    bool enable = config.getBool(group_name, "tm.enable", false);
-    if(enable)
-    {
-        int min_threads = config.getInt32(group_name, "tm.min_threads", 1);
-        int max_threads = config.getInt32(group_name, "tm.max_threads", 10);
-        int queue_size = config.getInt32(group_name, "tm.queue_size", 1);
-        this->message_id = config.getUInt32(group_name, "tm.message_id", 0);
-        setThreadsCount(min_threads, max_threads);
-        setQueueSize(queue_size);
-        running_loop = true;
-        thread_timer_loop = std::thread(ThreadTimerLoop, this);
-        startThreadPool();
-    }
 }
 
 CPPTimerManager::~CPPTimerManager()
+{
+    stopTimerManager();
+}
+
+void CPPTimerManager::startTimerManager()
+{
+    stopTimerManager();
+    running_loop = true;
+    thread_timer_loop = std::thread(ThreadTimerLoop, this);
+    startThreadPool();
+}
+
+void CPPTimerManager::stopTimerManager()
 {
     running_loop = false;
     if(thread_timer_loop.joinable())

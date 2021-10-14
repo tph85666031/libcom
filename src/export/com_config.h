@@ -9,20 +9,17 @@ class CPPConfig
 public:
     CPPConfig();
     CPPConfig(bool thread_safe);
-    CPPConfig(const char* file, bool thread_safe = false, bool safe_mode = false, const char* safe_dir = NULL);
+    CPPConfig(const char* file, bool thread_safe = false);
     virtual ~CPPConfig();
     CPPConfig(CPPConfig&) = delete;//赋值构造函数
     CPPConfig& operator=(CPPConfig& config) = delete; //拷贝构造函数
-    bool load(const char* file, bool safe_mode = false, const char* safe_dir = NULL);
+    bool load(const char* file);
     bool save();
     bool saveAs(const char* config_file);
     void enableAutoSave();
     void disableAutoSave();
     Message toMessage();
     std::string toString();
-    static bool CheckSignature(const char* config_file);
-    static bool CreateSignature(const char* config_file);
-    static bool CreateSignature(const char* config_file_to, const char* config_file_from);
 
     std::string getString(const char* group, const char* key, std::string default_val = std::string());
     int8 getInt8(const char* group, const char* key, int8 default_val = 0);
@@ -55,24 +52,19 @@ public:
     bool set(const char* group, const char* key, std::string val);
 private:
     std::string getConfigFile() const;
-    std::string getSwapFileName(const char* file);
     void lock();
     void unlock();
 private:
     void* data = NULL;
     std::string config_file;
-    std::string config_file_swap;
-    std::string config_file_swap_bak;
     std::atomic<bool> data_changed = {false};
-    std::atomic<bool> safe_mode = {true};
     std::atomic<bool> auto_save = {true};
-    std::string safe_dir;
 
     bool thread_safe = false;
     std::mutex mutex_data;
 };
 
-bool com_global_config_load(const char* config_file, bool safe_mode = true, const char* safe_dir = NULL);
+bool com_global_config_load(const char* config_file);
 bool com_global_config_save();
 bool com_global_config_save_as(const char* config_file);
 Message com_global_config_to_message();

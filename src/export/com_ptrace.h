@@ -86,7 +86,7 @@ public:
     virtual bool replace(const char* func_name, const char* func_name_new) = 0;
     virtual bool replace(const char* func_name, Elf_Addr addr_new) = 0;
 protected:
-    ProcessID pid = 0;
+    int pid = 0;
     void* addr_entry = NULL;
     void* addr_dynamic = NULL;
     void* addr_gotplt = NULL;
