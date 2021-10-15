@@ -37,7 +37,7 @@ public:
 private:
     std::string func_name;
     int line_number;
-    uint64_t time_cost_ns;
+    uint64 time_cost_ns;
 };
 
 #if __linux__ == 1

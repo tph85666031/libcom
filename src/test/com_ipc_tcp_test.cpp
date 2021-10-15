@@ -4,13 +4,13 @@
 class MyTcpIpcClient : public TcpIpcClient
 {
 public:
-    MyTcpIpcClient(const char* name, const char* server_name, const char* host, uint16_t port)
+    MyTcpIpcClient(const char* name, const char* server_name, const char* host, uint16 port)
         : TcpIpcClient(name, server_name, host, port)
     {
         recv_count = 0;
     }
 
-    void onMessage(std::string& name, uint8_t* data, int dataSize)
+    void onMessage(std::string& name, uint8* data, int dataSize)
     {
         //std::string v;
         //v.append((char*)data, dataSize);
@@ -52,7 +52,7 @@ void com_ipc_tcp_unit_test_suit(void** state)
     for (int i = 0; i < count_a; i++)
     {
         //int ret = snprintf(buf, sizeof(buf), "%u", i);
-        ASSERT_TRUE(ipcClient1.sendMessage("client*", (uint8_t*)buf, sizeof(buf)));
+        ASSERT_TRUE(ipcClient1.sendMessage("client*", (uint8*)buf, sizeof(buf)));
     }
     com_sleep_s(5);
 

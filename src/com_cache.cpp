@@ -33,7 +33,7 @@ Cache::Cache(const std::string& uuid)
     this->uuid = uuid;
 }
 
-Cache::Cache(const char* uuid, uint8_t* data, int data_size)
+Cache::Cache(const char* uuid, uint8* data, int data_size)
 {
     if (uuid != NULL)
     {
@@ -42,7 +42,7 @@ Cache::Cache(const char* uuid, uint8_t* data, int data_size)
     this->bytes = CPPBytes(data, data_size);
 }
 
-Cache::Cache(const std::string& uuid, uint8_t* data, int data_size)
+Cache::Cache(const std::string& uuid, uint8* data, int data_size)
 {
     this->uuid = uuid;
     this->bytes = CPPBytes(data, data_size);
@@ -57,7 +57,7 @@ std::string& Cache::getUUID()
     return uuid;
 }
 
-uint8_t* Cache::getData()
+uint8* Cache::getData()
 {
     return bytes.getData();
 }
@@ -67,7 +67,7 @@ int Cache::getDataSize()
     return bytes.getDataSize();
 }
 
-int64_t Cache::getExpireTime()
+int64 Cache::getExpireTime()
 {
     return this->flag.expiretime_ms;
 }
@@ -84,12 +84,12 @@ int Cache::getUserFlag()
 
 bool Cache::expired()
 {
-    uint64_t time = com_time_rtc_ms();
+    uint64 time = com_time_rtc_ms();
     if (time <= 1577808000000)//2020-01-01 00:00:00
     {
         return false;
     }
-    if (flag.expiretime_ms > 0 && com_time_rtc_ms() > (uint64_t)flag.expiretime_ms)
+    if (flag.expiretime_ms > 0 && com_time_rtc_ms() > (uint64)flag.expiretime_ms)
     {
         return true;
     }
@@ -117,7 +117,7 @@ Cache& Cache::setData(CPPBytes& bytes)
     return *this;
 }
 
-Cache& Cache::setData(const uint8_t* data, int data_size)
+Cache& Cache::setData(const uint8* data, int data_size)
 {
     this->bytes = CPPBytes(data, data_size);
     return *this;
@@ -150,7 +150,7 @@ Cache& Cache::setUUID(const std::string& uuid)
     return *this;
 }
 
-Cache& Cache::setExpireTime(int64_t expiretime_ms)
+Cache& Cache::setExpireTime(int64 expiretime_ms)
 {
     this->flag.expiretime_ms = expiretime_ms;
     return *this;
@@ -288,13 +288,13 @@ bool CacheManager::initDB()
     return true;
 }
 
-void CacheManager::insertHead(const char* uuid, uint8_t* data, int data_size)
+void CacheManager::insertHead(const char* uuid, uint8* data, int data_size)
 {
     Cache cache(uuid, data, data_size);
     insertHead(cache);
 }
 
-void CacheManager::insertHead(const std::string& uuid, uint8_t* data, int data_size)
+void CacheManager::insertHead(const std::string& uuid, uint8* data, int data_size)
 {
     Cache cache(uuid, data, data_size);
     insertHead(cache);
@@ -344,13 +344,13 @@ void CacheManager::insertHead(Cache& cache)
     }
 }
 
-void CacheManager::insertTail(const char* uuid, uint8_t* data, int data_size)
+void CacheManager::insertTail(const char* uuid, uint8* data, int data_size)
 {
     Cache cache(uuid, data, data_size);
     insertTail(cache);
 }
 
-void CacheManager::insertTail(const std::string& uuid, uint8_t* data, int data_size)
+void CacheManager::insertTail(const std::string& uuid, uint8* data, int data_size)
 {
     Cache cache(uuid, data, data_size);
     insertTail(cache);
@@ -405,12 +405,12 @@ void CacheManager::insertTail(Cache& cache)
     }
 }
 
-void CacheManager::append(const char* uuid, uint8_t* data, int data_size)
+void CacheManager::append(const char* uuid, uint8* data, int data_size)
 {
     insertTail(uuid, data, data_size);
 }
 
-void CacheManager::append(const std::string& uuid, uint8_t* data, int data_size)
+void CacheManager::append(const std::string& uuid, uint8* data, int data_size)
 {
     insertTail(uuid, data, data_size);
 }
@@ -526,7 +526,7 @@ void CacheManager::removeLast(int count)
 
 void CacheManager::removeExpired()
 {
-    uint64_t time = com_time_rtc_ms();
+    uint64 time = com_time_rtc_ms();
     if (time > 1577808000000)//2020-01-01 00:00:00
     {
         std::string sql = com_string_format("DELETE FROM \"%s\" WHERE \"%s\">0 AND \"%s\"<%lld",

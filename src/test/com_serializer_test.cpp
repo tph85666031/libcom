@@ -2,18 +2,18 @@
 
 typedef struct
 {
-    int16_t x;
+    int16 x;
     std::string y;
-    uint8_t buf[4];
+    uint8 buf[4];
 
     META(x, y, CPPBytes(buf, sizeof(buf)));
 } BB;
 
 typedef struct
 {
-    uint8_t x;
+    uint8 x;
     std::string y;
-    uint64_t z;
+    uint64 z;
     const char* cc;
     BB b;
 
@@ -37,7 +37,7 @@ void tuple_serializer_test()
     LOG_D("val=%s", bytes.toHexString(true).c_str());
     ASSERT_STR_EQUAL(bytes.toHexString(true).c_str(), "01313233000102030405060708343536005AA5373839F0F1F2F3");
 
-    LOG_D("gg=%s", typeid((int8_t)c.x).name());
+    LOG_D("gg=%s", typeid((int8)c.x).name());
 }
 
 void com_serializer_unit_test_suit(void** state)
@@ -45,20 +45,20 @@ void com_serializer_unit_test_suit(void** state)
     tuple_serializer_test();
     Serializer s;
 
-    uint8_t val_u8 = 8;
-    uint16_t val_u16 = 16;
-    uint32_t val_u32 = 32;
-    uint64_t val_u64 = 64;
+    uint8 val_u8 = 8;
+    uint16 val_u16 = 16;
+    uint32 val_u32 = 32;
+    uint64 val_u64 = 64;
 
-    int8_t val_s8 = -8;
-    int16_t val_s16 = -16;
-    int32_t val_s32 = -32;
-    int64_t val_s64 = -64;
+    int8 val_s8 = -8;
+    int16 val_s16 = -16;
+    int32 val_s32 = -32;
+    int64 val_s64 = -64;
 
     std::string val_str = "std::string";
     const char* val_char = "val_char";
 
-    uint8_t val_array[7];
+    uint8 val_array[7];
     memset(val_array, 3, sizeof(val_array));
 
     s.append(val_u8);
@@ -77,20 +77,20 @@ void com_serializer_unit_test_suit(void** state)
 
     s = Serializer(s.toBytes().getData(), s.toBytes().getDataSize());
 
-    uint8_t oval_u8 = 0;
-    uint16_t oval_u16 = 0;
-    uint32_t oval_u32 = 0;
-    uint64_t oval_u64 = 0;
+    uint8 oval_u8 = 0;
+    uint16 oval_u16 = 0;
+    uint32 oval_u32 = 0;
+    uint64 oval_u64 = 0;
 
-    int8_t oval_s8 = 0;
-    int16_t oval_s16 = 0;
-    int32_t oval_s32 = 0;
-    int64_t oval_s64 = 0;
+    int8 oval_s8 = 0;
+    int16 oval_s16 = 0;
+    int32 oval_s32 = 0;
+    int64 oval_s64 = 0;
 
     std::string oval_str;
     char oval_char[1024 + 1];
 
-    uint8_t oval_array[sizeof(val_array)];
+    uint8 oval_array[sizeof(val_array)];
 
     s.detach(oval_u8);
     s.detach(oval_u16);
@@ -146,7 +146,7 @@ void com_serializer_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(val_u8, *(bytes.getData() + 1 + sizeof(val_array)));
     ASSERT_MEM_EQUAL(val_array, bytes.getData() + 1 + sizeof(val_array) + 1, sizeof(val_array));
 
-    CPPBytes x((uint8_t*)"123", 4);
+    CPPBytes x((uint8*)"123", 4);
     x.getData()[0] = '3';
     ASSERT_STR_EQUAL(x.toString().c_str(), "323");
 }

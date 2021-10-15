@@ -25,7 +25,7 @@ static void auto_mutex_test()
     AutoMutex a(mutex_test);
 }
 
-static CPPBytes bytearray_test(uint8_t* data, int dataSize)
+static CPPBytes bytearray_test(uint8* data, int dataSize)
 {
     CPPBytes bytes;
     if(data == NULL || dataSize <= 0 || dataSize % 8 != 0)
@@ -34,7 +34,7 @@ static CPPBytes bytearray_test(uint8_t* data, int dataSize)
     }
 
     CPPBytes bytesSrc(data, dataSize);
-    uint8_t buf[8];
+    uint8 buf[8];
     for(int i = 0; i < bytesSrc.getDataSize() / 8; i++)
     {
         memcpy(buf, bytesSrc.getData() + 8 * i, 8);
@@ -313,11 +313,11 @@ void com_base_string_unit_test_suit(void** state)
 
 void com_base_time_unit_test_suit(void** state)
 {
-    uint32_t val_32 = com_time_rtc_s();
+    uint32 val_32 = com_time_rtc_s();
     //printf("time_s=%u\n", val_32);
-    //uint64_t val_64 = com_time_rtc_ms();
+    //uint64 val_64 = com_time_rtc_ms();
     //printf("time_s=%llu\n", val_64);
-    int32_t timezone_s = com_timezone_get_s();
+    int32 timezone_s = com_timezone_get_s();
     //printf("timezone_s=%d, timezone_h=%d\n", timezone_s, timezone_s / 3600);
     ASSERT_INT_EQUAL(timezone_s, 8 * 3600);
     //val_64 = com_time_cpu_ms();
@@ -325,7 +325,7 @@ void com_base_time_unit_test_suit(void** state)
     struct tm tm_val;
     val_32 = com_time_rtc_s();
     com_time_to_tm(val_32, &tm_val);
-    uint8_t bcd_time[6] = {0x19, 0x10, 0x09, 0x16, 0x56, 0x32};
+    uint8 bcd_time[6] = {0x19, 0x10, 0x09, 0x16, 0x56, 0x32};
     ASSERT_INT_EQUAL(com_time_from_bcd(bcd_time), 1570640192);
 #if 0
     printf("tm=%d-%d-%d %d:%d:%d week=%d\n",
@@ -342,9 +342,9 @@ void com_base_time_unit_test_suit(void** state)
     ASSERT_TRUE(com_string_to_time("2018-07-27 13:59:01") > 0);
     ASSERT_TRUE(com_time_to_string(com_tm_to_time(&tm_val), "%Y-%m-%d %H:%M:%S %z").length() > 0);
     //printf("date_check=%s      %s\n", "2018-07-27 13:59:01", date_str);
-    uint32_t time_cur_s = com_time_rtc_s();
+    uint32 time_cur_s = com_time_rtc_s();
     com_time_to_tm(time_cur_s, &tm_val);
-    uint8_t bcd[6];
+    uint8 bcd[6];
     com_tm_to_bcd_date(&tm_val, bcd);
     ASSERT_INT_EQUAL(com_tm_to_time(&tm_val), time_cur_s);
 }
@@ -464,7 +464,7 @@ void com_base_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(ret, 33);
 
     void* p1 = (void*)0x123456;
-    uint64_t val =  com_ptr_to_number(p1);
+    uint64 val =  com_ptr_to_number(p1);
     ASSERT_INT_EQUAL(val, 0x123456);
     void* p2 = com_number_to_ptr(val);
     ASSERT_PTR_EQUAL(p2, (void*)0x123456);
@@ -513,7 +513,7 @@ void com_base_unit_test_suit(void** state)
 
 void com_base_bytearray_unit_test_suit(void** state)
 {
-    CPPBytes bytes((uint8_t*)"123456", 6);
+    CPPBytes bytes((uint8*)"123456", 6);
 
     bytes.removeAt(1);
     ASSERT_STR_EQUAL(bytes.toString().c_str(), "13456");
@@ -527,7 +527,7 @@ void com_base_bytearray_unit_test_suit(void** state)
     ASSERT_STR_EQUAL(bytes.toString().c_str(), "345");
     LOG_D("bytes=%s\n", bytes.toString().c_str());
 
-    CPPBytes bytes1((uint8_t*)"123456", 6);
+    CPPBytes bytes1((uint8*)"123456", 6);
     bytes1 = bytearray_test(bytes1.getData(), bytes1.getDataSize());
 }
 
@@ -540,7 +540,7 @@ void com_base_message_unit_test_suit(void** state)
     msg.set("key2", -1.1);
     msg.set("key3", "kkkks");
     //msg.set("key4", (void*)0x123456);
-    msg.set("key5", (const uint8_t*)"123456", 6);
+    msg.set("key5", (const uint8*)"123456", 6);
 
     ASSERT_TRUE(msg.getBool("key0"));
     ASSERT_FALSE(msg.getBool("key0.1"));

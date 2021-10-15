@@ -8,14 +8,14 @@ URL::~URL()
 {
 }
 
-uint8_t URL::toHex(uint8_t x)
+uint8 URL::toHex(uint8 x)
 {
     return  x > 9 ? x + 55 : x + 48;
 }
 
-uint8_t URL::fromHex(uint8_t x)
+uint8 URL::fromHex(uint8 x)
 {
-    uint8_t y = ' ';
+    uint8 y = ' ';
     if (x >= 'A' && x <= 'Z')
     {
         y = x - 'A' + 10;

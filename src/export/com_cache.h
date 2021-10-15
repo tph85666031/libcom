@@ -7,7 +7,7 @@
 #pragma pack(1)
 typedef struct
 {
-    int64_t expiretime_ms = -1;
+    int64 expiretime_ms = -1;
     int retry_count = -1;
     int user_flag = 0;
 } CACHE_FLAG;
@@ -19,23 +19,23 @@ public:
     Cache();
     Cache(const char* uuid);
     Cache(const std::string& uuid);
-    Cache(const char* uuid, uint8_t* data, int data_size);
-    Cache(const std::string& uuid, uint8_t* data, int data_size);
+    Cache(const char* uuid, uint8* data, int data_size);
+    Cache(const std::string& uuid, uint8* data, int data_size);
     virtual ~Cache();
     std::string& getUUID();
-    uint8_t* getData();
+    uint8* getData();
     int getDataSize();
-    int64_t getExpireTime();
+    int64 getExpireTime();
     int getRetryCount();
     int getUserFlag();
     bool expired();
     Cache& setData(CPPBytes& bytes);
-    Cache& setData(const uint8_t* data, int data_size);
+    Cache& setData(const uint8* data, int data_size);
     Cache& setData(const char* data);
     Cache& setData(const char* data, int data_size);
     Cache& setUUID(const char* uuid);
     Cache& setUUID(const std::string& uuid);
-    Cache& setExpireTime(int64_t expiretime_ms);
+    Cache& setExpireTime(int64 expiretime_ms);
     Cache& setRetryCount(int retry_count);
     Cache& setUserFlag(int flag);
     bool empty();
@@ -66,8 +66,8 @@ public:
     bool startManager(const char* db_file);
     void stopManager();
 
-    void append(const char* uuid, uint8_t* data, int data_size);
-    void append(const std::string& uuid, uint8_t* data, int data_size);
+    void append(const char* uuid, uint8* data, int data_size);
+    void append(const std::string& uuid, uint8* data, int data_size);
     void append(Cache& cache);
     void removeByUUID(const char* uuid);
     void removeByUUID(const std::string& uuid);
@@ -97,11 +97,11 @@ private:
     void setRetryCount(const std::string& uuid, int count);
     void setRetryCount(const char* uuid, int count);
     void insertHead(Cache& cache);
-    void insertHead(const char* uuid, uint8_t* data, int data_size);
-    void insertHead(const std::string& uuid, uint8_t* data, int data_size);
+    void insertHead(const char* uuid, uint8* data, int data_size);
+    void insertHead(const std::string& uuid, uint8* data, int data_size);
     void insertTail(Cache& cache);
-    void insertTail(const char* uuid, uint8_t* data, int data_size);
-    void insertTail(const std::string& uuid, uint8_t* data, int data_size);
+    void insertTail(const char* uuid, uint8* data, int data_size);
+    void insertTail(const std::string& uuid, uint8* data, int data_size);
     static void ThreadFlushRunner(CacheManager* cache_manager);
 
 private:

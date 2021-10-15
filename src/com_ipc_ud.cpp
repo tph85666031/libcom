@@ -9,11 +9,11 @@
 #pragma pack(1)
 typedef struct
 {
-    uint8_t sof;
+    uint8 sof;
     char from[UD_IPC_NAME_LEN];
     char to[UD_IPC_NAME_LEN];
-    uint32_t data_size;
-    uint8_t data[0];
+    uint32 data_size;
+    uint8 data[0];
 } UD_IPC_MSG;
 #pragma pack(pop)
 
@@ -37,12 +37,12 @@ UnixDomainIPCServer::~UnixDomainIPCServer()
     }
 }
 
-void UnixDomainIPCServer::onMessage(std::string& from_file_name, uint8_t* data, int data_size)
+void UnixDomainIPCServer::onMessage(std::string& from_file_name, uint8* data, int data_size)
 {
     LOG_D("%s go message from %s", getServerFileName().c_str(), from_file_name.c_str());
 }
 
-void UnixDomainIPCServer::onRecv(std::string& client_file_name, int socketfd, uint8_t* data, int dataSize)
+void UnixDomainIPCServer::onRecv(std::string& client_file_name, int socketfd, uint8* data, int dataSize)
 {
     forwardMessage(client_file_name, data, dataSize);
 }
@@ -51,7 +51,7 @@ void UnixDomainIPCServer::onConnectionChanged(std::string& client_file_name, int
 {
 }
 
-void UnixDomainIPCServer::forwardMessage(std::string& from_file_name, uint8_t* data, int data_size)
+void UnixDomainIPCServer::forwardMessage(std::string& from_file_name, uint8* data, int data_size)
 {
     if (from_file_name.empty() || data == NULL || data_size <= 0)
     {
@@ -91,11 +91,11 @@ void UnixDomainIPCServer::forwardMessage(std::string& from_file_name, uint8_t* d
         {
             std::string from;
             from.assign(head->from, sizeof(head->from));
-            onMessage(from, (uint8_t*)head, sizeof(UD_IPC_MSG) + head->data_size);
+            onMessage(from, (uint8*)head, sizeof(UD_IPC_MSG) + head->data_size);
         }
         else
         {
-            send(head->to, (uint8_t*)head, sizeof(UD_IPC_MSG) + head->data_size);
+            send(head->to, (uint8*)head, sizeof(UD_IPC_MSG) + head->data_size);
         }
         des.bytes.removeHead(sizeof(UD_IPC_MSG) + head->data_size);
         for (int j = 0; j < des.bytes.getDataSize(); j++)
@@ -153,7 +153,7 @@ UnixDomainIPCClient::~UnixDomainIPCClient()
 {
 }
 
-bool UnixDomainIPCClient::sendMessage(const char* to_file_name, uint8_t* data, int data_size)
+bool UnixDomainIPCClient::sendMessage(const char* to_file_name, uint8* data, int data_size)
 {
     if (to_file_name == NULL || data == NULL || data_size <= 0)
     {
@@ -166,13 +166,13 @@ bool UnixDomainIPCClient::sendMessage(const char* to_file_name, uint8_t* data, i
     com_strncpy(msg.to, to_file_name, sizeof(msg.to));
     msg.data_size = data_size;
     CPPBytes bytes;
-    bytes.append((uint8_t*)&msg, sizeof(UD_IPC_MSG));
+    bytes.append((uint8*)&msg, sizeof(UD_IPC_MSG));
     bytes.append(data, data_size);
     int ret = send(bytes.getData(), bytes.getDataSize());
     return (ret == bytes.getDataSize());
 }
 
-void UnixDomainIPCClient::onMessage(std::string& from_file_name, uint8_t* data, int data_size)
+void UnixDomainIPCClient::onMessage(std::string& from_file_name, uint8* data, int data_size)
 {
 }
 
@@ -181,7 +181,7 @@ void UnixDomainIPCClient::onConnectionChanged(bool connected)
     //LOG_D("%s %s", getFileName(), connected ? "true" : "false");
 }
 
-void UnixDomainIPCClient::onRecv(uint8_t* data, int data_size)
+void UnixDomainIPCClient::onRecv(uint8* data, int data_size)
 {
     if (bytes.empty())
     {

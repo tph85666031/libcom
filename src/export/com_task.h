@@ -16,13 +16,13 @@ public:
     Task(std::string name, Message init_msg = Message());
     virtual ~Task();
     std::string getName();
-    bool isListenerExist(uint32_t id);
+    bool isListenerExist(uint32 id);
     template <class... T>
     void addListener(T... ids)
     {
         mutex_listeners.lock();
         // *INDENT-OFF*
-        for(uint32_t id : {ids...})
+        for(uint32 id : {ids...})
         // *INDENT-ON*
         {
             listeners[id] = id;
@@ -34,7 +34,7 @@ public:
     {
         mutex_listeners.lock();
         // *INDENT-OFF*
-        for(uint32_t id : {ids...})
+        for(uint32 id : {ids...})
         // *INDENT-ON*
         {
             if (listeners.count(id) > 0)
@@ -60,7 +60,7 @@ private:
     std::queue<Message> msgs;
     std::atomic<bool> running;
     CPPMutex mutex_listeners = {"TASK:mutex_listeners"};
-    std::map<uint32_t, uint32_t> listeners;
+    std::map<uint32, uint32> listeners;
     CPPCondition condition = {"TASK:condition"};
 };
 

@@ -1,7 +1,7 @@
 #ifndef __COM_ERR_H__
 #define __COM_ERR_H__
 
-typedef enum : uint16_t
+typedef enum : uint16
 {
     ERR_OK = 0,
     ERR_FAILED = 1,

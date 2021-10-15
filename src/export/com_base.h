@@ -2,6 +2,16 @@
 #define __COM_BASE_H__
 
 #include <stdint.h>
+typedef signed char        int8;
+typedef signed short       int16;
+typedef signed int         int32;
+typedef signed long long   int64;
+
+typedef unsigned char      uint8;
+typedef unsigned short     uint16;
+typedef unsigned int       uint32;
+typedef unsigned long long uint64;
+
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -96,11 +106,11 @@ public:
 };
 
 #ifndef htonll
-#define htonll(n) (htons(0x1234)==0x1234 ? ((uint64_t)(n)) : (uint64_t)(((((uint64_t)htonl(n)) << 32) | (uint64_t)htonl((n) >> 32))))
+#define htonll(n) (htons(0x1234)==0x1234 ? ((uint64)(n)) : (uint64)(((((uint64)htonl(n)) << 32) | (uint64)htonl((n) >> 32))))
 #endif
 
 #ifndef ntohll
-#define ntohll(n) (ntohs(0x1234)==0x1234 ? ((uint64_t)(n)) : (uint64_t)(((((uint64_t)ntohl(n)) << 32) | (uint64_t)ntohl((n) >> 32))))
+#define ntohll(n) (ntohs(0x1234)==0x1234 ? ((uint64)(n)) : (uint64)(((((uint64)ntohl(n)) << 32) | (uint64)ntohl((n) >> 32))))
 #endif
 
 #ifdef __GLIBC__
@@ -132,7 +142,7 @@ typedef struct
     double altitude;//米
     double direction;//度
     double speed;//米每秒
-    uint32_t time;//秒
+    uint32 time;//秒
 } GPS;
 
 class xstring : public std::string
@@ -171,9 +181,9 @@ public:
 bool com_run_shell(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 std::string com_run_shell_with_output(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 
-void com_sleep_s(uint32_t val);
-void com_sleep_ms(uint32_t val);
-uint32_t com_rand(uint32_t min, uint32_t max);
+void com_sleep_s(uint32 val);
+void com_sleep_ms(uint32 val);
+uint32 com_rand(uint32 min, uint32 max);
 char* com_strncpy(char* dst, const char* src, int dst_size);
 bool com_strncmp_ignore_case(const char* str1, const char* str2, int size);
 bool com_strncmp(const char* str1, const char* str2, int size);
@@ -195,8 +205,8 @@ std::string& com_string_to_upper(std::string& str);
 std::string& com_string_to_lower(std::string& str);
 char* com_string_to_upper(char* str);
 char* com_string_to_lower(char* str);
-uint32_t com_string_to_ip(const char* ip_str);
-std::string com_ip_to_string(uint32_t ip);
+uint32 com_string_to_ip(const char* ip_str);
+std::string com_ip_to_string(uint32 ip);
 bool com_string_replace(char* str, char from, char to);
 bool com_string_replace(std::string& str, const char* from, const char* to);
 int com_string_len_utf8(const char* str);
@@ -209,33 +219,33 @@ std::string com_string_from_wstring(const std::wstring& s);
 std::wstring com_string_to_wstring(const char* s);
 std::wstring com_string_to_wstring(const std::string& s);
 int com_snprintf(char* buf, int buf_size, const char* fmt, ...) __attribute__((format(printf, 3, 4)));
-std::string com_bytes_to_hexstring(const uint8_t* data, uint16_t size);
+std::string com_bytes_to_hexstring(const uint8* data, uint16 size);
 int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size);
 
-uint32_t com_time_rtc_s();
-uint64_t com_time_rtc_ms();
-uint64_t com_time_rtc_us();
-uint32_t com_time_cpu_s();
-uint64_t com_time_cpu_ms();
-uint64_t com_time_cpu_us();
-uint64_t com_time_cpu_ns();
-int32_t com_timezone_china_s();
-int32_t com_timezone_get_s();
-std::string com_time_to_string(uint32_t time_s);
-std::string com_time_to_string(uint32_t time_s, const char* format) __attribute__((format(strftime, 2, 0)));
-bool com_time_to_tm(uint32_t time_s,  struct tm* tm_val);
-bool com_time_to_bcd(uint32_t time_s, uint8_t bcd_time[6]);
-uint32_t com_time_from_bcd(uint8_t bcd_time[6]);
+uint32 com_time_rtc_s();
+uint64 com_time_rtc_ms();
+uint64 com_time_rtc_us();
+uint32 com_time_cpu_s();
+uint64 com_time_cpu_ms();
+uint64 com_time_cpu_us();
+uint64 com_time_cpu_ns();
+int32 com_timezone_china_s();
+int32 com_timezone_get_s();
+std::string com_time_to_string(uint32 time_s);
+std::string com_time_to_string(uint32 time_s, const char* format) __attribute__((format(strftime, 2, 0)));
+bool com_time_to_tm(uint32 time_s,  struct tm* tm_val);
+bool com_time_to_bcd(uint32 time_s, uint8 bcd_time[6]);
+uint32 com_time_from_bcd(uint8 bcd_time[6]);
 
 /* date_str格式为 yyyy-mm-dd HH:MM:SS */
-uint32_t com_string_to_time(const char* date_str);
+uint32 com_string_to_time(const char* date_str);
 
-uint32_t com_tm_to_time(struct tm* tm_val);
-bool com_tm_to_bcd_date(struct tm* tm_val, uint8_t bcd_date[6]);
+uint32 com_tm_to_time(struct tm* tm_val);
+bool com_tm_to_bcd_date(struct tm* tm_val, uint8 bcd_date[6]);
 bool com_gettimeofday(struct timeval* tp);
 
-uint8_t com_uint8_to_bcd(uint8_t v);
-uint8_t com_bcd_to_uint8(uint8_t bcd);
+uint8 com_uint8_to_bcd(uint8 v);
+uint8 com_bcd_to_uint8(uint8 bcd);
 
 double com_gps_distance_m(double lon_a, double lat_a, double lon_b,
                           double lat_b);
@@ -272,8 +282,8 @@ bool com_condition_destroy(Condition* condition);//通过create创建的由destr
 std::string com_get_bin_name();
 std::string com_get_bin_path();
 
-uint64_t com_ptr_to_number(const void* ptr);
-void* com_number_to_ptr(const uint64_t val);
+uint64 com_ptr_to_number(const void* ptr);
+void* com_number_to_ptr(const uint64 val);
 
 std::string com_get_cwd();
 void com_set_cwd(const char* dir);
@@ -290,7 +300,7 @@ int com_gcd(int x, int y, T...ns)
 {
     int gcd = com_gcd(x, y);
     // *INDENT-OFF*
-    for(uint32_t n : {ns...})
+    for(uint32 n : {ns...})
     // *INDENT-ON*
     {
         gcd = com_gcd(gcd, n);
@@ -326,22 +336,22 @@ public:
     CPPBytes();
     CPPBytes(const char* data);
     CPPBytes(const char* data, int data_size);
-    CPPBytes(const uint8_t* data, int data_size);
+    CPPBytes(const uint8* data, int data_size);
     CPPBytes(int reserve_size);
     virtual ~CPPBytes();
-    CPPBytes& operator+(uint8_t val);
-    CPPBytes& operator+=(uint8_t val);
+    CPPBytes& operator+(uint8 val);
+    CPPBytes& operator+=(uint8 val);
     bool operator==(CPPBytes& bytes);
     bool operator!=(CPPBytes& bytes);
     void clear();
     bool empty();
-    uint8_t* getData();
+    uint8* getData();
     int getDataSize();
-    CPPBytes& append(uint8_t val);
-    CPPBytes& append(const uint8_t* data, int data_size);
+    CPPBytes& append(uint8 val);
+    CPPBytes& append(const uint8* data, int data_size);
     CPPBytes& append(const char* data);
     CPPBytes& append(CPPBytes& bytes);
-    uint8_t getAt(int pos);
+    uint8 getAt(int pos);
     void removeAt(int pos);
     void removeHead(int count = 1);
     void removeTail(int count = 1);
@@ -349,7 +359,7 @@ public:
     std::string toHexString(bool upper = false);
     static CPPBytes FromHexString(const char* hex_str);
 private:
-    std::vector<uint8_t> buf;
+    std::vector<uint8> buf;
 };
 
 class CPPMutex
@@ -412,13 +422,13 @@ class Message
 {
 public:
     Message();
-    Message(uint32_t id);
+    Message(uint32 id);
     virtual ~Message();
 
     void reset();
 
-    uint32_t getID();
-    Message& setID(uint32_t id);
+    uint32 getID();
+    Message& setID(uint32 id);
 
     bool isKeyExist(const char* key);
     bool isEmpty();
@@ -435,7 +445,7 @@ public:
 
     Message& set(const char* key, const std::string& val);
     Message& set(const char* key, const char* val);
-    Message& set(const char* key, const uint8_t* val, int val_size);
+    Message& set(const char* key, const uint8* val, int val_size);
     Message& set(const char* key, CPPBytes bytes);
 
     void remove(const char* key);
@@ -446,14 +456,14 @@ public:
     float getFloat(const char* key, float default_val = 0.0f);
     double getDouble(const char* key, double default_val = 0.0f);
 
-    int8_t getInt8(const char* key, int8_t default_val = 0);
-    int16_t getInt16(const char* key, int16_t default_val = 0);
-    int32_t getInt32(const char* key, int32_t default_val = 0);
-    int64_t getInt64(const char* key, int64_t default_val = 0);
-    uint8_t getUInt8(const char* key, uint8_t default_val = 0);
-    uint16_t getUInt16(const char* key, uint16_t default_val = 0);
-    uint32_t getUInt32(const char* key, uint32_t default_val = 0);
-    uint64_t getUInt64(const char* key, uint64_t default_val = 0);
+    int8 getInt8(const char* key, int8 default_val = 0);
+    int16 getInt16(const char* key, int16 default_val = 0);
+    int32 getInt32(const char* key, int32 default_val = 0);
+    int64 getInt64(const char* key, int64 default_val = 0);
+    uint8 getUInt8(const char* key, uint8 default_val = 0);
+    uint16 getUInt16(const char* key, uint16 default_val = 0);
+    uint32 getUInt32(const char* key, uint32 default_val = 0);
+    uint64 getUInt64(const char* key, uint64 default_val = 0);
 
     std::string getString(const char* key, std::string default_val = std::string());
     CPPBytes getBytes(const char* key);
@@ -462,7 +472,7 @@ public:
     static Message FromJSON(std::string json);
 
 private:
-    uint32_t id;
+    uint32 id;
     std::map<std::string, std::string> datas;
 };
 

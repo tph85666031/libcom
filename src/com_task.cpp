@@ -92,7 +92,7 @@ void Task::pushMessage(Message& msg)
     condition.notifyOne();
 }
 
-bool Task::isListenerExist(uint32_t id)
+bool Task::isListenerExist(uint32 id)
 {
     mutex_listeners.lock();
     bool exist = listeners.count(id) > 0;

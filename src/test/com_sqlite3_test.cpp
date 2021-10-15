@@ -1,7 +1,7 @@
 #include "com.h"
 
-std::atomic<uint32_t> progress_cur;
-std::atomic<uint32_t> progress_all;
+std::atomic<uint32> progress_cur;
+std::atomic<uint32> progress_all;
 void sqlite3_test_thread_progress()
 {
     while (progress_cur < progress_all)
@@ -14,8 +14,8 @@ void sqlite3_test_thread_progress()
 
 void sqlite3_test_thread(void* fd, std::string table_name, int count, int start)
 {
-    uint32_t ID = start;
-    uint32_t PARAM = start;
+    uint32 ID = start;
+    uint32 PARAM = start;
     while (count-- > 0)
     {
         ID++;

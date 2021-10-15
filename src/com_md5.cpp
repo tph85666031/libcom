@@ -234,7 +234,7 @@ CPPMD5::~CPPMD5()
 {
 }
 
-void CPPMD5::append(const uint8_t* data, uint32_t data_size)
+void CPPMD5::append(const uint8* data, uint32 data_size)
 {
     if (data == NULL || data_size == 0)
     {
@@ -254,7 +254,7 @@ void CPPMD5::appendFile(const char* file_path)
     {
         return;
     }
-    uint8_t buf[READ_DATA_SIZE];
+    uint8 buf[READ_DATA_SIZE];
     while (true)
     {
         int ret = com_file_read(file, buf, sizeof(buf));

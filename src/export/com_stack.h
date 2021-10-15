@@ -11,7 +11,7 @@ void com_stack_print();
 void com_stack_set_hook(signal_cb cb, void* user_data = NULL);
 
 void com_system_send_signal(int sig);
-void com_system_send_signal(uint64_t pid, int sig);
+void com_system_send_signal(uint64 pid, int sig);
 void com_system_exit(bool force = false);
 
 #endif /* __COM_STACK_H__ */

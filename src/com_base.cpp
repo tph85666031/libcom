@@ -448,7 +448,7 @@ std::wstring com_string_to_wstring(const std::string& s)
     return com_string_to_wstring(s.c_str());
 }
 
-std::string com_bytes_to_hexstring(const uint8_t* data, uint16_t size)
+std::string com_bytes_to_hexstring(const uint8* data, uint16 size)
 {
     char buf[8];
     std::string result;
@@ -616,7 +616,7 @@ int com_snprintf(char* buf, int buf_size, const char* fmt, ...)
     return ret;
 }
 
-void com_sleep_ms(uint32_t val)
+void com_sleep_ms(uint32 val)
 {
     if(val == 0)
     {
@@ -626,7 +626,7 @@ void com_sleep_ms(uint32_t val)
     Sleep(val);
 #else
 #if 1
-    usleep((uint64_t)val * 1000);
+    usleep((uint64)val * 1000);
 #else
     struct timeval time;
     time.tv_sec = val / 1000;//seconds
@@ -636,16 +636,16 @@ void com_sleep_ms(uint32_t val)
 #endif
 }
 
-void com_sleep_s(uint32_t val)
+void com_sleep_s(uint32 val)
 {
-    com_sleep_ms((uint64_t)val * 1000);
+    com_sleep_ms((uint64)val * 1000);
 }
 
-uint32_t com_rand(uint32_t min, uint32_t max)
+uint32 com_rand(uint32 min, uint32 max)
 {
-    static uint32_t seed = 0;
+    static uint32 seed = 0;
     srand(com_time_cpu_ms() + (seed++));
-    return (uint32_t)(rand() % ((uint64_t)max - min + 1) + min);
+    return (uint32)(rand() % ((uint64)max - min + 1) + min);
 }
 
 bool com_gettimeofday(struct timeval* tp)
@@ -675,7 +675,7 @@ bool com_gettimeofday(struct timeval* tp)
 #endif
 }
 
-uint32_t com_time_cpu_s()
+uint32 com_time_cpu_s()
 {
 #if defined(_WIN32) || defined(_WIN64)
     return GetTickCount() / 1000;
@@ -686,10 +686,10 @@ uint32_t com_time_cpu_s()
 #endif
 }
 
-uint64_t com_time_cpu_ms()
+uint64 com_time_cpu_ms()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    return (uint64_t)GetTickCount();
+    return (uint64)GetTickCount();
 #else
     struct timespec tss;
     clock_gettime(CLOCK_MONOTONIC_RAW, &tss);
@@ -697,10 +697,10 @@ uint64_t com_time_cpu_ms()
 #endif
 }
 
-uint64_t com_time_cpu_us()
+uint64 com_time_cpu_us()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    return (uint64_t)GetTickCount() * 1000;
+    return (uint64)GetTickCount() * 1000;
 #else
     struct timespec tss;
     clock_gettime(CLOCK_MONOTONIC_RAW, &tss);
@@ -708,10 +708,10 @@ uint64_t com_time_cpu_us()
 #endif
 }
 
-uint64_t com_time_cpu_ns()
+uint64 com_time_cpu_ns()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    return (uint64_t)GetTickCount() * 1000 * 1000;
+    return (uint64)GetTickCount() * 1000 * 1000;
 #else
     struct timespec tss;
     clock_gettime(CLOCK_MONOTONIC_RAW, &tss);
@@ -720,7 +720,7 @@ uint64_t com_time_cpu_ns()
 }
 
 //UTC seconds form 1970-1-1 0-0-0
-uint32_t com_time_rtc_s()
+uint32 com_time_rtc_s()
 {
     struct timeval tv;
     com_gettimeofday(&tv);
@@ -728,7 +728,7 @@ uint32_t com_time_rtc_s()
 }
 
 //UTC milliseconds form 1970-1-1 0-0-0
-uint64_t com_time_rtc_ms()
+uint64 com_time_rtc_ms()
 {
     struct timeval tv;
     com_gettimeofday(&tv);
@@ -736,14 +736,14 @@ uint64_t com_time_rtc_ms()
 }
 
 //UTC macroseconds form 1970-1-1 0-0-0
-uint64_t com_time_rtc_us()
+uint64 com_time_rtc_us()
 {
     struct timeval tv;
     com_gettimeofday(&tv);
     return (tv.tv_sec * 1000 * 1000ULL + tv.tv_usec);
 }
 
-uint64_t com_time_diff_ms(uint64_t start, uint64_t end)
+uint64 com_time_diff_ms(uint64 start, uint64 end)
 {
     if(end < start)
     {
@@ -754,12 +754,12 @@ uint64_t com_time_diff_ms(uint64_t start, uint64_t end)
 }
 
 //获取与utc时间的秒速差值
-int32_t com_timezone_get_s()
+int32 com_timezone_get_s()
 {
     time_t t1, t2;
     time(&t1);
     t2 = t1;
-    int32_t timezone_s = 0;
+    int32 timezone_s = 0;
     struct tm* tm_local = NULL;
     struct tm* tm_utc = NULL;
     tm_local = localtime(&t1);
@@ -770,7 +770,7 @@ int32_t com_timezone_get_s()
     return timezone_s;
 }
 
-int32_t com_timezone_china_s()
+int32 com_timezone_china_s()
 {
     return 8 * 3600;
 }
@@ -813,7 +813,7 @@ int32_t com_timezone_china_s()
     %z，%Z 时区名称，如果不能得到时区名称则返回空字符
     %% 百分号
 */
-std::string com_time_to_string(uint32_t time_s, const char* format)
+std::string com_time_to_string(uint32 time_s, const char* format)
 {
     std::string str;
     if(format == NULL)
@@ -835,13 +835,13 @@ std::string com_time_to_string(uint32_t time_s, const char* format)
     return str;
 }
 
-std::string com_time_to_string(uint32_t time_s)
+std::string com_time_to_string(uint32 time_s)
 {
     return com_time_to_string(time_s, "%Y-%m-%d %H:%M:%S");
 }
 
 //UTC
-bool com_time_to_tm(uint32_t time_s,  struct tm* tm_val)
+bool com_time_to_tm(uint32 time_s,  struct tm* tm_val)
 {
     if(tm_val == NULL)
     {
@@ -860,7 +860,7 @@ bool com_time_to_tm(uint32_t time_s,  struct tm* tm_val)
 }
 
 //UTC
-bool com_time_to_bcd(uint32_t time_s, uint8_t bcd_time[6])
+bool com_time_to_bcd(uint32 time_s, uint8 bcd_time[6])
 {
     if(bcd_time == NULL)
     {
@@ -875,7 +875,7 @@ bool com_time_to_bcd(uint32_t time_s, uint8_t bcd_time[6])
     return com_tm_to_bcd_date(&tm_val, bcd_time);
 }
 
-uint32_t com_time_from_bcd(uint8_t bcd_date[6])
+uint32 com_time_from_bcd(uint8 bcd_date[6])
 {
     if(bcd_date == NULL)
     {
@@ -895,7 +895,7 @@ uint32_t com_time_from_bcd(uint8_t bcd_date[6])
 }
 
 //UTC
-uint32_t com_tm_to_time(struct tm* tm_val)
+uint32 com_tm_to_time(struct tm* tm_val)
 {
     if(tm_val == NULL)
     {
@@ -907,11 +907,11 @@ uint32_t com_tm_to_time(struct tm* tm_val)
     tm_val->tm_zone = NULL;
 #endif
     //mktime默认会扣除当前系统配置的时区秒数,由于我们传入的参数默认为UTC时间，因此需要再加上时区秒数
-    return (uint32_t)(mktime(tm_val) + com_timezone_get_s());
+    return (uint32)(mktime(tm_val) + com_timezone_get_s());
 }
 
 //UTC
-bool com_tm_to_bcd_date(struct tm* tm_val, uint8_t bcd_date[6])
+bool com_tm_to_bcd_date(struct tm* tm_val, uint8 bcd_date[6])
 {
     if(tm_val == NULL || bcd_date == NULL)
     {
@@ -934,7 +934,7 @@ bool com_tm_to_bcd_date(struct tm* tm_val, uint8_t bcd_date[6])
 }
 
 /* UTC date_str格式为 yyyy-mm-dd HH:MM:SS */
-uint32_t com_string_to_time(const char* date_str)
+uint32 com_string_to_time(const char* date_str)
 {
     if(date_str == NULL)
     {
@@ -954,14 +954,14 @@ uint32_t com_string_to_time(const char* date_str)
     return com_tm_to_time(&tm_val);
 }
 
-uint8_t com_uint8_to_bcd(uint8_t v)
+uint8 com_uint8_to_bcd(uint8 v)
 {
     return ((v / 10) << 4 | v % 10);
 }
 
-uint8_t com_bcd_to_uint8(uint8_t bcd)
+uint8 com_bcd_to_uint8(uint8 bcd)
 {
-    uint8_t tmp = 0;
+    uint8 tmp = 0;
     tmp = ((bcd & 0xF0) >> 0x4) * 10;
     return (tmp + (bcd & 0x0F));
 }
@@ -1107,7 +1107,7 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
         memset(&ts, 0, sizeof(struct timespec));
 
         clock_gettime(CLOCK_REALTIME, &ts);
-        uint64_t tmp = ts.tv_nsec + (int64_t)timeout_ms * 1000 * 1000;
+        uint64 tmp = ts.tv_nsec + (int64)timeout_ms * 1000 * 1000;
         ts.tv_nsec = tmp % (1000 * 1000 * 1000);
         ts.tv_sec += tmp / (1000 * 1000 * 1000);
 
@@ -1141,7 +1141,7 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
     dispatch_time_t timeout = DISPATCH_TIME_FOREVER;
     if(timeout_ms > 0)
     {
-        timeout = dispatch_time(DISPATCH_TIME_NOW, (int64_t)timeout_ms * NSEC_PER_MSEC);
+        timeout = dispatch_time(DISPATCH_TIME_NOW, (int64)timeout_ms * NSEC_PER_MSEC);
     }
     return dispatch_semaphore_wait(sem->handle, timeout) == 0;
 #else
@@ -1240,7 +1240,7 @@ bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms)
         struct timespec ts;
         memset(&ts, 0, sizeof(struct timespec));
         clock_gettime(CLOCK_REALTIME, &ts);
-        uint64_t tmp = ts.tv_nsec + (int64_t)timeout_ms * 1000 * 1000;
+        uint64 tmp = ts.tv_nsec + (int64)timeout_ms * 1000 * 1000;
         ts.tv_nsec = tmp % (1000 * 1000 * 1000);
         ts.tv_sec += tmp / (1000 * 1000 * 1000);
         if(pthread_cond_timedwait(&condition->handle, &mutex->handle, &ts) != 0)
@@ -1583,21 +1583,21 @@ GPS com_gps_gcj02_to_bd09(double longitude, double latitude)
 }
 
 //ip是大端结构
-uint32_t com_string_to_ip(const char* ip_str)
+uint32 com_string_to_ip(const char* ip_str)
 {
-    uint32_t ip[4];
+    uint32 ip[4];
     int ret = sscanf(ip_str, "%u.%u.%u.%u",
                      &ip[0], &ip[1], &ip[2],  &ip[3]);
     if(ret != 4)
     {
         return 0;
     }
-    uint32_t val = 0;
+    uint32 val = 0;
     val = (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3];
     return val;
 }
 
-std::string com_ip_to_string(uint32_t ip)
+std::string com_ip_to_string(uint32 ip)
 {
     static char str[64];
     snprintf(str, sizeof(str),
@@ -1707,14 +1707,14 @@ void com_set_cwd(const char* dir)
     }
 }
 
-uint64_t com_ptr_to_number(const void* ptr)
+uint64 com_ptr_to_number(const void* ptr)
 {
-    uint64_t val = 0;
+    uint64 val = 0;
     memcpy(&val, &ptr, sizeof(void*));
     return val;
 }
 
-void* com_number_to_ptr(const uint64_t val)
+void* com_number_to_ptr(const uint64 val)
 {
     void* ptr = NULL;
     memcpy(&ptr, &val, sizeof(void*));
@@ -1730,7 +1730,7 @@ std::string com_uuid_generator()
                                         com_time_cpu_us(),
                                         com_rand(0, 0xFFFFFFFF));
     CPPMD5 md5;
-    md5.append((const uint8_t*)val.data(), val.size());
+    md5.append((const uint8*)val.data(), val.size());
     return md5.finish().toHexString(false);
 }
 
@@ -1803,7 +1803,7 @@ CPPBytes::CPPBytes(int reserve_size)
     }
 }
 
-CPPBytes::CPPBytes(const uint8_t* data, int data_size)
+CPPBytes::CPPBytes(const uint8* data, int data_size)
 {
     if(data_size > 0 && data != NULL)
     {
@@ -1820,7 +1820,7 @@ CPPBytes::CPPBytes(const char* data)
     {
         for(size_t i = 0; i < strlen(data); i++)
         {
-            buf.push_back((uint8_t)data[i]);
+            buf.push_back((uint8)data[i]);
         }
     }
 }
@@ -1831,7 +1831,7 @@ CPPBytes::CPPBytes(const char* data, int data_size)
     {
         for(int i = 0; i < data_size; i++)
         {
-            buf.push_back((uint8_t)data[i]);
+            buf.push_back((uint8)data[i]);
         }
     }
 }
@@ -1841,13 +1841,13 @@ CPPBytes::~CPPBytes()
     buf.clear();
 }
 
-CPPBytes& CPPBytes::operator+(uint8_t val)
+CPPBytes& CPPBytes::operator+(uint8 val)
 {
     buf.push_back(val);
     return *this;
 }
 
-CPPBytes& CPPBytes::operator+=(uint8_t val)
+CPPBytes& CPPBytes::operator+=(uint8 val)
 {
     buf.push_back(val);
     return *this;
@@ -1898,7 +1898,7 @@ void CPPBytes::clear()
     buf.clear();
 }
 
-uint8_t* CPPBytes::getData()
+uint8* CPPBytes::getData()
 {
     if(empty())
     {
@@ -1917,13 +1917,13 @@ bool CPPBytes::empty()
     return (buf.size() <= 0);
 }
 
-CPPBytes& CPPBytes::append(uint8_t val)
+CPPBytes& CPPBytes::append(uint8 val)
 {
     buf.push_back(val);
     return *this;
 }
 
-CPPBytes& CPPBytes::append(const uint8_t* data, int data_size)
+CPPBytes& CPPBytes::append(const uint8* data, int data_size)
 {
     if(data_size > 0 && data != NULL)
     {
@@ -1967,7 +1967,7 @@ CPPBytes& CPPBytes::append(CPPBytes& bytes)
     return *this;
 }
 
-uint8_t CPPBytes::getAt(int pos)
+uint8 CPPBytes::getAt(int pos)
 {
     if(pos < 0 || pos >= (int)buf.size())
     {
@@ -2213,7 +2213,7 @@ Message::Message()
     id = 0;
 }
 
-Message::Message(uint32_t id)
+Message::Message(uint32 id)
 {
     this->id = id;
 }
@@ -2228,12 +2228,12 @@ void Message::reset()
     datas.clear();
 }
 
-uint32_t Message::getID()
+uint32 Message::getID()
 {
     return id;
 }
 
-Message& Message::setID(uint32_t id)
+Message& Message::setID(uint32 id)
 {
     this->id = id;
     return *this;
@@ -2271,7 +2271,7 @@ Message& Message::set(const char* key, const char* val)
     return *this;
 }
 
-Message& Message::set(const char* key, const uint8_t* val, int val_size)
+Message& Message::set(const char* key, const uint8* val, int val_size)
 {
     if(key != NULL && val != NULL && val_size > 0)
     {
@@ -2355,22 +2355,22 @@ double Message::getDouble(const char* key, double default_val)
     return strtod(val.c_str(), NULL);
 }
 
-int8_t Message::getInt8(const char* key, int8_t default_val)
+int8 Message::getInt8(const char* key, int8 default_val)
 {
-    return (int8_t)getInt64(key, default_val);
+    return (int8)getInt64(key, default_val);
 }
 
-int16_t Message::getInt16(const char* key, int16_t default_val)
+int16 Message::getInt16(const char* key, int16 default_val)
 {
-    return (int16_t)getInt64(key, default_val);
+    return (int16)getInt64(key, default_val);
 }
 
-int32_t Message::getInt32(const char* key, int32_t default_val)
+int32 Message::getInt32(const char* key, int32 default_val)
 {
-    return (int32_t)getInt64(key, default_val);
+    return (int32)getInt64(key, default_val);
 }
 
-int64_t Message::getInt64(const char* key, int64_t default_val)
+int64 Message::getInt64(const char* key, int64 default_val)
 {
     if(isKeyExist(key) == false)
     {
@@ -2380,22 +2380,22 @@ int64_t Message::getInt64(const char* key, int64_t default_val)
     return strtoll(val.c_str(), NULL, 10);
 }
 
-uint8_t Message::getUInt8(const char* key, uint8_t default_val)
+uint8 Message::getUInt8(const char* key, uint8 default_val)
 {
-    return (uint8_t)getUInt64(key, default_val);
+    return (uint8)getUInt64(key, default_val);
 }
 
-uint16_t Message::getUInt16(const char* key, uint16_t default_val)
+uint16 Message::getUInt16(const char* key, uint16 default_val)
 {
-    return (uint16_t)getUInt64(key, default_val);
+    return (uint16)getUInt64(key, default_val);
 }
 
-uint32_t Message::getUInt32(const char* key, uint32_t default_val)
+uint32 Message::getUInt32(const char* key, uint32 default_val)
 {
-    return (uint32_t)getUInt64(key, default_val);
+    return (uint32)getUInt64(key, default_val);
 }
 
-uint64_t Message::getUInt64(const char* key, uint64_t default_val)
+uint64 Message::getUInt64(const char* key, uint64 default_val)
 {
     if(isKeyExist(key) == false)
     {
@@ -2422,7 +2422,7 @@ CPPBytes Message::getBytes(const char* key)
         return bytes;
     }
     std::string val = datas[key];
-    return CPPBytes((uint8_t*)val.data(), val.length());
+    return CPPBytes((uint8*)val.data(), val.length());
 }
 
 std::string Message::toJSON()

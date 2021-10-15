@@ -2,11 +2,11 @@
 
 void com_base64_unit_test_suit(void** state)
 {
-    std::string result = Base64::Encode((uint8_t*)"1234567890", sizeof("1234567890") - 1);
+    std::string result = Base64::Encode((uint8*)"1234567890", sizeof("1234567890") - 1);
     ASSERT_STR_EQUAL("MTIzNDU2Nzg5MA==", result.c_str());
     ASSERT_STR_EQUAL("1234567890", Base64::Decode("MTIzNDU2Nzg5MA").toString().c_str());
 
-    result = Base64::Encode((uint8_t*)"w832y9gbvnspoVuu923_*)*)*@-", sizeof("w832y9gbvnspoVuu923_*)*)*@-") - 1);
+    result = Base64::Encode((uint8*)"w832y9gbvnspoVuu923_*)*)*@-", sizeof("w832y9gbvnspoVuu923_*)*)*@-") - 1);
     ASSERT_STR_EQUAL("dzgzMnk5Z2J2bnNwb1Z1dTkyM18qKSopKkAt", result.c_str());
     ASSERT_STR_EQUAL("w832y9gbvnspoVuu923_*)*)*@-", Base64::Decode(result.c_str()).toString().c_str());
 

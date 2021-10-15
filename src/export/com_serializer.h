@@ -8,38 +8,38 @@ class Serializer
 {
 public:
     Serializer();
-    Serializer(uint8_t* data, int data_size);
+    Serializer(uint8* data, int data_size);
     ~Serializer();
     Serializer& append(bool val);
     Serializer& append(char val);
-    Serializer& append(uint8_t val);
-    Serializer& append(int8_t val);
-    Serializer& append(uint16_t val);
-    Serializer& append(int16_t val);
-    Serializer& append(uint32_t val);
-    Serializer& append(int32_t val);
-    Serializer& append(uint64_t val);
-    Serializer& append(int64_t val);
+    Serializer& append(uint8 val);
+    Serializer& append(int8 val);
+    Serializer& append(uint16 val);
+    Serializer& append(int16 val);
+    Serializer& append(uint32 val);
+    Serializer& append(int32 val);
+    Serializer& append(uint64 val);
+    Serializer& append(int64 val);
 
     Serializer& append(const std::string val, int val_size = -1);
     Serializer& append(const char* val, int val_size = -1);
-    Serializer& append(const uint8_t* val, int val_size);
+    Serializer& append(const uint8* val, int val_size);
     Serializer& append(CPPBytes& bytes);
 
     int detach(bool& val);
     int detach(char& val);
-    int detach(uint8_t& val);
-    int detach(int8_t& val);
-    int detach(uint16_t& val);
-    int detach(int16_t& val);
-    int detach(uint32_t& val);
-    int detach(int32_t& val);
-    int detach(uint64_t& val);
-    int detach(int64_t& val);
+    int detach(uint8& val);
+    int detach(int8& val);
+    int detach(uint16& val);
+    int detach(int16& val);
+    int detach(uint32& val);
+    int detach(int32& val);
+    int detach(uint64& val);
+    int detach(int64& val);
 
     int detach(std::string& val, int val_size = -1);
     int detach(char* val, int val_size);
-    int detach(uint8_t* val, int val_size);
+    int detach(uint8* val, int val_size);
     int detach(CPPBytes& bytes, int val_size);
 
     void clear();
@@ -47,14 +47,14 @@ public:
     int getDetachRemainSize();
     CPPBytes toBytes();
 
-    uint8_t* getData();
+    uint8* getData();
     int getDataSize();
 
     Serializer& enableByteOrderModify();
     Serializer& disableByteOrderModify();
 
 private:
-    std::vector<uint8_t> buf;
+    std::vector<uint8> buf;
     int pos_detach = 0;;
     bool change_byte_order = true;
 };
