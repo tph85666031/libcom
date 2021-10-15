@@ -3,9 +3,9 @@
 
 #include "com_base.h"
 
-uint8 com_crc8(uint8* data, int data_size, uint8 init_val = 0);
-uint16 com_crc16(uint8* data, int data_size, uint16 init_val = 0);
-uint32 com_crc32(uint8* data, int data_size, uint32 init_val = 0);
-uint64 com_crc64(uint8* data, int data_size, uint64 init_val = 0);
+uint8_t com_crc8(uint8_t* data, int data_size, uint8_t init_val = 0);
+uint16_t com_crc16(uint8_t* data, int data_size, uint16_t init_val = 0);
+uint32_t com_crc32(uint8_t* data, int data_size, uint32_t init_val = 0);
+uint64_t com_crc64(uint8_t* data, int data_size, uint64_t init_val = 0);
 
 #endif /* __COM_CRC_H__ */

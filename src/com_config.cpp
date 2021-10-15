@@ -12,6 +12,7 @@ CPPConfig::CPPConfig()
     this->data_changed = false;
     this->auto_save = true;
     this->thread_safe = false;
+    this->data = (void*)dictionary_new(0);
 }
 
 CPPConfig::CPPConfig(bool thread_safe)
@@ -20,6 +21,7 @@ CPPConfig::CPPConfig(bool thread_safe)
     this->data_changed = false;
     this->auto_save = true;
     this->thread_safe = thread_safe;
+    this->data = (void*)dictionary_new(0);
 }
 
 CPPConfig::CPPConfig(const char* file, bool thread_safe)
@@ -32,17 +34,13 @@ CPPConfig::CPPConfig(const char* file, bool thread_safe)
     {
         this->config_file = file;
         int file_type = com_file_type(file);
-        if(file_type == FILE_TYPE_FILE)
+        if(file_type == FILE_TYPE_FILE || file_type == FILE_TYPE_LINK)
         {
             load(file);
         }
-        else if(file_type == FILE_TYPE_NOT_EXIST)
-        {
-            this->data = (void*)dictionary_new(0);
-        }
         else
         {
-            LOG_W("%s may be directory or link file", file);
+            this->data = (void*)dictionary_new(0);
         }
     }
 }
@@ -147,23 +145,24 @@ bool CPPConfig::load(const char* file)
     {
         return false;
     }
-    lock();
-    if(this->data != NULL)
-    {
-        iniparser_freedict((dictionary*)this->data);
-        this->data = NULL;
-    }
-    unlock();
-    bool ret = false;
     this->config_file = file;
     this->data_changed = false;
 
     lock();
-    this->data = (void*)iniparser_load(this->config_file.c_str());
-    ret = (this->data != NULL);
+    void* data = (void*)iniparser_load(this->config_file.c_str());
+    if(data == NULL)
+    {
+        unlock();
+        return false;
+    }
+    if(this->data != NULL)
+    {
+        iniparser_freedict((dictionary*)this->data);
+    }
+    this->data = data;
     unlock();
 
-    return ret;
+    return true;
 }
 
 
@@ -326,37 +325,37 @@ std::string CPPConfig::getString(const char* group, const char* key, std::string
     return val;
 }
 
-int8 CPPConfig::getInt8(const char* group, const char* key, int8 default_val)
+int8_t CPPConfig::getInt8(const char* group, const char* key, int8_t default_val)
 {
-    return (int8)getInt64(group, key, (int64)default_val);
+    return (int8_t)getInt64(group, key, (int64_t)default_val);
 }
 
-uint8 CPPConfig::getUInt8(const char* group, const char* key, uint8 default_val)
+uint8_t CPPConfig::getUInt8(const char* group, const char* key, uint8_t default_val)
 {
-    return (uint8)getUInt64(group, key, (uint64)default_val);
+    return (uint8_t)getUInt64(group, key, (uint64_t)default_val);
 }
 
-int16 CPPConfig::getInt16(const char* group, const char* key, int16 default_val)
+int16_t CPPConfig::getInt16(const char* group, const char* key, int16_t default_val)
 {
-    return (int16)getInt64(group, key, (int64)default_val);
+    return (int16_t)getInt64(group, key, (int64_t)default_val);
 }
 
-uint16 CPPConfig::getUInt16(const char* group, const char* key, uint16 default_val)
+uint16_t CPPConfig::getUInt16(const char* group, const char* key, uint16_t default_val)
 {
-    return (uint16)getUInt64(group, key, (uint64)default_val);
+    return (uint16_t)getUInt64(group, key, (uint64_t)default_val);
 }
 
-int32 CPPConfig::getInt32(const char* group, const char* key, int32 default_val)
+int32_t CPPConfig::getInt32(const char* group, const char* key, int32_t default_val)
 {
-    return (int32)getInt64(group, key, (int64)default_val);
+    return (int32_t)getInt64(group, key, (int64_t)default_val);
 }
 
-uint32 CPPConfig::getUInt32(const char* group, const char* key, uint32 default_val)
+uint32_t CPPConfig::getUInt32(const char* group, const char* key, uint32_t default_val)
 {
-    return (uint32)getUInt64(group, key, (uint64)default_val);
+    return (uint32_t)getUInt64(group, key, (uint64_t)default_val);
 }
 
-int64 CPPConfig::getInt64(const char* group, const char* key, int64 default_val)
+int64_t CPPConfig::getInt64(const char* group, const char* key, int64_t default_val)
 {
     std::string val = getString(group, key);
     if(val.empty())
@@ -373,7 +372,7 @@ int64 CPPConfig::getInt64(const char* group, const char* key, int64 default_val)
     }
 }
 
-uint64 CPPConfig::getUInt64(const char* group, const char* key, uint64 default_val)
+uint64_t CPPConfig::getUInt64(const char* group, const char* key, uint64_t default_val)
 {
     std::string val = getString(group, key);
     if(val.empty())
@@ -674,42 +673,42 @@ bool com_global_config_set(const char* group, const char* key, const double val)
     return global_config.set(group, key, val);
 }
 
-bool com_global_config_set(const char* group, const char* key, const int8 val)
+bool com_global_config_set(const char* group, const char* key, const int8_t val)
 {
     return global_config.set(group, key, val);
 }
 
-bool com_global_config_set(const char* group, const char* key, const int16 val)
+bool com_global_config_set(const char* group, const char* key, const int16_t val)
 {
     return global_config.set(group, key, val);
 }
 
-bool com_global_config_set(const char* group, const char* key, const int32 val)
+bool com_global_config_set(const char* group, const char* key, const int32_t val)
 {
     return global_config.set(group, key, val);
 }
 
-bool com_global_config_set(const char* group, const char* key, const int64 val)
+bool com_global_config_set(const char* group, const char* key, const int64_t val)
 {
     return global_config.set(group, key, val);
 }
 
-bool com_global_config_set(const char* group, const char* key, const uint8 val)
+bool com_global_config_set(const char* group, const char* key, const uint8_t val)
 {
     return global_config.set(group, key, val);
 }
 
-bool com_global_config_set(const char* group, const char* key, const uint16 val)
+bool com_global_config_set(const char* group, const char* key, const uint16_t val)
 {
     return global_config.set(group, key, val);
 }
 
-bool com_global_config_set(const char* group, const char* key, const uint32 val)
+bool com_global_config_set(const char* group, const char* key, const uint32_t val)
 {
     return global_config.set(group, key, val);
 }
 
-bool com_global_config_set(const char* group, const char* key, const uint64 val)
+bool com_global_config_set(const char* group, const char* key, const uint64_t val)
 {
     return global_config.set(group, key, val);
 }
@@ -739,42 +738,42 @@ double com_global_config_get_double(const char* group, const char* key, double d
     return global_config.getDouble(group, key, default_val);
 }
 
-int8 com_global_config_get_int8(const char* group, const char* key, int8 default_val)
+int8_t com_global_config_get_int8(const char* group, const char* key, int8_t default_val)
 {
     return global_config.getInt8(group, key, default_val);
 }
 
-int16 com_global_config_get_int16(const char* group, const char* key, int16 default_val)
+int16_t com_global_config_get_int16(const char* group, const char* key, int16_t default_val)
 {
     return global_config.getInt16(group, key, default_val);
 }
 
-int32 com_global_config_get_int32(const char* group, const char* key, int32 default_val)
+int32_t com_global_config_get_int32(const char* group, const char* key, int32_t default_val)
 {
     return global_config.getInt32(group, key, default_val);
 }
 
-int64 com_global_config_get_int64(const char* group, const char* key, int64 default_val)
+int64_t com_global_config_get_int64(const char* group, const char* key, int64_t default_val)
 {
     return global_config.getInt64(group, key, default_val);
 }
 
-uint8 com_global_config_get_uint8(const char* group, const char* key, uint8 default_val)
+uint8_t com_global_config_get_uint8(const char* group, const char* key, uint8_t default_val)
 {
     return global_config.getUInt8(group, key, default_val);
 }
 
-uint16 com_global_config_get_uint16(const char* group, const char* key, uint16 default_val)
+uint16_t com_global_config_get_uint16(const char* group, const char* key, uint16_t default_val)
 {
     return global_config.getUInt16(group, key, default_val);
 }
 
-uint32 com_global_config_get_uint32(const char* group, const char* key, uint32 default_val)
+uint32_t com_global_config_get_uint32(const char* group, const char* key, uint32_t default_val)
 {
     return global_config.getUInt32(group, key, default_val);
 }
 
-uint64 com_global_config_get_uint64(const char* group, const char* key, uint64 default_val)
+uint64_t com_global_config_get_uint64(const char* group, const char* key, uint64_t default_val)
 {
     return global_config.getUInt64(group, key, default_val);
 }

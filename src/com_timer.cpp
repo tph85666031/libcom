@@ -54,7 +54,7 @@ void CPPTimerManager::stopTimerManager()
 
 void CPPTimerManager::threadPoolRunner(Message& msg)
 {
-    uint8 id  = msg.getUInt8("id", 0);
+    uint8_t id  = msg.getUInt8("id", 0);
     fc_timer fc = (fc_timer)com_number_to_ptr(msg.getUInt64("fc"));
     void* arg = com_number_to_ptr(msg.getUInt64("arg"));
     if(fc)
@@ -67,7 +67,7 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
 {
     LOG_I("running...");
     std::vector<Message> timeout_msgs;
-    uint64 time_start = 0;
+    uint64_t time_start = 0;
     com_thread_set_name("T-TimerMGR");
 
     while(manager->running_loop)
@@ -120,7 +120,7 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
         for(size_t i = 0; i < timeout_msgs.size(); i++)
         {
             std::string task_name = timeout_msgs[i].getString("task");
-            uint64 fc = timeout_msgs[i].getUInt64("fc");
+            uint64_t fc = timeout_msgs[i].getUInt64("fc");
             if(task_name.empty() == false)
             {
                 GetTaskManager().sendMessage(task_name.c_str(), timeout_msgs[i]);
@@ -130,7 +130,7 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
                 manager->pushMessage(timeout_msgs[i]);
             }
         }
-        int64 remain_sleep = TIMER_INTERVAL_MIN_MS - (com_time_cpu_ms() - time_start);
+        int64_t remain_sleep = TIMER_INTERVAL_MIN_MS - (com_time_cpu_ms() - time_start);
         if(remain_sleep > 0)
         {
             com_sleep_ms(remain_sleep);
@@ -185,7 +185,7 @@ void CPPTimerManager::updateTimer(CPPTimer& timer)
     return;
 }
 
-void CPPTimerManager::setMessageID(uint32 id)
+void CPPTimerManager::setMessageID(uint32_t id)
 {
     this->message_id = id;
 }
@@ -195,7 +195,7 @@ CPPTimer::CPPTimer()
     uuid = com_uuid_generator();
 }
 
-CPPTimer::CPPTimer(uint8 id, const std::string& task_name)
+CPPTimer::CPPTimer(uint8_t id, const std::string& task_name)
 {
     this->id = id;
     this->task_name = task_name;
@@ -203,7 +203,7 @@ CPPTimer::CPPTimer(uint8 id, const std::string& task_name)
 }
 
 
-CPPTimer::CPPTimer(uint8 id, const char* task_name)
+CPPTimer::CPPTimer(uint8_t id, const char* task_name)
 {
     if(task_name != NULL)
     {
@@ -213,7 +213,7 @@ CPPTimer::CPPTimer(uint8 id, const char* task_name)
     uuid = com_uuid_generator();
 }
 
-CPPTimer::CPPTimer(uint8 id, fc_timer fc, void* user_arg)
+CPPTimer::CPPTimer(uint8_t id, fc_timer fc, void* user_arg)
 {
     this->id = id;
     this->fc = fc;
@@ -225,7 +225,7 @@ CPPTimer::~CPPTimer()
 {
 }
 
-uint8 CPPTimer::getID()
+uint8_t CPPTimer::getID()
 {
     return this->id;
 }
@@ -260,7 +260,7 @@ CPPTimer& CPPTimer::setType(fc_timer fc, void* user_arg)
     return *this;
 }
 
-CPPTimer& CPPTimer::setID(uint8 id)
+CPPTimer& CPPTimer::setID(uint8_t id)
 {
     this->id = id;
     return *this;

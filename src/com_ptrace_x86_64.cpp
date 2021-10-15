@@ -42,7 +42,7 @@ PTrace_x86_64::PTrace_x86_64(pid_t pid) : PTrace(pid)
         {
             continue;
         }
-        uint64 addr = strtoull(items[0].c_str(), NULL, 16);
+        uint64_t addr = strtoull(items[0].c_str(), NULL, 16);
         if(addr == 0x8000)
         {
             addr = 0;
@@ -105,7 +105,7 @@ void* PTrace_x86_64::getFreexAddr()
         return NULL;
     }
     char buf[4096];
-    uint64 addr = 0;
+    uint64_t addr = 0;
     while(com_file_readline(file, buf, sizeof(buf)))
     {
         if(com_string_contain(buf, "xp") == false)
@@ -142,7 +142,7 @@ void* PTrace_x86_64::getEntryAddrLib(pid_t pid, const char* file_lib)
         return NULL;
     }
     char buf[4096];
-    uint64 addr = 0;
+    uint64_t addr = 0;
     while(com_file_readline(file, buf, sizeof(buf)))
     {
         if(com_string_contain(buf, file_lib) == false)
@@ -179,7 +179,7 @@ void* PTrace_x86_64::getSymbolAddr(const char* file_lib, const void* addr_func)
               remote_addr_base, local_addr_base);
         return NULL;
     }
-    return (void*)((uint64)remote_addr_base + ((uint64)addr_func - (uint64)local_addr_base));
+    return (void*)((uint64_t)remote_addr_base + ((uint64_t)addr_func - (uint64_t)local_addr_base));
 }
 
 void* PTrace_x86_64::getSymbolAddr(const char* sym_name)
@@ -347,8 +347,8 @@ bool PTrace_x86_64::pwrite(void* addr, const void* data, int data_size)
         char data[sizeof(long)];
     } item;
 
-    uint8* ptr_src = (uint8*)data;
-    uint8* ptr_dst = (uint8*)addr;
+    uint8_t* ptr_src = (uint8_t*)data;
+    uint8_t* ptr_dst = (uint8_t*)addr;
     for(int i = 0; i < data_size / sizeof(long); i++)
     {
         memcpy(item.data, ptr_src, sizeof(item.data));
@@ -382,8 +382,8 @@ bool PTrace_x86_64::pread(void* addr, void* buf, int buf_size)
         char data[sizeof(long)];
     } item;
 
-    uint8* ptr_src = (uint8*)addr;
-    uint8* ptr_dst = (uint8*)buf;
+    uint8_t* ptr_src = (uint8_t*)addr;
+    uint8_t* ptr_dst = (uint8_t*)buf;
     for(int i = 0; i < buf_size / sizeof(long); i++)
     {
         item.val = ptrace(PTRACE_PEEKTEXT, pid, ptr_src, 0);
@@ -411,7 +411,7 @@ std::string PTrace_x86_64::preadString(void* addr)
     } item;
 
     std::string result;
-    uint8* ptr_src = (uint8*)addr;
+    uint8_t* ptr_src = (uint8_t*)addr;
 
     int i = 0;
     do

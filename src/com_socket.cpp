@@ -149,7 +149,7 @@ bool com_socket_is_tcp_connected(int sock)
 #endif
 }
 
-int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broadcast)
+int com_socket_udp_open(const char* interface_name, uint16_t local_port, bool broadcast)
 {
     int socketfd = -1;
 
@@ -257,7 +257,7 @@ int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
 }
 #endif
 
-int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 timeout_ms, const char* interface_name)
+int com_socket_tcp_open(const char* remote_host, uint16_t remote_port, uint32_t timeout_ms, const char* interface_name)
 {
     if (remote_host == NULL)
     {
@@ -274,7 +274,7 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
         LOG_E("failed to get host ip");
         return -1;
     }
-    uint32 remote_ip = ((sockaddr_in*)(res->ai_addr))->sin_addr.s_addr;
+    uint32_t remote_ip = ((sockaddr_in*)(res->ai_addr))->sin_addr.s_addr;
     freeaddrinfo(res);
 
     int socketfd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_IP);
@@ -358,7 +358,7 @@ int com_socket_udp_send(int socketfd, const char* remote_host, int remote_port,
         LOG_E("failed to get host ip");
         return -1;
     }
-    uint32 remote_ip = ((sockaddr_in*)(res->ai_addr))->sin_addr.s_addr;
+    uint32_t remote_ip = ((sockaddr_in*)(res->ai_addr))->sin_addr.s_addr;
     freeaddrinfo(res);
 
     //设置目的地地址
@@ -395,8 +395,8 @@ int com_socket_tcp_send(int socketfd, void* data, int data_size)
     return send(socketfd, (char*)data, data_size, 0);
 }
 
-int com_socket_udp_read(int socketfd, uint8* data, int data_size,
-                        uint32 timeout_ms, char* remote_ip, int sender_ip_size)
+int com_socket_udp_read(int socketfd, uint8_t* data, int data_size,
+                        uint32_t timeout_ms, char* remote_ip, int sender_ip_size)
 {
     if (socketfd <= 0 || data == NULL || data_size <= 0)
     {
@@ -440,7 +440,7 @@ int com_socket_udp_read(int socketfd, uint8* data, int data_size,
                        (struct sockaddr*)&addr, (socklen_t*)&addr_len);
     if (remote_ip && sender_ip_size > 0)
     {
-        uint32 ip_addr = ntohl(addr.sin_addr.s_addr);
+        uint32_t ip_addr = ntohl(addr.sin_addr.s_addr);
         com_snprintf(remote_ip, sender_ip_size, "%d.%d.%d.%d",
                      (ip_addr >> 24) & 0xFF, (ip_addr >> 16) & 0xFF,
                      (ip_addr >> 8) & 0xFF, ip_addr & 0xFF);
@@ -449,8 +449,8 @@ int com_socket_udp_read(int socketfd, uint8* data, int data_size,
 }
 
 //如果此函数返回值<=0则需要主动检查下连接是否已断开了(-2代表超时,可以不用检查连接)
-int com_socket_tcp_read(int socketfd, uint8* data, int data_size,
-                        uint32 timeout_ms, bool block_mode)
+int com_socket_tcp_read(int socketfd, uint8_t* data, int data_size,
+                        uint32_t timeout_ms, bool block_mode)
 {
     if (socketfd <= 0 || data == NULL || data_size <= 0)
     {
@@ -502,15 +502,15 @@ void com_socket_close(int socketfd)
     }
 }
 
-uint8 com_net_get_rpfilter(const char* interface_name)
+uint8_t com_net_get_rpfilter(const char* interface_name)
 {
 #if __linux__ == 1
     if (interface_name == NULL)
     {
         return 0xFF;
     }
-    ByteArray bytes = com_file_readall(com_string_format("/proc/sys/net/ipv4/conf/%s/rp_filter", interface_name).c_str());
-    uint8 flag = (uint8)strtoul(bytes.toString().c_str(), NULL, 10);
+    CPPBytes bytes = com_file_readall(com_string_format("/proc/sys/net/ipv4/conf/%s/rp_filter", interface_name).c_str());
+    uint8_t flag = (uint8_t)strtoul(bytes.toString().c_str(), NULL, 10);
     if (flag != 0 && flag != 1 && flag != 2)
     {
         return 0xFF;
@@ -522,7 +522,7 @@ uint8 com_net_get_rpfilter(const char* interface_name)
 }
 
 //反向原地址可达性校验，0=不校验，1=严格校验，2=宽松校验
-void com_net_set_rpfilter(const char* interface_name, uint8 flag)
+void com_net_set_rpfilter(const char* interface_name, uint8_t flag)
 {
 #if __linux__ == 1
     if (interface_name != NULL && (flag == 0 || flag == 1 || flag == 2))
@@ -669,7 +669,7 @@ bool com_net_get_nic(const char* interface_name, NicInfo& nic)
 #endif
 }
 
-bool com_net_get_mac(const char* interface_name, uint8* mac)
+bool com_net_get_mac(const char* interface_name, uint8_t* mac)
 {
 #if __linux__ == 1
     if (interface_name == NULL || mac == NULL)
@@ -730,7 +730,7 @@ void Socket::setHost(const char* host)
     }
 }
 
-void Socket::setPort(uint16 port)
+void Socket::setPort(uint16_t port)
 {
     this->port = port;
 }
@@ -755,7 +755,7 @@ std::string Socket::getHost()
     return host.c_str();
 }
 
-uint16 Socket::getPort()
+uint16_t Socket::getPort()
 {
     return port;
 }
@@ -778,7 +778,7 @@ SocketTcpClient::SocketTcpClient()
     connected = false;
 }
 
-SocketTcpClient::SocketTcpClient(const char* host, uint16 port)
+SocketTcpClient::SocketTcpClient(const char* host, uint16_t port)
 {
     reconnect_at_once = false;
     running = false;
@@ -799,7 +799,7 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* socket_client)
         LOG_E("arg incorrect");
         return;
     }
-    uint8 buf[1024];
+    uint8_t buf[1024];
     while (socket_client->running)
     {
         if (socket_client->reconnect_at_once || com_socket_get_tcp_connection_status(socket_client->socketfd) == 0)
@@ -887,7 +887,7 @@ void SocketTcpClient::setReconnectInterval(int reconnect_interval_ms)
     this->reconnect_interval_ms = reconnect_interval_ms;
 }
 
-int SocketTcpClient::send(uint8* data, int data_size)
+int SocketTcpClient::send(uint8_t* data, int data_size)
 {
     if (connected == false || data == NULL || data_size <= 0)
     {
@@ -910,7 +910,7 @@ void SocketTcpClient::onConnectionChanged(bool connected)
 {
 }
 
-void SocketTcpClient::onRecv(uint8* data, int data_size)
+void SocketTcpClient::onRecv(uint8_t* data, int data_size)
 {
 }
 
@@ -924,7 +924,7 @@ SocketTcpServer::SocketTcpServer()
     epoll_timeout_ms = 3000;
 }
 
-SocketTcpServer::SocketTcpServer(uint16 port)
+SocketTcpServer::SocketTcpServer(uint16_t port)
 {
     setHost("127.0.0.1");
     setPort(port);
@@ -941,7 +941,7 @@ SocketTcpServer::~SocketTcpServer()
 
 void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* socket_server)
 {
-    uint8 buf[4096];
+    uint8_t buf[4096];
     while (socket_server->receiver_running)
     {
         socket_server->semfds.wait(1000);
@@ -1167,7 +1167,7 @@ void SocketTcpServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSize)
+int SocketTcpServer::send(const char* host, uint16_t port, uint8_t* data, int dataSize)
 {
     if (host == NULL || data == NULL || dataSize <= 0)
     {
@@ -1198,7 +1198,7 @@ int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSi
     return ret;
 }
 
-int SocketTcpServer::send(int clientfd, uint8* data, int dataSize)
+int SocketTcpServer::send(int clientfd, uint8_t* data, int dataSize)
 {
     if (data == NULL || dataSize <= 0)
     {
@@ -1212,11 +1212,11 @@ int SocketTcpServer::send(int clientfd, uint8* data, int dataSize)
     return ret;
 }
 
-void SocketTcpServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
+void SocketTcpServer::onConnectionChanged(std::string& host, uint16_t port, int socketfd, bool connected)
 {
 }
 
-void SocketTcpServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int dataSize)
+void SocketTcpServer::onRecv(std::string& host, uint16_t port, int socketfd, uint8_t* data, int dataSize)
 {
 }
 
@@ -1247,7 +1247,7 @@ void UnixDomainTcpClient::ThreadUnixDomainClientReceiver(UnixDomainTcpClient* cl
     {
         return;
     }
-    uint8 buf[1024];
+    uint8_t buf[1024];
     while (client->receiver_running)
     {
         if (client->need_reconnect)
@@ -1320,7 +1320,7 @@ void UnixDomainTcpClient::reconnect()
     this->need_reconnect = true;
 }
 
-int UnixDomainTcpClient::send(uint8* data, int data_size)
+int UnixDomainTcpClient::send(uint8_t* data, int data_size)
 {
     if (data == NULL || data_size <= 0)
     {
@@ -1348,7 +1348,7 @@ void UnixDomainTcpClient::onConnectionChanged(bool connected)
 {
 }
 
-void UnixDomainTcpClient::onRecv(uint8* data, int data_size)
+void UnixDomainTcpClient::onRecv(uint8_t* data, int data_size)
 {
 }
 
@@ -1373,7 +1373,7 @@ UnixDomainTcpServer::~UnixDomainTcpServer()
 
 void UnixDomainTcpServer::ThreadUnixDomainServerReceiver(UnixDomainTcpServer* socket_server)
 {
-    uint8 buf[4096];
+    uint8_t buf[4096];
     while (socket_server->receiver_running)
     {
         socket_server->semfds.wait(1000);
@@ -1594,7 +1594,7 @@ void UnixDomainTcpServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int UnixDomainTcpServer::send(int clientfd, uint8* data, int data_size)
+int UnixDomainTcpServer::send(int clientfd, uint8_t* data, int data_size)
 {
     if (data == NULL || data_size <= 0)
     {
@@ -1603,7 +1603,7 @@ int UnixDomainTcpServer::send(int clientfd, uint8* data, int data_size)
     return com_socket_tcp_send(clientfd, data, data_size);
 }
 
-int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8* data, int data_size)
+int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8_t* data, int data_size)
 {
     if (client_file_name_wildcard == NULL || data == NULL || data_size <= 0)
     {
@@ -1657,7 +1657,7 @@ void UnixDomainTcpServer::onConnectionChanged(std::string& client_file_name, int
 {
 }
 
-void UnixDomainTcpServer::onRecv(std::string& client_file_name, int socketfd, uint8* data, int data_size)
+void UnixDomainTcpServer::onRecv(std::string& client_file_name, int socketfd, uint8_t* data, int data_size)
 {
 }
 

@@ -234,7 +234,7 @@ CPPMD5::~CPPMD5()
 {
 }
 
-void CPPMD5::append(const uint8* data, uint32 data_size)
+void CPPMD5::append(const uint8_t* data, uint32_t data_size)
 {
     if (data == NULL || data_size == 0)
     {
@@ -254,7 +254,7 @@ void CPPMD5::appendFile(const char* file_path)
     {
         return;
     }
-    uint8 buf[READ_DATA_SIZE];
+    uint8_t buf[READ_DATA_SIZE];
     while (true)
     {
         int ret = com_file_read(file, buf, sizeof(buf));
@@ -268,12 +268,12 @@ void CPPMD5::appendFile(const char* file_path)
     return;
 }
 
-ByteArray CPPMD5::finish()
+CPPBytes CPPMD5::finish()
 {
     unsigned char data[CPPMD5_SIZE];
     memset(data, 0, sizeof(data));
     md5_final(&ctx, data);
     md5_init(&ctx);
-    return ByteArray(data, sizeof(data));
+    return CPPBytes(data, sizeof(data));
 }
 

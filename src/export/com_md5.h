@@ -15,9 +15,9 @@ class CPPMD5
 public:
     CPPMD5();
     virtual ~CPPMD5();
-    void append(const uint8* data, uint32 dataSize);
+    void append(const uint8_t* data, uint32_t dataSize);
     void appendFile(const char* filePath);
-    ByteArray finish();
+    CPPBytes finish();
 private:
     CPPMD5_CTX ctx;
 };

@@ -16,9 +16,9 @@ std::string com_thread_get_name(std::thread* t);
 std::string com_thread_get_name(std::thread& t);
 std::string com_thread_get_name(int tid);
 std::string com_thread_get_name();
-uint64 com_thread_get_tid_posix();
-uint64 com_thread_get_tid();
-uint64 com_thread_get_pid();
+uint64_t com_thread_get_tid_posix();
+uint64_t com_thread_get_tid();
+uint64_t com_thread_get_pid();
 
 typedef struct
 {

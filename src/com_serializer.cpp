@@ -7,7 +7,7 @@ Serializer::Serializer()
     this->pos_detach = 0;
 }
 
-Serializer::Serializer(uint8* data, int dataSize)
+Serializer::Serializer(uint8_t* data, int dataSize)
 {
     this->pos_detach = 0;
     if(data != NULL && dataSize > 0)
@@ -37,52 +37,52 @@ Serializer& Serializer::disableByteOrderModify()
 
 Serializer& Serializer::append(bool val)
 {
-    buf.push_back((uint8)val);
+    buf.push_back((uint8_t)val);
     return *this;
 }
 
 Serializer& Serializer::append(char val)
 {
-    buf.push_back((uint8)val);
+    buf.push_back((uint8_t)val);
     return *this;
 }
 
-Serializer& Serializer::append(uint8 val)
+Serializer& Serializer::append(uint8_t val)
 {
     buf.push_back(val);
     return *this;
 }
 
-Serializer& Serializer::append(int8 val)
+Serializer& Serializer::append(int8_t val)
 {
-    buf.push_back((uint8)val);
+    buf.push_back((uint8_t)val);
     return *this;
 }
 
-Serializer& Serializer::append(uint16 val)
+Serializer& Serializer::append(uint16_t val)
 {
     if(change_byte_order)
     {
         val = htons(val);
     }
-    uint8* p = (uint8*)&val;
+    uint8_t* p = (uint8_t*)&val;
     buf.push_back(p[0]);
     buf.push_back(p[1]);
     return *this;
 }
 
-Serializer& Serializer::append(int16 val)
+Serializer& Serializer::append(int16_t val)
 {
-    return append((uint16)val);
+    return append((uint16_t)val);
 }
 
-Serializer& Serializer::append(uint32 val)
+Serializer& Serializer::append(uint32_t val)
 {
     if(change_byte_order)
     {
         val = htonl(val);
     }
-    uint8* p = (uint8*)&val;
+    uint8_t* p = (uint8_t*)&val;
     buf.push_back(p[0]);
     buf.push_back(p[1]);
     buf.push_back(p[2]);
@@ -90,18 +90,18 @@ Serializer& Serializer::append(uint32 val)
     return *this;
 }
 
-Serializer& Serializer::append(int32 val)
+Serializer& Serializer::append(int32_t val)
 {
-    return append((uint32)val);
+    return append((uint32_t)val);
 }
 
-Serializer& Serializer::append(uint64 val)
+Serializer& Serializer::append(uint64_t val)
 {
     if(change_byte_order)
     {
         val = htonll(val);
     }
-    uint8* p = (uint8*)&val;
+    uint8_t* p = (uint8_t*)&val;
     buf.push_back(p[0]);
     buf.push_back(p[1]);
     buf.push_back(p[2]);
@@ -113,9 +113,9 @@ Serializer& Serializer::append(uint64 val)
     return *this;
 }
 
-Serializer& Serializer::append(int64 val)
+Serializer& Serializer::append(int64_t val)
 {
-    return append((uint64)val);
+    return append((uint64_t)val);
 }
 
 Serializer& Serializer::append(const char* val, int val_size)
@@ -128,13 +128,13 @@ Serializer& Serializer::append(const char* val, int val_size)
     {
         for(int i = 0; i < val_size; i++)
         {
-            buf.push_back((uint8)val[i]);
+            buf.push_back((uint8_t)val[i]);
         }
     }
     return *this;
 }
 
-Serializer& Serializer::append(const uint8* val, int val_size)
+Serializer& Serializer::append(const uint8_t* val, int val_size)
 {
     if(val != NULL && val_size > 0)
     {
@@ -156,7 +156,7 @@ Serializer& Serializer::append(const std::string val, int val_size)
     return *this;
 }
 
-Serializer& Serializer::append(ByteArray& bytes)
+Serializer& Serializer::append(CPPBytes& bytes)
 {
     append(bytes.getData(), bytes.getDataSize());
     return *this;
@@ -164,59 +164,59 @@ Serializer& Serializer::append(ByteArray& bytes)
 
 int Serializer::detach(bool& val)
 {
-    return detach((uint8&)val);
+    return detach((uint8_t&)val);
 }
 
 int Serializer::detach(char& val)
 {
-    return detach((uint8&)val);
+    return detach((uint8_t&)val);
 }
 
-int Serializer::detach(uint8& val)
+int Serializer::detach(uint8_t& val)
 {
     if(pos_detach >= (int)buf.size())
     {
         return -1;
     }
     val = buf[pos_detach];
-    pos_detach += sizeof(uint8);
+    pos_detach += sizeof(uint8_t);
     return 0;
 }
 
-int Serializer::detach(int8& val)
+int Serializer::detach(int8_t& val)
 {
-    return detach((uint8&)val);
+    return detach((uint8_t&)val);
 }
 
-int Serializer::detach(uint16& val)
+int Serializer::detach(uint16_t& val)
 {
-    if(pos_detach + sizeof(uint16) > buf.size())
+    if(pos_detach + sizeof(uint16_t) > buf.size())
     {
         return -1;
     }
-    uint8* p = (uint8*)&val;
+    uint8_t* p = (uint8_t*)&val;
     p[0] = buf[pos_detach];
     p[1] = buf[pos_detach + 1];
     if(change_byte_order)
     {
         val = ntohs(val);
     }
-    pos_detach += sizeof(uint16);
+    pos_detach += sizeof(uint16_t);
     return 0;
 }
 
-int Serializer::detach(int16& val)
+int Serializer::detach(int16_t& val)
 {
-    return detach((uint16&)val);
+    return detach((uint16_t&)val);
 }
 
-int Serializer::detach(uint32& val)
+int Serializer::detach(uint32_t& val)
 {
-    if(pos_detach + sizeof(uint32) > buf.size())
+    if(pos_detach + sizeof(uint32_t) > buf.size())
     {
         return -1;
     }
-    uint8* p = (uint8*)&val;
+    uint8_t* p = (uint8_t*)&val;
     p[0] = buf[pos_detach];
     p[1] = buf[pos_detach + 1];
     p[2] = buf[pos_detach + 2];
@@ -225,22 +225,22 @@ int Serializer::detach(uint32& val)
     {
         val = ntohl(val);
     }
-    pos_detach += sizeof(uint32);
+    pos_detach += sizeof(uint32_t);
     return 0;
 }
 
-int Serializer::detach(int32& val)
+int Serializer::detach(int32_t& val)
 {
-    return detach((uint32&)val);
+    return detach((uint32_t&)val);
 }
 
-int Serializer::detach(uint64& val)
+int Serializer::detach(uint64_t& val)
 {
-    if(pos_detach + sizeof(uint64) > buf.size())
+    if(pos_detach + sizeof(uint64_t) > buf.size())
     {
         return -1;
     }
-    uint8* p = (uint8*)&val;
+    uint8_t* p = (uint8_t*)&val;
     p[0] = buf[pos_detach];
     p[1] = buf[pos_detach + 1];
     p[2] = buf[pos_detach + 2];
@@ -253,13 +253,13 @@ int Serializer::detach(uint64& val)
     {
         val = ntohll(val);
     }
-    pos_detach += sizeof(uint64);
+    pos_detach += sizeof(uint64_t);
     return 0;
 }
 
-int Serializer::detach(int64& val)
+int Serializer::detach(int64_t& val)
 {
-    return detach((uint64&)val);
+    return detach((uint64_t&)val);
 }
 
 //读到\0结尾或val_size（val_size<0则读取到\0）
@@ -307,7 +307,7 @@ int Serializer::detach(char* val, int val_size)
 }
 
 //读val_size
-int Serializer::detach(uint8* val, int val_size)
+int Serializer::detach(uint8_t* val, int val_size)
 {
     if(val == NULL || val_size <= 0)
     {
@@ -325,7 +325,7 @@ int Serializer::detach(uint8* val, int val_size)
 }
 
 //读val_size
-int Serializer::detach(ByteArray& bytes, int val_size)
+int Serializer::detach(CPPBytes& bytes, int val_size)
 {
     if(val_size <= 0)
     {
@@ -358,13 +358,13 @@ int Serializer::getDetachRemainSize()
     return buf.size() - pos_detach;
 }
 
-ByteArray Serializer::toBytes()
+CPPBytes Serializer::toBytes()
 {
-    ByteArray bytes(&buf[0], buf.size());
+    CPPBytes bytes(&buf[0], buf.size());
     return bytes;
 }
 
-uint8* Serializer::getData()
+uint8_t* Serializer::getData()
 {
     return &buf[0];
 }

@@ -18,17 +18,17 @@ bool Base64::isBase64(char c)
     return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string Base64::Encode(ByteArray& bytes)
+std::string Base64::Encode(CPPBytes& bytes)
 {
     return Encode(bytes.getData(), bytes.getDataSize());
 }
 
-std::string Base64::Encode(const uint8* data, int data_size)
+std::string Base64::Encode(const uint8_t* data, int data_size)
 {
     int i = 0;
     int j = 0;
-    uint8 char_array_3[3];
-    uint8 char_array_4[4];
+    uint8_t char_array_3[3];
+    uint8_t char_array_4[4];
     std::string encode_data;
 
     if (data == NULL || data_size <= 0)
@@ -79,9 +79,9 @@ std::string Base64::Encode(const uint8* data, int data_size)
     return encode_data;
 }
 
-ByteArray Base64::Decode(const char* base64_data)
+CPPBytes Base64::Decode(const char* base64_data)
 {
-    ByteArray bytes;
+    CPPBytes bytes;
     if (base64_data == NULL)
     {
         return bytes;
@@ -91,8 +91,8 @@ ByteArray Base64::Decode(const char* base64_data)
     int i = 0;
     int j = 0;
     int in_ = 0;
-    uint8 char_array_4[4];
-    uint8 char_array_3[3];
+    uint8_t char_array_4[4];
+    uint8_t char_array_3[3];
 
     if (in_len % 4 > 0)
     {

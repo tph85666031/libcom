@@ -9,7 +9,7 @@ public:
         recvCount = 0;
     }
 
-    void onMessage(std::string& from_file_path, uint8* data, int data_size)
+    void onMessage(std::string& from_file_path, uint8_t* data, int data_size)
     {
         std::string v;
         v.append((char*)data, data_size);
@@ -46,8 +46,8 @@ void com_ipc_ud_unit_test_suit(void** state)
     {
         char buf[8];
         int ret = snprintf(buf, sizeof(buf), "%d", i);
-        ASSERT_TRUE(ud_client1.sendMessage("client?", (uint8*)buf, ret));
-        ud_client1.sendMessage("server", (uint8*)buf, ret);
+        ASSERT_TRUE(ud_client1.sendMessage("client?", (uint8_t*)buf, ret));
+        ud_client1.sendMessage("server", (uint8_t*)buf, ret);
     }
 
     com_sleep_s(1);
@@ -63,7 +63,7 @@ void com_ipc_ud_unit_test_suit(void** state)
     {
         char buf[8];
         int ret = snprintf(buf, sizeof(buf), "%d", i);
-        ASSERT_TRUE(ud_client1.sendMessage("client*", (uint8*)buf, ret));
+        ASSERT_TRUE(ud_client1.sendMessage("client*", (uint8_t*)buf, ret));
     }
 
     com_sleep_s(1);

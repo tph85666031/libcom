@@ -127,56 +127,56 @@ bool com_kv_set(const char* file, const char* key, bool value)
     return com_kv_set(file, key, value ? "1" : "0");
 }
 
-bool com_kv_set(const char* file, const char* key, int8 value)
+bool com_kv_set(const char* file, const char* key, int8_t value)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%d", value);
     return com_kv_set(file, key, buf);
 }
 
-bool com_kv_set(const char* file, const char* key, uint8 value)
+bool com_kv_set(const char* file, const char* key, uint8_t value)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%u", value);
     return com_kv_set(file, key, buf);
 }
 
-bool com_kv_set(const char* file, const char* key, int16 value)
+bool com_kv_set(const char* file, const char* key, int16_t value)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%d", value);
     return com_kv_set(file, key, buf);
 }
 
-bool com_kv_set(const char* file, const char* key, uint16 value)
+bool com_kv_set(const char* file, const char* key, uint16_t value)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%u", value);
     return com_kv_set(file, key, buf);
 }
 
-bool com_kv_set(const char* file, const char* key, int32 value)
+bool com_kv_set(const char* file, const char* key, int32_t value)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%d", value);
     return com_kv_set(file, key, buf);
 }
 
-bool com_kv_set(const char* file, const char* key, uint32 value)
+bool com_kv_set(const char* file, const char* key, uint32_t value)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%u", value);
     return com_kv_set(file, key, buf);
 }
 
-bool com_kv_set(const char* file, const char* key, int64 value)
+bool com_kv_set(const char* file, const char* key, int64_t value)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%lld", value);
     return com_kv_set(file, key, buf);
 }
 
-bool com_kv_set(const char* file, const char* key, uint64 value)
+bool com_kv_set(const char* file, const char* key, uint64_t value)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%llu", value);
@@ -298,7 +298,7 @@ bool com_kv_exist(const char* file, const char* key)
         return false;
     }
 
-    int64 value_size = 0;
+    int64_t value_size = 0;
     ret = unqlite_kv_fetch(pDb, key, - 1, NULL, &value_size);
     if (ret != UNQLITE_OK)
     {
@@ -350,7 +350,7 @@ std::vector<KVResult> com_kv_get_front(const char* file, int count)
             unqlite_kv_cursor_next_entry(pCursor))
     {
         int key_size = 0;
-        int64 data_size = 0;
+        int64_t data_size = 0;
         unqlite_kv_cursor_key(pCursor, NULL, &key_size);
         unqlite_kv_cursor_data(pCursor, NULL, &data_size);
         if (key_size <= 0 || data_size <= 0)
@@ -362,7 +362,7 @@ std::vector<KVResult> com_kv_get_front(const char* file, int count)
         {
             continue;
         }
-        uint8* data = (uint8*)calloc(1, data_size);
+        uint8_t* data = (uint8_t*)calloc(1, data_size);
         if (data == NULL)
         {
             free(key);
@@ -422,7 +422,7 @@ std::vector<KVResult> com_kv_get_tail(const char* file, int count)
             unqlite_kv_cursor_prev_entry(pCursor))
     {
         int key_size = 0;
-        int64 data_size = 0;
+        int64_t data_size = 0;
         unqlite_kv_cursor_key(pCursor, NULL, &key_size);
         unqlite_kv_cursor_data(pCursor, NULL, &data_size);
         if (key_size <= 0 || data_size <= 0)
@@ -434,7 +434,7 @@ std::vector<KVResult> com_kv_get_tail(const char* file, int count)
         {
             continue;
         }
-        uint8* data = (uint8*)calloc(1, data_size);
+        uint8_t* data = (uint8_t*)calloc(1, data_size);
         if (data == NULL)
         {
             free(key);
@@ -516,9 +516,9 @@ std::vector<std::string> com_kv_get_all_keys(const char* file)
     return keys;
 }
 
-ByteArray com_kv_get_bytes(const char* file, const char* key)
+CPPBytes com_kv_get_bytes(const char* file, const char* key)
 {
-    ByteArray bytes;
+    CPPBytes bytes;
     if (file == NULL || key == NULL)
     {
         return bytes;
@@ -533,7 +533,7 @@ ByteArray com_kv_get_bytes(const char* file, const char* key)
         return bytes;
     }
 
-    int64 value_size = 0;
+    int64_t value_size = 0;
     ret = unqlite_kv_fetch(pDb, key, -1, NULL, &value_size);
     if (ret != UNQLITE_OK || value_size <= 0)
     {
@@ -542,7 +542,7 @@ ByteArray com_kv_get_bytes(const char* file, const char* key)
         return bytes;
     }
 
-    uint8* value = (uint8*)calloc(1, value_size);
+    uint8_t* value = (uint8_t*)calloc(1, value_size);
     if (value == NULL)
     {
         kv_show_err(pDb);
@@ -563,13 +563,13 @@ ByteArray com_kv_get_bytes(const char* file, const char* key)
     unqlite_close(pDb);
     kv_destroy(pDb);
 
-    bytes = ByteArray(value_size);
+    bytes = CPPBytes(value_size);
     bytes.append(value, value_size);
     free(value);
     return bytes;
 }
 
-bool com_kv_get_string(const char* file, const char* key, char* value, int64 value_size)
+bool com_kv_get_string(const char* file, const char* key, char* value, int64_t value_size)
 {
     if (file == NULL || key == NULL || value_size <= 0)
     {
@@ -609,7 +609,7 @@ std::string com_kv_get_string(const char* file, const char* key, const char* def
     {
         default_value = "";
     }
-    ByteArray bytes = com_kv_get_bytes(file, key);
+    CPPBytes bytes = com_kv_get_bytes(file, key);
     if (bytes.getDataSize() <= 0)
     {
         return default_value;
@@ -627,84 +627,84 @@ bool com_kv_get_bool(const char* file, const char* key, bool default_value)
     return strtol(buf, NULL, 10) == 1 ? true : false;
 }
 
-int8 com_kv_get_int8(const char* file, const char* key, int8 default_value)
+int8_t com_kv_get_int8(const char* file, const char* key, int8_t default_value)
 {
     char buf[64] = {0};
     if (com_kv_get_string(file, key, buf, sizeof(buf)) == false)
     {
         return default_value;
     }
-    return (int8)strtol(buf, NULL, 10);
+    return (int8_t)strtol(buf, NULL, 10);
 }
 
-uint8 com_kv_get_uint8(const char* file, const char* key, uint8 default_value)
+uint8_t com_kv_get_uint8(const char* file, const char* key, uint8_t default_value)
 {
     char buf[64] = {0};
     if (com_kv_get_string(file, key, buf, sizeof(buf)) == false)
     {
         return default_value;
     }
-    return (uint8)strtoul(buf, NULL, 10);
+    return (uint8_t)strtoul(buf, NULL, 10);
 }
 
-int16 com_kv_get_int16(const char* file, const char* key, int16 default_value)
+int16_t com_kv_get_int16(const char* file, const char* key, int16_t default_value)
 {
     char buf[64] = {0};
     if (com_kv_get_string(file, key, buf, sizeof(buf)) == false)
     {
         return default_value;
     }
-    return (int16)strtol(buf, NULL, 10);
+    return (int16_t)strtol(buf, NULL, 10);
 }
 
-uint16 com_kv_get_uint16(const char* file, const char* key, uint16 default_value)
+uint16_t com_kv_get_uint16(const char* file, const char* key, uint16_t default_value)
 {
     char buf[64] = {0};
     if (com_kv_get_string(file, key, buf, sizeof(buf)) == false)
     {
         return default_value;
     }
-    return (uint16)strtoul(buf, NULL, 10);
+    return (uint16_t)strtoul(buf, NULL, 10);
 }
 
-int32 com_kv_get_int32(const char* file, const char* key, int32 default_value)
+int32_t com_kv_get_int32(const char* file, const char* key, int32_t default_value)
 {
     char buf[64] = {0};
     if (com_kv_get_string(file, key, buf, sizeof(buf)) == false)
     {
         return default_value;
     }
-    return (int32)strtol(buf, NULL, 10);
+    return (int32_t)strtol(buf, NULL, 10);
 }
 
-uint32 com_kv_get_uint32(const char* file, const char* key, uint32 default_value)
+uint32_t com_kv_get_uint32(const char* file, const char* key, uint32_t default_value)
 {
     char buf[64] = {0};
     if (com_kv_get_string(file, key, buf, sizeof(buf)) == false)
     {
         return default_value;
     }
-    return (uint32)strtoul(buf, NULL, 10);
+    return (uint32_t)strtoul(buf, NULL, 10);
 }
 
-int64 com_kv_get_int64(const char* file, const char* key, int64 default_value)
+int64_t com_kv_get_int64(const char* file, const char* key, int64_t default_value)
 {
     char buf[64] = {0};
     if (com_kv_get_string(file, key, buf, sizeof(buf)) == false)
     {
         return default_value;
     }
-    return (int64)strtoll(buf, NULL, 10);
+    return (int64_t)strtoll(buf, NULL, 10);
 }
 
-uint64 com_kv_get_uint64(const char* file, const char* key, uint64 default_value)
+uint64_t com_kv_get_uint64(const char* file, const char* key, uint64_t default_value)
 {
     char buf[64] = {0};
     if (com_kv_get_string(file, key, buf, sizeof(buf)) == false)
     {
         return default_value;
     }
-    return (uint64)strtoull(buf, NULL, 10);
+    return (uint64_t)strtoull(buf, NULL, 10);
 }
 
 double com_kv_get_double(const char* file, const char* key, double default_value)

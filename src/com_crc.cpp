@@ -2,7 +2,7 @@
 #include "com_crc.h"
 #include "com_log.h"
 
-static uint8 crc8_tab[] =
+static uint8_t crc8_tab[] =
 {
     0x00, 0x31, 0x62, 0x53, 0xc4, 0xf5, 0xa6, 0x97, 0xb9, 0x88, 0xdb, 0xea, 0x7d, 0x4c, 0x1f, 0x2e,
     0x43, 0x72, 0x21, 0x10, 0x87, 0xb6, 0xe5, 0xd4, 0xfa, 0xcb, 0x98, 0xa9, 0x3e, 0x0f, 0x5c, 0x6d,
@@ -22,7 +22,7 @@ static uint8 crc8_tab[] =
     0x82, 0xb3, 0xe0, 0xd1, 0x46, 0x77, 0x24, 0x15, 0x3b, 0x0a, 0x59, 0x68, 0xff, 0xce, 0x9d, 0xac
 };
 
-static const uint16 crc16_tab[] =
+static const uint16_t crc16_tab[] =
 {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
     0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
@@ -58,7 +58,7 @@ static const uint16 crc16_tab[] =
     0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
 };
 
-static uint32 crc32_tab[] =
+static uint32_t crc32_tab[] =
 {
     0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL, 0x076dc419L,
     0x706af48fL, 0xe963a535L, 0x9e6495a3L, 0x0edb8832L, 0x79dcb8a4L,
@@ -114,7 +114,7 @@ static uint32 crc32_tab[] =
     0x2d02ef8dL
 };
 
-static const uint64 crc64_tab[256] =
+static const uint64_t crc64_tab[256] =
 {
     0x0000000000000000ULL, 0x7ad870c830358979ULL,
     0xf5b0e190606b12f2ULL, 0x8f689158505e9b8bULL,
@@ -246,14 +246,14 @@ static const uint64 crc64_tab[256] =
     0x536fa08fdfd90e51ULL, 0x29b7d047efec8728ULL,
 };
 
-uint8 com_crc8(uint8* data, int data_size, uint8 init_val)
+uint8_t com_crc8(uint8_t* data, int data_size, uint8_t init_val)
 {
     if (data == NULL || data_size <= 0)
     {
         return 0;
     }
 
-    uint8 crc = init_val;
+    uint8_t crc = init_val;
     for (int i = 0; i < data_size; i++)
     {
         crc = crc8_tab[data[i] ^ crc];
@@ -262,13 +262,13 @@ uint8 com_crc8(uint8* data, int data_size, uint8 init_val)
     return crc;
 }
 
-uint16 com_crc16(uint8* data, int data_size, uint16 init_val)
+uint16_t com_crc16(uint8_t* data, int data_size, uint16_t init_val)
 {
     if (data == NULL || data_size <= 0)
     {
         return 0;
     }
-    uint16 crc = init_val;
+    uint16_t crc = init_val;
     for (int i = 0; i < data_size; i++)
     {
         crc = (crc << 8) ^ crc16_tab[((crc >> 8) ^ data[i]) & 0x00FF];
@@ -276,13 +276,13 @@ uint16 com_crc16(uint8* data, int data_size, uint16 init_val)
     return crc;
 }
 
-uint32 com_crc32(uint8* data, int data_size, uint32 init_val)
+uint32_t com_crc32(uint8_t* data, int data_size, uint32_t init_val)
 {
     if (data == NULL || data_size <= 0)
     {
         return 0;
     }
-    uint32 crc = init_val;
+    uint32_t crc = init_val;
 
     int i;
     crc ^= 0xFFFFFFFF;
@@ -295,17 +295,17 @@ uint32 com_crc32(uint8* data, int data_size, uint32 init_val)
     return (crc ^ 0xFFFFFFFF);
 }
 
-uint64 com_crc64(uint8* data, int data_size, uint64 init_val)
+uint64_t com_crc64(uint8_t* data, int data_size, uint64_t init_val)
 {
     if (data == NULL || data_size <= 0)
     {
         return 0;
     }
 
-    uint64 crc = init_val;
+    uint64_t crc = init_val;
     for (int j = 0; j < data_size; j++)
     {
-        crc = crc64_tab[(uint8)crc ^ data[j]] ^ (crc >> 8);
+        crc = crc64_tab[(uint8_t)crc ^ data[j]] ^ (crc >> 8);
     }
     return crc;
 }

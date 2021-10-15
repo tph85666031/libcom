@@ -2,7 +2,7 @@
 
 void com_file_unit_test_suit(void** state)
 {
-    ByteArray bytes = com_file_readall("./CMakeLists.txt");
+    CPPBytes bytes = com_file_readall("./CMakeLists.txt");
     ASSERT_FALSE(bytes.empty());
 
     com_dir_create("./1");

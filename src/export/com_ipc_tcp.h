@@ -9,34 +9,34 @@
 class TcpIpcMessage final
 {
 public:
-    ByteArray toBytes();
-    static bool FromBytes(TcpIpcMessage& msg, uint8* data, int dataSize);
+    CPPBytes toBytes();
+    static bool FromBytes(TcpIpcMessage& msg, uint8_t* data, int dataSize);
 public:
     std::string from;//char[32]
     std::string to;//char[32]
-    ByteArray bytes;
+    CPPBytes bytes;
 private:
-    uint8 sof;
+    uint8_t sof;
 };
 
 typedef struct
 {
     std::string name;
     int clinetfd;
-    ByteArray bytes;
+    CPPBytes bytes;
 } TCP_IPC_CLIENT;
 
 class TcpIpcServer : public SocketTcpServer
 {
 public:
-    TcpIpcServer(const char* name, uint16 port);
+    TcpIpcServer(const char* name, uint16_t port);
     virtual ~TcpIpcServer();
     std::string& getName();
 private:
-    virtual void onMessage(std::string& from_name, uint8* data, int data_size);
-    void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
-    void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
-    void buildMessage(int socketfd, uint8* data, int data_size);
+    virtual void onMessage(std::string& from_name, uint8_t* data, int data_size);
+    void onConnectionChanged(std::string& host, uint16_t port, int socketfd, bool connected);
+    void onRecv(std::string& host, uint16_t port, int socketfd, uint8_t* data, int data_size);
+    void buildMessage(int socketfd, uint8_t* data, int data_size);
     static void ThreadForward(TcpIpcServer* server);
 private:
     std::atomic<bool> forward_running;
@@ -52,18 +52,18 @@ private:
 class TcpIpcClient: public SocketTcpClient
 {
 public:
-    TcpIpcClient(const char* name, const char* serverName, const char* host, uint16 port);
+    TcpIpcClient(const char* name, const char* serverName, const char* host, uint16_t port);
     virtual ~TcpIpcClient();
-    bool sendMessage(const char* name, uint8* data, int dataSize);
+    bool sendMessage(const char* name, uint8_t* data, int dataSize);
     std::string getName();
     std::string getServerName();
 private:
-    virtual void onMessage(std::string& from_name, uint8* data, int data_size);
-    void buildMessage(uint8* data, int data_size);
+    virtual void onMessage(std::string& from_name, uint8_t* data, int data_size);
+    void buildMessage(uint8_t* data, int data_size);
     void onConnectionChanged(bool connected);
-    void onRecv(uint8* data, int data_size);
+    void onRecv(uint8_t* data, int data_size);
 private:
-    ByteArray bytes;
+    CPPBytes bytes;
     std::string name;
     std::string server_name;
 };

@@ -3,8 +3,8 @@
 void com_md5_unit_test_suit(void** state)
 {
     CPPMD5 md5;
-    md5.append((uint8*)"1234567890", sizeof("1234567890") - 1);
-    md5.append((uint8*)"1234567890", sizeof("1234567890") - 1);
+    md5.append((uint8_t*)"1234567890", sizeof("1234567890") - 1);
+    md5.append((uint8_t*)"1234567890", sizeof("1234567890") - 1);
     std::string result =  md5.finish().toHexString();
     ASSERT_STR_EQUAL("fd85e62d9beb45428771ec688418b271", result.c_str());
 

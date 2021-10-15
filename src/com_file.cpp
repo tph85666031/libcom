@@ -59,15 +59,15 @@ bool com_dir_create(const char* full_path)
     return true;
 }
 
-int64 com_dir_size_max(const char* dir)
+int64_t com_dir_size_max(const char* dir)
 {
     if(dir == NULL)
     {
         return -1;
     }
-    int64 total_size_byte = 0;
+    int64_t total_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    int64 free_size_byte = 0;
+    int64_t free_size_byte = 0;
     if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
                           (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
@@ -75,7 +75,7 @@ int64 com_dir_size_max(const char* dir)
     }
     return total_size_byte;
 #else
-    int64 block_size = 0;
+    int64_t block_size = 0;
     struct statfs dirfs_info;
     if(statfs(dir, &dirfs_info) != 0)
     {
@@ -90,14 +90,14 @@ int64 com_dir_size_max(const char* dir)
     return total_size_byte;
 }
 
-int64 com_dir_size_used(const char* dir)
+int64_t com_dir_size_used(const char* dir)
 {
     if(dir == NULL)
     {
         return -1;
     }
-    int64 total_size_byte = 0;
-    int64 free_size_byte = 0;
+    int64_t total_size_byte = 0;
+    int64_t free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
                           (ULARGE_INTEGER*)&free_size_byte) == 0)
@@ -106,7 +106,7 @@ int64 com_dir_size_used(const char* dir)
     }
     return total_size_byte - free_size_byte;
 #else
-    int64 block_size = 0;
+    int64_t block_size = 0;
     struct statfs dirfs_info;
     if(statfs(dir, &dirfs_info) != 0)
     {
@@ -175,15 +175,15 @@ int com_dir_remove(const char* dir_path)
 #endif
 }
 
-int64 com_dir_size_freed(const char* dir)
+int64_t com_dir_size_freed(const char* dir)
 {
     if(dir == NULL)
     {
         return -1;
     }
-    int64 free_size_byte = 0;
+    int64_t free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    int64 total_size_byte = 0;
+    int64_t total_size_byte = 0;
     if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
                           (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
@@ -191,7 +191,7 @@ int64 com_dir_size_freed(const char* dir)
     }
     return free_size_byte;
 #else
-    int64 block_size = 0;
+    int64_t block_size = 0;
     struct statfs dirfs_info;
     if(statfs(dir, &dirfs_info) != 0)
     {
@@ -251,7 +251,7 @@ int com_file_type(const char* file)
     return FILE_TYPE_UNKNOWN;
 }
 
-int64 com_file_size(const char* file_path)
+int64_t com_file_size(const char* file_path)
 {
     if(file_path == NULL)
     {
@@ -274,13 +274,13 @@ int64 com_file_size(const char* file_path)
     return filesize;
 }
 
-uint32 com_file_get_create_time(const char* file_path)
+uint32_t com_file_get_create_time(const char* file_path)
 {
     if(file_path == NULL)
     {
         return 0;
     }
-    uint32 timestamp = 0;
+    uint32_t timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
     if(_stat(file_path, &statbuff) == 0)
@@ -297,13 +297,13 @@ uint32 com_file_get_create_time(const char* file_path)
     return timestamp;
 }
 
-uint32 com_file_get_modify_time(const char* file_path)
+uint32_t com_file_get_modify_time(const char* file_path)
 {
     if(file_path == NULL)
     {
         return 0;
     }
-    uint32 timestamp = 0;
+    uint32_t timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
     if(_stat(file_path, &statbuff) == 0)
@@ -320,13 +320,13 @@ uint32 com_file_get_modify_time(const char* file_path)
     return timestamp;
 }
 
-uint32 com_file_get_access_time(const char* file_path)
+uint32_t com_file_get_access_time(const char* file_path)
 {
     if(file_path == NULL)
     {
         return 0;
     }
-    uint32 timestamp = 0;
+    uint32_t timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
     if(_stat(file_path, &statbuff) == 0)
@@ -352,7 +352,7 @@ void com_file_copy(const char* file_path_to, const char* file_path_from, bool ap
     FILE* fpR, *fpW;
     //char buffer[8];
     int buffer_size = 1 * 1024 * 1024;
-    uint8* buffer = new uint8[buffer_size]();
+    uint8_t* buffer = new uint8_t[buffer_size]();
     int lenR, lenW;
     if((fpR = fopen(file_path_from, "r")) == NULL)
     {
@@ -427,7 +427,7 @@ int com_file_seek_tail(FILE* file)
     return fseek(file, 0L, SEEK_END);
 }
 
-int com_file_seek(FILE* file, int64 pos)
+int com_file_seek(FILE* file, int64_t pos)
 {
     if(file == NULL)
     {
@@ -477,7 +477,7 @@ int com_file_read(FILE* file, void* buf, int size)
     int size_readed = 0;
     do
     {
-        size_readed += fread((uint8*)buf + size_readed, 1, size - size_readed, file);
+        size_readed += fread((uint8_t*)buf + size_readed, 1, size - size_readed, file);
     }
     while(feof(file) == 0 && ferror(file) == 0 && size_readed < size);
     return size_readed;
@@ -500,15 +500,15 @@ bool com_file_readline(FILE* file, char* buf, int size)
     }
 }
 
-ByteArray com_file_readall(const char* file_path)
+CPPBytes com_file_readall(const char* file_path)
 {
-    ByteArray bytes;
+    CPPBytes bytes;
     FILE* file = com_file_open(file_path, "r");
     if(file == NULL)
     {
         return bytes;
     }
-    uint8 buf[1024];
+    uint8_t buf[1024];
     int size = 0;
     while((size = com_file_read(file, buf, sizeof(buf))) > 0)
     {
@@ -528,7 +528,7 @@ int com_file_write(FILE* file, const void* buf, int size)
     int len = -1;
     int total_size = 0;
     while(total_size < size
-            && (len = fwrite((uint8*)buf + total_size, 1, size - total_size, file)) > 0)
+            && (len = fwrite((uint8_t*)buf + total_size, 1, size - total_size, file)) > 0)
     {
         total_size += len;
     }
@@ -591,7 +591,7 @@ void com_file_sync(FILE* file)
 #endif
 }
 
-bool com_file_crop(const char* file_name, uint8 start_percent_keepd, uint8 end_percent_keeped)
+bool com_file_crop(const char* file_name, uint8_t start_percent_keepd, uint8_t end_percent_keeped)
 {
     if(file_name == NULL || start_percent_keepd >= 100 || end_percent_keeped == 0)
     {
@@ -601,7 +601,7 @@ bool com_file_crop(const char* file_name, uint8 start_percent_keepd, uint8 end_p
     {
         end_percent_keeped = 100;
     }
-    uint64 file_size = com_file_size(file_name);
+    uint64_t file_size = com_file_size(file_name);
     if(file_size == 0)
     {
         return false;
@@ -619,21 +619,21 @@ bool com_file_crop(const char* file_name, uint8 start_percent_keepd, uint8 end_p
         com_file_close(file_in);
         return false;
     }
-    uint64 start_size = file_size * start_percent_keepd / 100;
-    uint64 end_size = file_size * end_percent_keeped / 100;
-    uint64 block_size = file_size / 100;
+    uint64_t start_size = file_size * start_percent_keepd / 100;
+    uint64_t end_size = file_size * end_percent_keeped / 100;
+    uint64_t block_size = file_size / 100;
     if(block_size > 1024 * 1024)
     {
         block_size = 1024 * 1024;
     }
-    uint8* buf = (uint8*)calloc(1, block_size);
+    uint8_t* buf = (uint8_t*)calloc(1, block_size);
     if(buf == NULL)
     {
         com_file_close(file_in);
         com_file_close(file_out);
         return false;
     }
-    uint64 total_size = 0;
+    uint64_t total_size = 0;
     int size = 0;
     while(true)
     {

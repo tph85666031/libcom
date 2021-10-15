@@ -4,18 +4,18 @@ void com_cache_unit_test_suit(void** state)
 {
     com_file_remove("./test.db");
     CacheManager cache_manager;
-    cache_manager.start("./test.db");
+    cache_manager.startManager("./test.db");
     cache_manager.clear(true);
     cache_manager.setFlushCount(10);
     cache_manager.setFlushInterval(10);
     for (int i = 0; i < 10000; i++)
     {
-        Cache cache(std::to_string(i).c_str(), (uint8*)"1234", 5);
+        Cache cache(std::to_string(i).c_str(), (uint8_t*)"1234", 5);
         cache_manager.append(cache);
     }
 
     ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 10000);
-    Cache cache_x(std::to_string(10001).c_str(), (uint8*)"5678", 5);
+    Cache cache_x(std::to_string(10001).c_str(), (uint8_t*)"5678", 5);
     cache_manager.append(cache_x);
     cache_manager.flushToDisk();
     Cache cache = cache_manager.getFirst();
@@ -35,11 +35,11 @@ void com_cache_unit_test_suit(void** state)
     com_file_remove("./test.db");
 
     CacheManager cache_manager2;
-    cache_manager2.start("./test_d.db");
+    cache_manager2.startManager("./test_d.db");
     cache_manager2.clear(true);
     for (int i = 0; i < 10000; i++)
     {
-        Cache cache(std::to_string(i).c_str(), (uint8*)"1234", 5);
+        Cache cache(std::to_string(i).c_str(), (uint8_t*)"1234", 5);
         cache_manager2.append(cache);
         if (i % 100 == 0)
         {
@@ -72,7 +72,7 @@ void com_cache_unit_test_suit(void** state)
     cache.setUUID("uuid");
     cache.setExpireTime(com_time_rtc_ms() + 5);
     cache.setRetryCount(4);
-    cache.setData((uint8*)"data", 4);
+    cache.setData((uint8_t*)"data", 4);
     cache_manager.append(cache);
 
     Cache cache_bak = cache_manager.getByUUID("uuid");

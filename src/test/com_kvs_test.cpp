@@ -20,24 +20,24 @@ void com_kvs_unit_test_suit(void** state)
     val_str = com_kvs_get_string("./kvs_test.db", "string", NULL);
     ASSERT_STR_EQUAL(val_str.c_str(), "142cger");
 
-    uint8 buf[7];
+    uint8_t buf[7];
     for (size_t i = 0; i < sizeof(buf); i++)
     {
         buf[i] = i;
     }
     com_kvs_set("./kvs_test.db", "bytes", buf, sizeof(buf));
-    ByteArray bytes = com_kvs_get_bytes("./kvs_test.db", "bytes");
+    CPPBytes bytes = com_kvs_get_bytes("./kvs_test.db", "bytes");
     ASSERT_MEM_EQUAL(bytes.getData(), buf, sizeof(buf));
 
     bool val_bool = true;
-    int8 val_int8 = -8;
-    int16 val_int16 = -16;
-    int32 val_int32 = -32;
-    int64 val_int64 = -64;
-    uint8 val_uint8 = 8;
-    uint16 val_uint16 = 16;
-    uint32 val_uint32 = 32;
-    uint64 val_uint64 = 64;
+    int8_t val_int8 = -8;
+    int16_t val_int16 = -16;
+    int32_t val_int32 = -32;
+    int64_t val_int64 = -64;
+    uint8_t val_uint8 = 8;
+    uint16_t val_uint16 = 16;
+    uint32_t val_uint32 = 32;
+    uint64_t val_uint64 = 64;
     double val_double = 12345.4654;
 
     com_kvs_set("./kvs_test.db", "val_double", val_double);
@@ -88,7 +88,7 @@ void com_kvs_unit_test_suit(void** state)
     com_file_remove("./kvs_test.db");
 
     Serializer s;
-    uint64 xx = 100;
+    uint64_t xx = 100;
     s.append(xx);
 
     Message msg;

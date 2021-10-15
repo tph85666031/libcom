@@ -1,6 +1,6 @@
 #include "com.h"
 
-void test_timer_callback(uint8 id, void* user_arg)
+void test_timer_callback(uint8_t id, void* user_arg)
 {
     LOG_D("timer_fc %d timeout,user_arg=%p", id, user_arg);
 }

@@ -5,9 +5,9 @@
 #if __linux__ == 1
 #define TCP_IPC_SOF            (0xA5)
 #define TCP_IPC_NAME_LENGTH    (32)
-#define TCP_IPC_MSG_HEAD_SIZE  (sizeof(uint8) + TCP_IPC_NAME_LENGTH * 2 + sizeof(uint32))
+#define TCP_IPC_MSG_HEAD_SIZE  (sizeof(uint8_t) + TCP_IPC_NAME_LENGTH * 2 + sizeof(uint32_t))
 
-ByteArray TcpIpcMessage::toBytes()
+CPPBytes TcpIpcMessage::toBytes()
 {
     Serializer s;
     sof = TCP_IPC_SOF;
@@ -20,12 +20,12 @@ ByteArray TcpIpcMessage::toBytes()
     s.append(from);
     s.append(to);
 
-    s.append((uint32)bytes.getDataSize());
+    s.append((uint32_t)bytes.getDataSize());
     s.append(bytes);
     return s.toBytes();
 }
 
-bool TcpIpcMessage::FromBytes(TcpIpcMessage& msg, uint8* data, int data_size)
+bool TcpIpcMessage::FromBytes(TcpIpcMessage& msg, uint8_t* data, int data_size)
 {
     if (data == NULL || data_size < (int)TCP_IPC_MSG_HEAD_SIZE)
     {
@@ -53,7 +53,7 @@ bool TcpIpcMessage::FromBytes(TcpIpcMessage& msg, uint8* data, int data_size)
     return true;
 }
 
-TcpIpcServer::TcpIpcServer(const char* name, uint16 port) : SocketTcpServer(port)
+TcpIpcServer::TcpIpcServer(const char* name, uint16_t port) : SocketTcpServer(port)
 {
     if (name != NULL)
     {
@@ -74,11 +74,11 @@ TcpIpcServer::~TcpIpcServer()
     }
 }
 
-void TcpIpcServer::onMessage(std::string& from_name, uint8* data, int data_size)
+void TcpIpcServer::onMessage(std::string& from_name, uint8_t* data, int data_size)
 {
 }
 
-void TcpIpcServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
+void TcpIpcServer::onConnectionChanged(std::string& host, uint16_t port, int socketfd, bool connected)
 {
     mutex_fds.lock();
     if (connected)
@@ -97,7 +97,7 @@ void TcpIpcServer::onConnectionChanged(std::string& host, uint16 port, int socke
     mutex_fds.unlock();
 }
 
-void TcpIpcServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
+void TcpIpcServer::onRecv(std::string& host, uint16_t port, int socketfd, uint8_t* data, int data_size)
 {
     buildMessage(socketfd, data, data_size);
 }
@@ -107,7 +107,7 @@ std::string& TcpIpcServer::getName()
     return name;
 }
 
-void TcpIpcServer::buildMessage(int socketfd, uint8* data, int dataSize)
+void TcpIpcServer::buildMessage(int socketfd, uint8_t* data, int dataSize)
 {
     if (socketfd <= 0 || data == NULL || dataSize <= 0)
     {
@@ -195,7 +195,7 @@ void TcpIpcServer::ThreadForward(TcpIpcServer* server)
                 TCP_IPC_CLIENT* des = &it->second;
                 if (com_string_match(des->name.c_str(), msg.to.c_str()))
                 {
-                    ByteArray bytes = msg.toBytes();
+                    CPPBytes bytes = msg.toBytes();
                     server->send(des->clinetfd, bytes.getData(), bytes.getDataSize());
                 }
             }
@@ -204,7 +204,7 @@ void TcpIpcServer::ThreadForward(TcpIpcServer* server)
     }
 }
 
-TcpIpcClient::TcpIpcClient(const char* name, const char* server_name, const char* host, uint16 port) : SocketTcpClient(host, port)
+TcpIpcClient::TcpIpcClient(const char* name, const char* server_name, const char* host, uint16_t port) : SocketTcpClient(host, port)
 {
     if (name != NULL)
     {
@@ -222,7 +222,7 @@ TcpIpcClient::~TcpIpcClient()
     stopClient();
 }
 
-bool TcpIpcClient::sendMessage(const char* target_name, uint8* data, int data_size)
+bool TcpIpcClient::sendMessage(const char* target_name, uint8_t* data, int data_size)
 {
     if (target_name == NULL)
     {
@@ -232,13 +232,13 @@ bool TcpIpcClient::sendMessage(const char* target_name, uint8* data, int data_si
     msg.from = name;
     msg.to = target_name;
     msg.bytes.append(data, data_size);
-    ByteArray bytes = msg.toBytes();
+    CPPBytes bytes = msg.toBytes();
     int ret = send(bytes.getData(), bytes.getDataSize());
     //LOG_D("send [%d],%s", msg.bytes.getDataSize(), msg.bytes.toHexString(true).c_str());
     return (ret == bytes.getDataSize());
 }
 
-void TcpIpcClient::onMessage(std::string& from_name, uint8* data, int data_size)
+void TcpIpcClient::onMessage(std::string& from_name, uint8_t* data, int data_size)
 {
 }
 
@@ -250,7 +250,7 @@ void TcpIpcClient::onConnectionChanged(bool connected)
     }
 }
 
-void TcpIpcClient::onRecv(uint8* data, int data_size)
+void TcpIpcClient::onRecv(uint8_t* data, int data_size)
 {
     buildMessage(data, data_size);
 }
@@ -265,7 +265,7 @@ std::string TcpIpcClient::getServerName()
     return server_name;
 }
 
-void TcpIpcClient::buildMessage(uint8* data, int data_size)
+void TcpIpcClient::buildMessage(uint8_t* data, int data_size)
 {
     if (data == NULL || data_size <= 0)
     {

@@ -188,7 +188,7 @@ void com_mem_set(const char* key, const double val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const int8 val)
+void com_mem_set(const char* key, const int8_t val)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -197,7 +197,7 @@ void com_mem_set(const char* key, const int8 val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const int16 val)
+void com_mem_set(const char* key, const int16_t val)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -206,7 +206,7 @@ void com_mem_set(const char* key, const int16 val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const int32 val)
+void com_mem_set(const char* key, const int32_t val)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -215,7 +215,7 @@ void com_mem_set(const char* key, const int32 val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const int64 val)
+void com_mem_set(const char* key, const int64_t val)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -224,7 +224,7 @@ void com_mem_set(const char* key, const int64 val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const uint8 val)
+void com_mem_set(const char* key, const uint8_t val)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -233,7 +233,7 @@ void com_mem_set(const char* key, const uint8 val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const uint16 val)
+void com_mem_set(const char* key, const uint16_t val)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -242,7 +242,7 @@ void com_mem_set(const char* key, const uint16 val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const uint32 val)
+void com_mem_set(const char* key, const uint32_t val)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -251,7 +251,7 @@ void com_mem_set(const char* key, const uint32 val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const uint64 val)
+void com_mem_set(const char* key, const uint64_t val)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -278,7 +278,7 @@ void com_mem_set(const char* key, const char* val)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, const uint8* val, int val_size)
+void com_mem_set(const char* key, const uint8_t* val, int val_size)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -287,7 +287,7 @@ void com_mem_set(const char* key, const uint8* val, int val_size)
     GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
 }
 
-void com_mem_set(const char* key, ByteArray& bytes)
+void com_mem_set(const char* key, CPPBytes& bytes)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -330,49 +330,49 @@ double com_mem_get_double(const char* key, double default_val)
     return mem_msg.getDouble(key, default_val);
 }
 
-int8 com_mem_get_int8(const char* key, int8 default_val)
+int8_t com_mem_get_int8(const char* key, int8_t default_val)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getInt8(key, default_val);
 }
 
-int16 com_mem_get_int16(const char* key, int16 default_val)
+int16_t com_mem_get_int16(const char* key, int16_t default_val)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getInt16(key, default_val);
 }
 
-int32 com_mem_get_int32(const char* key, int32 default_val)
+int32_t com_mem_get_int32(const char* key, int32_t default_val)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getInt32(key, default_val);
 }
 
-int64 com_mem_get_int64(const char* key, int64 default_val)
+int64_t com_mem_get_int64(const char* key, int64_t default_val)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getInt64(key, default_val);
 }
 
-uint8 com_mem_get_uint8(const char* key, uint8 default_val)
+uint8_t com_mem_get_uint8(const char* key, uint8_t default_val)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getUInt8(key, default_val);
 }
 
-uint16 com_mem_get_uint16(const char* key, uint16 default_val)
+uint16_t com_mem_get_uint16(const char* key, uint16_t default_val)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getUInt16(key, default_val);
 }
 
-uint32 com_mem_get_uint32(const char* key, uint32 default_val)
+uint32_t com_mem_get_uint32(const char* key, uint32_t default_val)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getUInt32(key, default_val);
 }
 
-uint64 com_mem_get_uint64(const char* key, uint64 default_val)
+uint64_t com_mem_get_uint64(const char* key, uint64_t default_val)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getUInt64(key, default_val);
@@ -384,7 +384,7 @@ std::string com_mem_get_string(const char* key, std::string default_val)
     return mem_msg.getString(key, default_val);
 }
 
-ByteArray com_mem_get_bytes(const char* key)
+CPPBytes com_mem_get_bytes(const char* key)
 {
     AutoMutex mutex(&mutex_share_mem);
     return mem_msg.getBytes(key);
@@ -419,7 +419,7 @@ bool com_mem_to_file(std::string file)
 
 void com_mem_from_file(std::string file)
 {
-    ByteArray bytes = com_file_readall(file.c_str());
+    CPPBytes bytes = com_file_readall(file.c_str());
     com_mem_from_json(bytes.toString());
 }
 

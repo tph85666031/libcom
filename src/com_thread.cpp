@@ -20,30 +20,30 @@ typedef struct
 #include "com_thread.h"
 #include "com_log.h"
 
-uint64 com_thread_get_tid()
+uint64_t com_thread_get_tid()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    return (uint64)GetCurrentThreadId();
+    return (uint64_t)GetCurrentThreadId();
 #else
-    return (uint64)syscall(SYS_gettid);
+    return (uint64_t)syscall(SYS_gettid);
 #endif
 }
 
-uint64 com_thread_get_tid_posix()
+uint64_t com_thread_get_tid_posix()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    return (uint64)GetCurrentThreadId();
+    return (uint64_t)GetCurrentThreadId();
 #else
-    return (uint64)pthread_self();
+    return (uint64_t)pthread_self();
 #endif
 }
 
-uint64 com_thread_get_pid()
+uint64_t com_thread_get_pid()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    return (uint64)GetCurrentProcessId();
+    return (uint64_t)GetCurrentProcessId();
 #else
-    return (uint64)getpid();
+    return (uint64_t)getpid();
 #endif
 }
 

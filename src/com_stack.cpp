@@ -20,7 +20,7 @@
 static std::atomic<void*> signal_cb_user_data;
 static std::atomic<signal_cb> signal_cb_func;
 
-static bool com_stack_name_of_pid(uint64 pid, char* name, int name_size)
+static bool com_stack_name_of_pid(uint64_t pid, char* name, int name_size)
 {
     if(name == NULL || name_size <= 0)
     {
@@ -100,7 +100,7 @@ static std::string stack_addr2line(const char* info, const char* file_addr2line,
     com_string_trim(offset);
     com_string_trim(offset_absolute);
 
-    uint64 addr_base = 0;
+    uint64_t addr_base = 0;
     std::string result;
     if(function.empty() == false)
     {
@@ -118,9 +118,9 @@ static std::string stack_addr2line(const char* info, const char* file_addr2line,
         addr_base = strtoull(addrs[0].c_str(), NULL, 16);
     }
 
-    uint64 addr_offset_absolute = strtoull(offset_absolute.c_str(), NULL, 16);
-    uint64 addr_offset = strtoull(offset.c_str(), NULL, 16);
-    uint64 addr = addr_base + addr_offset;
+    uint64_t addr_offset_absolute = strtoull(offset_absolute.c_str(), NULL, 16);
+    uint64_t addr_offset = strtoull(offset.c_str(), NULL, 16);
+    uint64_t addr = addr_base + addr_offset;
     if(addr == 0)
     {
         if(addr_offset_absolute == 0)
@@ -354,7 +354,7 @@ void com_system_send_signal(int sig)
 #endif
 }
 
-void com_system_send_signal(uint64 pid, int sig)
+void com_system_send_signal(uint64_t pid, int sig)
 {
 #if __linux__ == 1
     kill(pid, sig);

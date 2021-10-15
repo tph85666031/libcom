@@ -67,8 +67,8 @@ private:
     }
 private:
     std::atomic<int> count = {0};
-    std::atomic<uint64> tid = {0};
-    uint32 flag = 0;
+    std::atomic<uint64_t> tid = {0};
+    uint32_t flag = 0;
 };
 
 static void test_thread(std::string name, int count)
