@@ -9,43 +9,6 @@ public:
     }
 };
 
-class MyThread : public EasyThread<Message>
-{
-public:
-    void onLoop()
-    {
-        LOG_D("running ...");
-        if (waitMessage(100))
-        {
-            LOG_D("got message");
-            Message msg;
-            if (getMessage(msg))
-            {
-                ASSERT_INT_EQUAL(msg.getID(), 3);
-                ASSERT_STR_EQUAL(getName().c_str(), "MyThread");
-            }
-        }
-    }
-};
-
-class MyThread2 : public EasyThread<std::string>
-{
-public:
-    void onLoop()
-    {
-        LOG_D("running ...");
-        if (waitMessage(100))
-        {
-            LOG_D("got message");
-            std::string msg;
-            if (getMessage(msg))
-            {
-                ASSERT_STR_EQUAL(msg.c_str(), "haha");
-            }
-        }
-    }
-};
-
 static void thread_cpp_test(int val1, int val2)
 {
     LOG_D("vals=%d,val2=%d", val1, val2);
@@ -75,17 +38,5 @@ void com_thread_unit_test_suit(void** state)
     }
 
     MyThreadPoll x;
-    
-    MyThread my_thread;
-    MyThread2 my_thread2;
-    Message msg(3);
-    my_thread.setName("MyThread");
-    my_thread.startThread();
-    my_thread.pushMessage(msg);
-    my_thread2.pushMessage("haha");
-    LOG_D("send done");
-
-    com_sleep_s(2);
-    my_thread.stopThread();
 }
 

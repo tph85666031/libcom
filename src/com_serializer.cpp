@@ -122,7 +122,7 @@ Serializer& Serializer::append(const char* val, int val_size)
 {
     if(val_size < 0)
     {
-        val_size = strlen(val);
+        val_size = (int)strlen(val);
     }
     if(val != NULL && val_size > 0)
     {
@@ -150,9 +150,9 @@ Serializer& Serializer::append(const std::string val, int val_size)
 {
     if(val_size < 0)
     {
-        val_size = val.length();
+        val_size = (int)val.length();
     }
-    append(val.data(), val.length());
+    append(val.data(), (int)val.length());
     return *this;
 }
 

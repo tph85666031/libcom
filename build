@@ -145,7 +145,6 @@ done
 
 if [ $? != 0 ];then
   show_message "failed to load toolchain for ${HOST_TYPE}"
-  exit -1
 fi
 
 #编译

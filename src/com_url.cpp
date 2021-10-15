@@ -41,8 +41,8 @@ std::string URL::Encode(const char* str)
     {
         return encodeData;
     }
-    int length = strlen(str);
-    for (int i = 0; i < length; i++)
+    size_t length = strlen(str);
+    for (size_t i = 0; i < length; i++)
     {
         if (isalnum((unsigned char)str[i]) ||
                 (str[i] == '-') ||
@@ -73,8 +73,8 @@ std::string URL::Decode(const char* str)
     {
         return decodeData;
     }
-    int length = strlen(str);
-    for (int i = 0; i < length; i++)
+	size_t length = strlen(str);
+    for (size_t i = 0; i < length; i++)
     {
         if (str[i] == '+')
         {

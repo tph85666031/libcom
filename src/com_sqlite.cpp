@@ -435,7 +435,7 @@ DBQuery::~DBQuery()
 
 int DBQuery::getRowCount()
 {
-    return list.size() - 1;//排除列头
+    return (int)list.size() - 1;//排除列头
 }
 
 int DBQuery::getColumnCount()
@@ -444,7 +444,7 @@ int DBQuery::getColumnCount()
     {
         return 0;
     }
-    return list[0].size();
+    return (int)list[0].size();
 }
 
 const char* DBQuery::getItem(int row, int column)

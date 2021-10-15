@@ -392,7 +392,7 @@ int ThreadPool::getMessageCount()
 {
     int count = 0;
     mutex_msgs.lock();
-    count = msgs.size();
+    count = (int)msgs.size();
     mutex_msgs.unlock();
     return count;
 }

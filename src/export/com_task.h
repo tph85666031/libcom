@@ -78,7 +78,7 @@ public:
     T* createTask(std::string task_name, Message init_msg = Message())
     {
         mutex_tasks.lock();
-        int count = tasks.count(task_name);
+        size_t count = tasks.count(task_name);
         if (count > 0)
         {
             mutex_tasks.unlock();

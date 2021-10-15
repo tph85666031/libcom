@@ -3,9 +3,9 @@
 #include "com_log.h"
 #include "com_test.h"
 
-#if __linux__ == 1
 void com_dns_unit_test_suit(void** state)
 {
+#if __linux__ == 1
     std::string ip;
     std::vector<std::string> interfaces = com_net_get_interface_all();
     for (size_t i = 0; i < interfaces.size(); i++)
@@ -27,6 +27,5 @@ void com_dns_unit_test_suit(void** state)
 
     ASSERT_TRUE(com_string_is_ip("127.23.247.6"));
     ASSERT_FALSE(com_string_is_ip("127.0247.4467.6"));
-}
 #endif
-
+}
