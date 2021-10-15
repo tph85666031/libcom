@@ -1,5 +1,7 @@
 #include "com.h"
 
+ComInitializer initializer;
+
 extern void com_base_unit_test_suit(void** state);
 extern void com_base_string_split_unit_test_suit(void** state);
 extern void com_base_string_unit_test_suit(void** state);

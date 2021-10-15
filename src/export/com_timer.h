@@ -54,6 +54,7 @@ public:
     void updateTimer(CPPTimer& timer);
     void removeTimer(std::string uuid);
     bool isTimerExist(std::string uuid);
+    void setMessageID(uint32 id);
 private:
     void threadPoolRunner(Message& msg);
     static void ThreadTimerLoop(CPPTimerManager* manager);

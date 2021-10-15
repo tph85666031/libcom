@@ -185,6 +185,11 @@ void CPPTimerManager::updateTimer(CPPTimer& timer)
     return;
 }
 
+void CPPTimerManager::setMessageID(uint32 id)
+{
+    this->message_id = id;
+}
+
 CPPTimer::CPPTimer()
 {
     uuid = com_uuid_generator();
