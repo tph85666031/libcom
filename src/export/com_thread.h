@@ -10,11 +10,11 @@
 
 void com_thread_set_name(std::thread* t, const char* name);
 void com_thread_set_name(std::thread& t, const char* name);
-void com_thread_set_name(int tid, const char* name);
+void com_thread_set_name(uint64 tid_posix, const char* name);
 void com_thread_set_name(const char* name);
 std::string com_thread_get_name(std::thread* t);
 std::string com_thread_get_name(std::thread& t);
-std::string com_thread_get_name(int tid);
+std::string com_thread_get_name(uint64 tid_posix);
 std::string com_thread_get_name();
 uint64 com_thread_get_tid_posix();
 uint64 com_thread_get_tid();

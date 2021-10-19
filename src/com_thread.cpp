@@ -100,7 +100,7 @@ std::string com_thread_get_name(std::thread& t)
     return name;
 }
 
-void com_thread_set_name(int tid_posix, const char* name)
+void com_thread_set_name(uint64 tid_posix, const char* name)
 {
 #if __linux__ == 1
     if (tid_posix > 0 && name != NULL)
@@ -113,7 +113,7 @@ void com_thread_set_name(int tid_posix, const char* name)
 #endif
 }
 
-std::string com_thread_get_name(int tid_posix)
+std::string com_thread_get_name(uint64 tid_posix)
 {
     char buf[32];
     memset(buf, 0, sizeof(buf));
