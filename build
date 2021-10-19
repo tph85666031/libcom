@@ -1,40 +1,25 @@
 #!/bin/bash
 
-HOST_TYPES=(linux_x64 rpi android-arm android-arm64)
-BUILD_TYPES=(release debug)
-
 show_usage()
 {
-	echo "Usage:  -h host type:${HOST_TYPES[@]}"
-	echo "        -t toolchain directory, (default is ../toolchains)"
-	echo "        -d build with debug option"
+	echo "Usage:  -d build with debug option"
 	echo "        -u build as unit test app"
 	echo "        -s build static library"
-	echo "        -p package all required file"
-	echo "        -v verbose mode"
 	echo "        -c remove all build file"
-	echo "        -P publish this module after successfull building"
 	echo ""
 	exit -1
 }
 
 show_message()
 {
-    echo "[lib${module_name}-------------"$1"-----------------]"
+    echo "[-------------"$1"-----------------]"
 }
 
 DIR_ROOT=`pwd`
-TOOLCHAIN_PTAH="${DIR_ROOT}/../toolchains"
-REPO_PATH="${DIR_ROOT}/../repo"
-HOST_TYPE="linux_x64"
 BUILD_TYPE="release"
 UNIT_TEST="false"
-MODULE_TYPE="00000000"
 PROJECT_CLEAN= "false"
-FORMAT="false"
-PUBLISH="false"
 LIB_TYPE="shared"
-PACKAGE="false"
 
 if [ -n "$1" ];then
 if [ x"${1:0:1}" != "x-" ];then
@@ -42,12 +27,8 @@ if [ x"${1:0:1}" != "x-" ];then
 fi
 fi
 
-while getopts 'cCh:t:dspuvFPm:' OPT; do
+while getopts 'cdsuj:' OPT; do
 	case $OPT in
-	h)
-		HOST_TYPE=$OPTARG;;
-	t)
-	    TOOLCHAIN_PTAH=$OPTARG;;
 	c)
 		PROJECT_CLEAN="true";;
 	d)
@@ -56,132 +37,45 @@ while getopts 'cCh:t:dspuvFPm:' OPT; do
 		LIB_TYPE="static";;
 	u)
 		UNIT_TEST="true";;
-	p)
-		PACKAGE="true";;
-	P)
-		PUBLISH="true";;
+    j)
+		JOBS=$OPTARG;;
 	?)
 		show_usage
 	esac
 done
 shift $(($OPTIND - 1))
 
-__host_support__="false"
-for i in ${HOST_TYPES[@]}
-do
-  if [ "$i" == "${HOST_TYPE}" ];then
-    __host_support__="true";
-    break;
-  fi
-done
-
-if [ "${__host_support__}" != "true" ];then
-show_message "host \"${HOST_TYPE}\" not support"
-exit -1
-fi
 
 #清理环境
 if [ x"${PROJECT_CLEAN}" == x"true" ];then
-	rm -rf ${DIR_ROOT}/tmp/${HOST_TYPE} 2>&1 > /dev/null
-	rm -rf ${DIR_ROOT}/out/${HOST_TYPE} 2>&1 > /dev/null
+	rm -rf ${DIR_ROOT}/tmp/ 2>&1 > /dev/null
+	rm -rf ${DIR_ROOT}/out/ 2>&1 > /dev/null
 	show_message "clean done"
 	echo ""
 	exit 0
 fi
 
 #环境准备
-rm -rf ${DIR_ROOT}/out/${HOST_TYPE}/* 2>&1 > /dev/null
-mkdir -pv ${DIR_ROOT}/tmp/${HOST_TYPE}/depend > /dev/null
-mkdir -pv ${DIR_ROOT}/tmp/${HOST_TYPE}/zip/${BUILD_TYPE} > /dev/null
-mkdir -pv ${DIR_ROOT}/out/${HOST_TYPE}/ > /dev/null
-
-#读取config.txt文件加载依赖关系
-source config.txt
-set link_lib=""
-array=(${depend_lib//,/ })
-for var in ${array[@]}
-do
-  OIFS=$IFS; IFS=":"; set -- $var; lib_name=$1;lib_ver=$2; IFS=$OIFS
-  if [ -z "$lib_ver" ];then
-    link_lib="$link_lib-l$lib_name "  #修复特殊lib依赖
-  else
-    if [ ! -f ${DIR_ROOT}/tmp/${HOST_TYPE}/zip/${BUILD_TYPE}/lib${lib_name}_${lib_ver}.tar.gz ];then
-	  echo "copy file lib$lib_name_$lib_ver.tar.gz"
-      cp ${REPO_PATH}/${HOST_TYPE}/${BUILD_TYPE}/lib${lib_name}_${lib_ver}.tar.gz ${DIR_ROOT}/tmp/${HOST_TYPE}/zip/${BUILD_TYPE}
-	fi
-  fi
-done
-
-#解压压缩包
-cd ${DIR_ROOT}/tmp/${HOST_TYPE}/zip/${BUILD_TYPE}
-for t in *.tar.gz; do
-if [ -f ${t} ];then
-tar -zxvf $t -C ${DIR_ROOT}/tmp/${HOST_TYPE}/depend > /dev/null
-if [ $? != 0 ];then
-  rm -f $t
-  show_message "failed to decompress ${var}"
-  exit -1
-fi
-fi
-done
-cd - > /dev/null
-
-#生成静态链接库链接参数
-link_lib="$link_lib -Xlinker -( "
-for file_lib in `ls ${DIR_ROOT}/tmp/${HOST_TYPE}/depend/lib*.a 2>/dev/null |awk -F\/ '{print substr($(NF),4,length($NF)-5)}'`
-do
-link_lib="$link_lib-l$file_lib "
-done
-link_lib="$link_lib -Xlinker -) "
-
-#生成动态链接库链接参数
-for file_lib in `ls ${DIR_ROOT}/tmp/${HOST_TYPE}/depend/lib*.so 2>/dev/null |awk -F\/ '{print substr($(NF),4,length($NF)-6)}'`
-do
-link_lib="$link_lib-l$file_lib "
-done
-
-#加载交叉工具链
-. ${TOOLCHAIN_PTAH}/${HOST_TYPE}/setenv ${TOOLCHAIN_PTAH}/${HOST_TYPE}
-
-if [ $? != 0 ];then
-  show_message "failed to load toolchain for ${HOST_TYPE}"
-fi
+rm -rf ${DIR_ROOT}/out/* > /dev/null 2>&1
+mkdir -pv ${DIR_ROOT}/out/ > /dev/null 2>&1
+mkdir -pv ${DIR_ROOT}/tmp/ > /dev/null 2>&1
 
 #编译
-JOBS=`grep -c ^processor /proc/cpuinfo`
-if [ -z ${JOBS} ];then
-JOBS=1
+if [ x"${JOBS}" == x"" ];then
+    JOBS=`grep -c ^processor /proc/cpuinfo`
 fi
-cd ${DIR_ROOT}/tmp/${HOST_TYPE}
+
+if [ -z ${JOBS} ];then
+    JOBS=1
+fi
+
+cd ${DIR_ROOT}/tmp
 if [ -d ${DIR_ROOT}/src ];then
-  cmake -DCMAKE_AR:FILEPATH=${AR} -DCMAKE_RANLIB:FILEPATH=${RANLIB} -DCMAKE_STRIP:FILEPATH=${STRIP} ${DIR_ROOT} -DHOST_TYPE=$HOST_TYPE -DBUILD_TYPE=$BUILD_TYPE -DLIB_TYPE=$LIB_TYPE -DUNIT_TEST=$UNIT_TEST -DMODULE_VER=$module_ver -DMODULE_NAME=$module_name -DMODULE_DEPEND="$depend_lib" -DMODULE_DEFINE="$module_define" -DPROJECT_LIB="$link_lib" && make -j${JOBS}
+  cmake -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DLIB_TYPE=${LIB_TYPE} ${DIR_ROOT} && make -j${JOBS}
   if [ $? != 0 ]; then
-    show_message "failed to make lib${module_name}_${module_ver}"
+    show_message "failed to make project"
     exit -1
   fi
-fi
-
-if [ x"$PACKAGE" == x"true" ];then
-  cp -d -f ${DIR_ROOT}/tmp/${HOST_TYPE}/depend/* ${DIR_ROOT}/out/${HOST_TYPE}/ 2> /dev/null
-  cp -d -f ${DIR_ROOT}/config.txt                ${DIR_ROOT}/out/${HOST_TYPE}/version.txt 2> /dev/null
-fi
-
-cp -f ${DIR_ROOT}/config/*               ${DIR_ROOT}/out/${HOST_TYPE}/ 2> /dev/null
-cp -f ${DIR_ROOT}/config/${HOST_TYPE}/*  ${DIR_ROOT}/out/${HOST_TYPE}/ 2> /dev/null
-cp -r -f ${DIR_ROOT}/src/export/*        ${DIR_ROOT}/out/${HOST_TYPE}/ 2> /dev/null
-
-if [ x"$PACKAGE" == x"true" ];then
-  find  ${DIR_ROOT}/out/${HOST_TYPE}/ -name "*.h" | xargs rm -f 2>&1 > /dev/null
-  find  ${DIR_ROOT}/out/${HOST_TYPE}/ -name "*.a" | xargs rm -f 2>&1 > /dev/null
-fi
-
-cd ${DIR_ROOT}/out/${HOST_TYPE}/
-rm -f lib${module_name}_${module_ver}.tar.gz
-tar -zcvf lib${module_name}_${module_ver}.tar.gz ./*
-
-if [ x"${PUBLISH}" == x"true" ] && [ x"${UNIT_TEST}" == x"false" ];then
-  mkdir -pv ${REPO_PATH}/${HOST_TYPE}/${BUILD_TYPE}/ 2>&1 /dev/null
-  \cp -f ${DIR_ROOT}/out/${HOST_TYPE}/lib${module_name}_${module_ver}.tar.gz ${REPO_PATH}/${HOST_TYPE}/${BUILD_TYPE}/
 fi
 
 show_message "succeed"
