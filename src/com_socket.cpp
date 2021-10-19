@@ -914,7 +914,7 @@ void SocketTcpClient::onRecv(uint8* data, int data_size)
 {
 }
 
-#if __linux__ == 1
+#if __linux__ == 1 && !defined(__APPLE__)
 SocketTcpServer::SocketTcpServer()
 {
     setHost("127.0.0.1");
