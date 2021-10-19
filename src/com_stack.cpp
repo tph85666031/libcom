@@ -194,7 +194,7 @@ static void stack_signal_function(int sig, siginfo_t* info, void* context)
 {
     if(signal_cb_func != NULL)
     {
-        if(signal_cb_func(sig, signal_cb_user_data))
+        if((*signal_cb_func)(sig, signal_cb_user_data))
         {
             return;
         }
