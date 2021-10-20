@@ -33,7 +33,9 @@ typedef unsigned long long uint64;
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #include <winsock.h> //ntohl
-#pragma comment(lib, "ws2_32.lib")
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#include <sys/time.h>
 #else
 #include <arpa/inet.h> //ntohl
 #include <semaphore.h> //sem mutex
@@ -89,8 +91,10 @@ public:
     std::string name;
 #if defined(_WIN32) || defined(_WIN64)
     void* handle = NULL;
-#else
+#elif __linux__ == 1
     sem_t handle;
+#elif defined(__APPLE__)
+    dispatch_semaphore_t handle = NULL;
 #endif
 };
 

@@ -10,6 +10,10 @@ typedef struct
     DWORD dwFlags; // reserved for future use, must be zero
 } THREADNAME_INFO;
 #pragma pack(pop)
+#elif defined(__APPLE__)
+#include <sys/syscall.h>
+#include <pthread.h>
+#include <unistd.h>
 #else
 #include <sys/syscall.h>
 #include <sys/prctl.h>
@@ -144,6 +148,8 @@ void com_thread_set_name(const char* name)
     __except (EXCEPTION_CONTINUE_EXECUTION)
     {
     }
+#elif defined(__APPLE__)
+    pthread_setname_np(name);
 #else
     char tmp[16];
     strncpy(tmp, name, sizeof(tmp));

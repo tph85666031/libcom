@@ -1,6 +1,6 @@
 #include "com.h"
 
-#if __linux__ == 1
+#if __linux__ == 1 || defined(__APPLE__)
 class MySocketTcpClient : public SocketTcpClient
 {
 public:
@@ -71,12 +71,12 @@ public:
     {
         data_size = 0;
     }
-    void onConnectionChanged(std::string& client_name, int socketfd, bool connected)
+    void onConnectionChanged(std::string& client_name, uint16 port, int socketfd, bool connected)
     {
         LOG_D("%s connection %s", client_name.c_str(), connected ? "true" : "false");
     }
 
-    void onRecv(std::string& client_name,  int socketfd, uint8* data, int data_size)
+    void onRecv(std::string& client_name, uint16 port, int socketfd, uint8* data, int data_size)
     {
         this->data_size += data_size;
         CPPBytes bytes(data, data_size);
@@ -88,7 +88,7 @@ public:
 
 void com_socket_unit_test_suit(void** state)
 {
-#if __linux__ == 1
+#if __linux__ == 1 || defined(__APPLE__)
     uint8 mac[LENGTH_MAC]={0};
     com_net_get_mac("eth0", mac);
     std::string mac_str = com_string_format("%02X-%02X-%02X-%02X-%02X-%02X",
@@ -133,7 +133,7 @@ void com_socket_unit_test_suit(void** state)
 
 void com_unix_domain_unit_test_suit(void** state)
 {
-#if __linux__ == 1
+#if __linux__ == 1 || defined(__APPLE__)
     MyUnixDomainTcpServer ud_server("un_server_test");
     MyUnixDomainTcpClient ud_client1("un_server_test", "un_client1_test");
 

@@ -6,6 +6,18 @@
 #include "com_thread.h"
 #include "com_err.h"
 
+#if defined(__APPLE__)
+typedef struct kevent IOM_EVENT;
+#define iom_event_fd(x)         (int)(intptr_t)((x).udata)
+#define iom_event_events(x)     (x).filter
+#define iom_error_events(x)     (!((x) & EVFILT_READ))
+#else
+typedef struct epoll_event IOM_EVENT;
+#define iom_event_fd(x)         (x).data.fd
+#define iom_event_events(x)     (x).events
+#define iom_error_events(x)     (((x) & EPOLLERR) || ((x) & EPOLLHUP) || ((x) & EPOLLRDHUP) || !((x) & EPOLLIN))
+#endif
+
 #define LENGTH_MAC    6
 
 #define SOCKET_SERVER_MAX_CLIENTS 500
@@ -30,7 +42,6 @@ void com_socket_set_recv_timeout(int sock, int timeout_ms);
 void com_socket_set_send_timeout(int sock, int timeout_ms);
 
 int com_socket_get_tcp_connection_status(int sock);
-bool com_socket_is_tcp_connected(int sock);
 int com_unix_domain_tcp_open(const char* my_name, const char* server_name);
 int com_socket_udp_open(const char* interface_name, uint16 recv_port, bool broadcast = false);
 int com_socket_tcp_open(const char* remote_host, uint16 remote_port,
@@ -107,40 +118,6 @@ private:
     std::atomic<bool> connected;
 };
 
-#if __linux__ == 1
-class SocketTcpServer : public Socket
-{
-public:
-    SocketTcpServer();
-    SocketTcpServer(uint16 port);
-    virtual ~SocketTcpServer();
-    virtual int startServer();
-    virtual void stopServer();
-    void closeClient(int fd);
-    int send(int clientfd, uint8* data, int data_size);
-    int send(const char* host, uint16 port, uint8* data, int data_size);
-    virtual void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
-    virtual void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
-private:
-    int acceptClient();
-    int recvData(int clientfd);
-    static void ThreadSocketServerReceiver(SocketTcpServer* socket_server);
-    static void ThreadSocketServerListener(SocketTcpServer* socket_server);
-    static void ThreadSocketServerDispatcher(SocketTcpServer* socket_server);
-private:
-    int epollfd;
-    std::atomic<bool> receiver_running;
-    std::atomic<bool> listener_running;
-    int epoll_timeout_ms;
-    std::thread thread_listener;
-    std::thread thread_receiver;
-    CPPMutex mutex_clients;
-    std::map<int, CLIENT_DES> clients;
-    CPPMutex mutexfds;
-    CPPSem semfds;
-    std::queue<CLIENT_DES> ready_fds;
-};
-
 class UnixDomainTcpClient
 {
 public:
@@ -167,31 +144,36 @@ private:
     std::atomic<bool> need_reconnect;
 };
 
-class UnixDomainTcpServer
+
+
+// SERVER
+class TCPServer : public Socket
 {
 public:
-    UnixDomainTcpServer(const char* server_file_name);
-    virtual ~UnixDomainTcpServer();
-    int startServer();
-    void stopServer();
-    int send(const char* client_file_name_wildcard, uint8* data, int data_size);
-    int send(int clientfd, uint8* data, int data_size);
-    std::string& getServerFileName();
-    int getSocketfd();
-    virtual void onConnectionChanged(std::string& client_file_name, int socketfd, bool connected);
-    virtual void onRecv(std::string& client_file_name, int socketfd, uint8* data, int data_size);
-private:
-    int acceptClient();
-    void closeClient(int fd);
-    int recvData(int clientfd);
-    static void ThreadUnixDomainServerReceiver(UnixDomainTcpServer* socket_server);
-    static void ThreadUnixDomainServerListener(UnixDomainTcpServer* socket_server);
-private:
-    std::string server_file_name;
-    int socketfd;
+    TCPServer();
+    virtual ~TCPServer();
+public:
+    bool IOMCreate();
+    void IOMAddMonitor(int clientfd);
+    void IOMRemoveMonitor(int fd);
+    int IOMWaitFor(IOM_EVENT *event_list, int event_len);
+public:
+    virtual int startServer();
+    virtual bool initListen() { return false; }
+    virtual int acceptClient() { return -1; }
+    virtual void closeClient(int fd);
+    virtual void stopServer();
+    virtual int send(int clientfd, uint8* data, int data_size);
+    virtual int recvData(int clientfd);
+    virtual void onConnectionChanged(std::string& host_or_file, uint16 port, int socketfd, bool connected) {}
+    virtual void onRecv(std::string& host_or_file, uint16 port, int socketfd, uint8* data, int data_size) {}
+public:
+    static void ThreadTCPServerReceiver(TCPServer* socket_server);
+    static void ThreadTCPServerListener(TCPServer* socket_server);
+protected:
     int epollfd;
-    std::atomic<bool> listener_running;
     std::atomic<bool> receiver_running;
+    std::atomic<bool> listener_running;
     int epoll_timeout_ms;
     std::thread thread_listener;
     std::thread thread_receiver;
@@ -199,8 +181,31 @@ private:
     std::map<int, CLIENT_DES> clients;
     CPPMutex mutexfds;
     CPPSem semfds;
-    std::queue<CLIENT_DES> fds;
+    std::queue<CLIENT_DES> ready_fds;
 };
-#endif
+
+class SocketTcpServer : public TCPServer
+{
+public:
+    SocketTcpServer(uint16 port);
+    virtual ~SocketTcpServer();
+public:
+    virtual bool initListen() override;
+    virtual int acceptClient() override;
+    int send(const char* host, uint16 port, uint8* data, int data_size);
+private:
+    static void ThreadSocketServerDispatcher(SocketTcpServer* socket_server);
+};
+
+class UnixDomainTcpServer : public TCPServer
+{
+public:
+    UnixDomainTcpServer(const char* server_file_name);
+    virtual ~UnixDomainTcpServer();
+public:
+    virtual bool initListen() override;
+    virtual int acceptClient() override;
+    int send(const char* client_file_name_wildcard, uint8* data, int data_size);
+};
 
 #endif /* __COM_SOCKET_H__ */

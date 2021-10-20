@@ -20,7 +20,11 @@
 #endif
 
 #ifdef HAVE_MALLOC_H
+#if defined(__APPLE__)
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #endif
 
 #ifdef HAVE_INTTYPES_H

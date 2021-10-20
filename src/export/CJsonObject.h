@@ -13,7 +13,11 @@
 
 #include <stdio.h>
 #include <stddef.h>
+#if defined(__APPLE__)
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <errno.h>
 #include <limits.h>
 #include <math.h>

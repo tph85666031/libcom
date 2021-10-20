@@ -7,10 +7,6 @@
 #include <spdlog/details/periodic_worker.h>
 #endif
 
-#ifdef __GNUC__
-#include <sys/prctl.h>
-#endif
-        
 namespace spdlog {
 namespace details {
 
@@ -23,9 +19,6 @@ SPDLOG_INLINE periodic_worker::periodic_worker(const std::function<void()> &call
     }
 
     worker_thread_ = std::thread([this, callback_fun, interval]() {
-        #ifdef __GNUC__
-        prctl(PR_SET_NAME, "T-Spdlog");
-        #endif
         for (;;)
         {
             std::unique_lock<std::mutex> lock(this->mutex_);

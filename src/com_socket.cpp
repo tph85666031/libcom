@@ -7,7 +7,16 @@
 #else
 #include <unistd.h>
 #include <sys/socket.h>
+#if defined(__APPLE__)
+#include <sys/event.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <netinet/tcp_fsm.h>
+#include <arpa/inet.h>
+#else
 #include <sys/epoll.h>
+#endif
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <netinet/tcp.h>
@@ -92,8 +101,7 @@ int com_socket_get_tcp_connection_status(int sock)
     {
         return 0;
     }
-    return 1;
-#else
+#elif defined(TCP_INFO)
     struct tcp_info info;
     int len = sizeof(info);
     int ret = getsockopt(sock, IPPROTO_TCP, TCP_INFO, &info, (socklen_t*)&len);
@@ -107,54 +115,37 @@ int com_socket_get_tcp_connection_status(int sock)
         LOG_D("tcp socket status=%d", info.tcpi_state);
         return 0;
     }
-    return 1;
-#endif
-}
-
-bool com_socket_is_tcp_connected(int sock)
-{
-    if (sock <= 0)
-    {
-        return false;
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    int optval = -1;
-    int optlen = sizeof(int);
-    int ret = getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*) &optval, &optlen);
-    if (ret != 0)
-    {
-        LOG_D("failed to get tcp socket status, ret=%d", ret);
-        return false;
-    }
-    if (optval == 0)
-    {
-        return true;
-    }
-    return false;
-#else
-    struct tcp_info info;
+#elif defined(TCP_CONNECTION_INFO)
+    struct tcp_connection_info info;
     int len = sizeof(info);
-    int ret = getsockopt(sock, IPPROTO_TCP, TCP_INFO, &info, (socklen_t*)&len);
+    int ret = getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, (void *)&info, (socklen_t *)&len);
     if (ret != 0)
     {
         LOG_D("failed to get tcp socket status, ret=%d,errno=%d:%s", ret, errno, strerror(errno));
-        return false;
+        return -1;
     }
-    if (info.tcpi_state != TCP_ESTABLISHED)
+    if (info.tcpi_state != TCPS_ESTABLISHED)
     {
         LOG_D("tcp socket status=%d", info.tcpi_state);
-        return false;
+        return 0;
     }
-    return true;
 #endif
+    return 1; // tcp established
 }
 
 int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broadcast)
 {
     int socketfd = -1;
-
-    /*建立socket*/
-    if ((socketfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_IP)) < 0)
+#if defined(SOCK_CLOEXEC)
+    socketfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_IP)
+#elif defined(O_CLOEXEC)
+    socketfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (socketfd > 0)
+    {
+        fcntl(socketfd, O_CLOEXEC);
+    }
+#endif
+    if (socketfd < 0)
     {
         LOG_E("failed to open socket");
         return -1;
@@ -213,7 +204,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
 
     return socketfd;
 }
-#if __linux__ == 1
+
 int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
 {
     if (my_name == NULL || server_name == NULL)
@@ -237,8 +228,8 @@ int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
         LOG_E("failed to create unix domain socket");
         return -1;
     }
-    int len = offsetof(struct sockaddr_un, sun_path) + strlen(client_addr.sun_path);
-    int ret = bind(socketfd, (struct sockaddr*)(&client_addr), len);
+    long len = offsetof(struct sockaddr_un, sun_path) + strlen(client_addr.sun_path);
+    int ret = bind(socketfd, (struct sockaddr*)(&client_addr), (int)len);
     if (ret < 0)
     {
         com_socket_close(socketfd);
@@ -246,7 +237,7 @@ int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
         return -1;
     }
     len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
-    ret = connect(socketfd, (struct sockaddr*)(&server_addr), len);
+    ret = connect(socketfd, (struct sockaddr*)(&server_addr), (int)len);
     if (ret != 0)
     {
         com_socket_close(socketfd);
@@ -255,7 +246,6 @@ int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
     }
     return socketfd;
 }
-#endif
 
 int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 timeout_ms, const char* interface_name)
 {
@@ -276,14 +266,22 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
     }
     uint32 remote_ip = ((sockaddr_in*)(res->ai_addr))->sin_addr.s_addr;
     freeaddrinfo(res);
-
-    int socketfd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_IP);
-    if (-1 == socketfd)
+    
+    int socketfd = -1;
+#if defined(SOCK_CLOEXEC)
+    socketfd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_IP);
+#elif defined(O_CLOEXEC)
+    socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if (socketfd > 0)
+    {
+        fcntl(socketfd, O_CLOEXEC);
+    }
+#endif
+    if (socketfd < 0)
     {
         LOG_E("socketfd fail");
         return -1;
     }
-
 
     NicInfo nic;
 #if __linux__ == 1
@@ -771,6 +769,7 @@ std::string Socket::getInterface()
     return interface_name;
 }
 
+// SocketTcpClient
 SocketTcpClient::SocketTcpClient()
 {
     reconnect_at_once = false;
@@ -914,312 +913,7 @@ void SocketTcpClient::onRecv(uint8* data, int data_size)
 {
 }
 
-#if __linux__ == 1 && !defined(__APPLE__)
-SocketTcpServer::SocketTcpServer()
-{
-    setHost("127.0.0.1");
-    epollfd = -1;
-    receiver_running = false;
-    listener_running = false;
-    epoll_timeout_ms = 3000;
-}
-
-SocketTcpServer::SocketTcpServer(uint16 port)
-{
-    setHost("127.0.0.1");
-    setPort(port);
-    epollfd = -1;
-    receiver_running = false;
-    listener_running = false;
-    epoll_timeout_ms = 3000;
-}
-
-SocketTcpServer::~SocketTcpServer()
-{
-    stopServer();
-}
-
-void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* socket_server)
-{
-    uint8 buf[4096];
-    while (socket_server->receiver_running)
-    {
-        socket_server->semfds.wait(1000);
-        socket_server->mutexfds.lock();
-        if (socket_server->ready_fds.size() <= 0)
-        {
-            socket_server->mutexfds.unlock();
-            continue;
-        }
-        CLIENT_DES des = socket_server->ready_fds.front();
-        socket_server->ready_fds.pop();
-        socket_server->mutexfds.unlock();
-        while (true)
-        {
-            memset(buf, 0, sizeof(buf));
-            int ret = recv(des.clientfd, buf, sizeof(buf), MSG_DONTWAIT);
-            if (ret <= 0)
-            {
-                break;
-            }
-            socket_server->onRecv(des.host, des.port, des.clientfd, buf, ret);
-        }
-    }
-    return;
-}
-
-void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* socket_server)
-{
-    if (socket_server == NULL)
-    {
-        LOG_E("arg incorrect");
-        return;
-    }
-    struct epoll_event eventList[SOCKET_SERVER_MAX_CLIENTS];
-    while (socket_server->listener_running)
-    {
-        socket_server->epoll_timeout_ms = 1000;
-        //epoll_wait
-        int count = epoll_wait(socket_server->epollfd, eventList,
-                               SOCKET_SERVER_MAX_CLIENTS, socket_server->epoll_timeout_ms);
-        if (count < 0)
-        {
-            LOG_E("epoll error,errno=%d:%s", errno, strerror(errno));
-            break;
-        }
-        else if (count == 0)
-        {
-            //LOG_D("epoll timeout");
-            continue;
-        }
-        if (socket_server->listener_running == false)
-        {
-            break;
-        }
-        //直接获取了事件数量,给出了活动的流,这里是和poll区别的关键
-        for (int i = 0; i < count; i++)
-        {
-            if ((eventList[i].events & EPOLLERR) ||
-                    (eventList[i].events & EPOLLHUP) ||
-                    (eventList[i].events & EPOLLRDHUP) ||//远端close
-                    !(eventList[i].events & EPOLLIN))
-            {
-                LOG_D("epoll client quit, fd=%d, event=0x%X", eventList[i].data.fd, eventList[i].events);
-                socket_server->closeClient(eventList[i].data.fd);
-                break;
-            }
-            if (eventList[i].data.fd == socket_server->socketfd)
-            {
-                socket_server->acceptClient();
-            }
-            else
-            {
-                socket_server->recvData(eventList[i].data.fd);
-            }
-        }
-    }
-    LOG_I("socket server quit, port=%d", socket_server->getPort());
-    return;
-}
-
-int SocketTcpServer::recvData(int socketfd)//ThreadSocketServerRunner线程
-{
-    mutex_clients.lock();
-    if (clients.count(socketfd) == 0)
-    {
-        mutex_clients.unlock();
-        return -1;
-    }
-    CLIENT_DES des = clients[socketfd];
-    mutex_clients.unlock();
-    mutexfds.lock();
-    ready_fds.push(des);
-    semfds.post();
-    mutexfds.unlock();
-    return 0;
-}
-
-void SocketTcpServer::closeClient(int fd)
-{
-    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
-    CLIENT_DES des;
-    des.clientfd = fd;
-    mutex_clients.lock();
-    if (clients.count(fd) == 0)
-    {
-        mutex_clients.unlock();
-        return;
-    }
-    des = clients[fd];
-    mutex_clients.unlock();
-    onConnectionChanged(des.host, des.port, des.clientfd, false);
-    com_socket_close(fd);
-    mutex_clients.lock();
-    if (clients.count(fd) != 0)
-    {
-        clients.erase(fd);
-    }
-    mutex_clients.unlock();
-}
-
-int SocketTcpServer::acceptClient()//ThreadSocketServerRunner线程
-{
-    struct sockaddr_in sin;
-    socklen_t len = sizeof(struct sockaddr_in);
-    memset(&sin, 0, len);
-    int clientfd = accept(socketfd, (struct sockaddr*)&sin, &len);
-    if (clientfd < 0)
-    {
-        LOG_E("bad accept client, errno=%d:%s", errno, strerror(errno));
-        return -1;
-    }
-    LOG_D("Accept Connection, fd=%d, addr=%s,port=%u",
-          clientfd, com_ip_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
-    CLIENT_DES des;
-    des.clientfd = clientfd;
-    des.host = com_ip_to_string(sin.sin_addr.s_addr);
-    des.port = sin.sin_port;
-    mutex_clients.lock();
-    clients[des.clientfd] = des;
-    mutex_clients.unlock();
-    //将新建立的连接添加到EPOLL的监听中
-    struct epoll_event event;
-    memset(&event, 0, sizeof(struct epoll_event));
-    event.data.fd = clientfd;
-    event.events =  EPOLLIN | EPOLLET | EPOLLRDHUP;//边缘触发
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, clientfd, &event);
-    onConnectionChanged(des.host, des.port, des.clientfd, true);
-    return 0;
-}
-
-int SocketTcpServer::startServer()
-{
-    if (port == 0)
-    {
-        LOG_E("port not set");
-        return -1;
-    }
-    socketfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (socketfd <= 0)
-    {
-        LOG_E("socket create failed : fd = %d", getSocketfd());
-        return -1;
-    }
-    struct sockaddr_in server_addr;
-    bzero(&server_addr, sizeof(server_addr));
-    server_addr.sin_family  =  AF_INET;
-    server_addr.sin_port = htons(getPort());
-    server_addr.sin_addr.s_addr  =  htonl(INADDR_ANY);
-    int resuse_flag = 1;
-    setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &resuse_flag, sizeof(int));
-    if (bind(getSocketfd(), (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
-    {
-        LOG_E("socket bind failed : fd = %d", getSocketfd());
-        com_socket_close(socketfd);
-        return -2;
-    }
-    if (listen(socketfd, 5) < 0)
-    {
-        LOG_E("socket listen failed : fd = %d", getSocketfd());
-        com_socket_close(socketfd);
-        return -3;
-    }
-    // epoll 初始化
-    epollfd = epoll_create(SOCKET_SERVER_MAX_CLIENTS);
-    struct epoll_event event;
-    memset(&event, 0, sizeof(struct epoll_event));
-    event.events = EPOLLIN;
-    event.data.fd = getSocketfd();
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
-    {
-        LOG_E("epoll add failed : fd = %d", getSocketfd());
-        return -4;
-    }
-    listener_running = true;
-    thread_listener = std::thread(ThreadSocketServerListener, this);
-    receiver_running = true;
-    thread_receiver = std::thread(ThreadSocketServerReceiver, this);
-    return 0;
-}
-
-void SocketTcpServer::stopServer()
-{
-    listener_running = false;
-    if (thread_listener.joinable())
-    {
-        thread_listener.join();
-    }
-    receiver_running = false;
-    if (thread_receiver.joinable())
-    {
-        thread_receiver.join();
-    }
-    com_socket_close(socketfd);
-    socketfd = -1;
-    com_socket_close(epollfd);
-    epollfd = -1;
-    mutex_clients.lock();
-    for (size_t i = 0; i < clients.size(); i++)
-    {
-        com_socket_close(clients[i].clientfd);
-    }
-    mutex_clients.unlock();
-    LOG_I("socket server stopped");
-}
-
-int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSize)
-{
-    if (host == NULL || data == NULL || dataSize <= 0)
-    {
-        return 0;
-    }
-    mutex_clients.lock();
-    int clientfd = -1;
-    std::map<int, CLIENT_DES>::iterator it;
-    for (it = clients.begin(); it != clients.end(); it++)
-    {
-        CLIENT_DES des = it->second;
-        if (com_string_equal(des.host.c_str(), host) && des.port == port)
-        {
-            clientfd = des.clientfd;
-            break;
-        }
-    }
-    mutex_clients.unlock();
-    if (clientfd == -1)
-    {
-        return -1;
-    }
-    int ret = com_socket_tcp_send(clientfd, data, dataSize);
-    if (ret == -1)
-    {
-        closeClient(clientfd);
-    }
-    return ret;
-}
-
-int SocketTcpServer::send(int clientfd, uint8* data, int dataSize)
-{
-    if (data == NULL || dataSize <= 0)
-    {
-        return 0;
-    }
-    int ret = com_socket_tcp_send(clientfd, data, dataSize);
-    if (ret == -1)
-    {
-        closeClient(clientfd);
-    }
-    return ret;
-}
-
-void SocketTcpServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
-{
-}
-
-void SocketTcpServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int dataSize)
-{
-}
-
+// UnixDomainTcpClient
 UnixDomainTcpClient::UnixDomainTcpClient(const char* server_file_name, const char* file_name)
 {
     need_reconnect = false;
@@ -1352,129 +1046,130 @@ void UnixDomainTcpClient::onRecv(uint8* data, int data_size)
 {
 }
 
-UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
+
+// TCPServer
+TCPServer::TCPServer()
 {
-    if (server_file_name != NULL)
-    {
-        this->server_file_name = server_file_name;
-    }
-    socketfd = -1;
     epollfd = -1;
-    listener_running = false;
     receiver_running = false;
+    listener_running = false;
     epoll_timeout_ms = 3000;
 }
 
-UnixDomainTcpServer::~UnixDomainTcpServer()
+TCPServer::~TCPServer()
 {
     stopServer();
-    com_file_remove(getServerFileName().c_str());
 }
 
-void UnixDomainTcpServer::ThreadUnixDomainServerReceiver(UnixDomainTcpServer* socket_server)
+bool TCPServer::IOMCreate()
 {
-    uint8 buf[4096];
-    while (socket_server->receiver_running)
+#if __linux__ == 1
+    epollfd = epoll_create(SOCKET_SERVER_MAX_CLIENTS);
+    if (epollfd < 0)
     {
-        socket_server->semfds.wait(1000);
-        socket_server->mutexfds.lock();
-        if (socket_server->fds.size() <= 0)
-        {
-            socket_server->mutexfds.unlock();
-            continue;
-        }
-
-        CLIENT_DES des = socket_server->fds.front();
-        socket_server->fds.pop();
-        socket_server->mutexfds.unlock();
-        while (true)
-        {
-            memset(buf, 0, sizeof(buf));
-            int ret = recv(des.clientfd, buf, sizeof(buf), MSG_DONTWAIT);
-            if (ret <= 0)
-            {
-                break;
-            }
-            socket_server->onRecv(des.host, des.clientfd, buf, ret);
-        }
-    }
-    return;
-}
-
-void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* socket_server)
-{
-    if (socket_server == NULL)
-    {
-        LOG_E("arg incorrect");
-        return;
-    }
-    struct epoll_event event_list[SOCKET_SERVER_MAX_CLIENTS];
-    while (socket_server->listener_running)
-    {
-        socket_server->epoll_timeout_ms = 1000;
-        //epoll_wait
-        int count = epoll_wait(socket_server->epollfd, event_list,
-                               SOCKET_SERVER_MAX_CLIENTS, socket_server->epoll_timeout_ms);
-        if (count < 0)
-        {
-            LOG_E("epoll error");
-            break;
-        }
-        else if (count == 0)
-        {
-            //LOG_D("epoll timeout");
-            continue;
-        }
-        if (socket_server->listener_running == false)
-        {
-            break;
-        }
-        //直接获取了事件数量,给出了活动的流,这里是和poll区别的关键
-        for (int i = 0; i < count; i++)
-        {
-            if ((event_list[i].events & EPOLLERR) ||
-                    (event_list[i].events & EPOLLHUP) ||
-                    (event_list[i].events & EPOLLRDHUP) ||//远端close
-                    !(event_list[i].events & EPOLLIN))
-            {
-                LOG_D("epoll client quit, fd=%d, event=0x%X", event_list[i].data.fd, event_list[i].events);
-                socket_server->closeClient(event_list[i].data.fd);
-                break;
-            }
-            if (event_list[i].data.fd == socket_server->socketfd)
-            {
-                socket_server->acceptClient();
-            }
-            else
-            {
-                socket_server->recvData(event_list[i].data.fd);
-            }
-        }
-    }
-    LOG_I("socket server quit, file_path=%s", socket_server->server_file_name.c_str());
-    return;
-}
-
-int UnixDomainTcpServer::recvData(int socketfd)
-{
-    mutex_clients.lock();
-    if (clients.count(socketfd) == 0)
-    {
-        mutex_clients.unlock();
+        LOG_E("Failed to create epoll");
         return -1;
     }
-    CLIENT_DES des = clients[socketfd];
-    mutex_clients.unlock();
-    mutexfds.lock();
-    fds.push(des);
-    semfds.post();
-    mutexfds.unlock();
+    struct epoll_event event;
+    memset(&event, 0, sizeof(struct epoll_event));
+    event.events = EPOLLIN;
+    event.data.fd = getSocketfd();
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
+    {
+        LOG_E("epoll add failed : fd = %d", getSocketfd());
+        return false;
+    }
+#elif defined(__APPLE__)
+    epollfd = kqueue();
+    if (epollfd < 0)
+    {
+        LOG_E("Failed to open kqueue");
+        return false;
+    }
+    struct kevent events[1];
+    EV_SET(&events[0], socketfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void*)(intptr_t)socketfd);
+    if (kevent(epollfd, events, 1, NULL, 0, NULL) < 0)
+    {
+        LOG_E("kqueue add failed : fd = %d", getSocketfd());
+        return false;
+    }
+#endif
+    return true;
+}
+
+void TCPServer::IOMAddMonitor(int clientfd)
+{
+#if __linux__ == 1
+    struct epoll_event event;
+    memset(&event, 0, sizeof(struct epoll_event));
+    event.data.fd = clientfd;
+    event.events =  EPOLLIN | EPOLLET | EPOLLRDHUP;//边缘触发
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, clientfd, &event);
+#elif defined(__APPLE__)
+    struct kevent ev[1];
+    EV_SET(&ev[0], clientfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void*)(intptr_t)clientfd);
+    if (kevent(epollfd, ev, 1, NULL, 0, NULL) < 0)
+    {
+        LOG_E("kqueue add accept fd failed : clientfd = %d", clientfd);
+    }
+#endif
+}
+
+void TCPServer::IOMRemoveMonitor(int fd)
+{
+#if __linux__ == 1
+    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
+#elif defined(__APPLE__)
+    struct kevent ev[1];
+    EV_SET(&ev[0], fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void*)(intptr_t)fd);
+    if (kevent(epollfd, ev, 1, NULL, 0, NULL) < 0)
+    {
+        LOG_E("kqueue close failed : fd = %d", fd);
+    }
+#endif
+}
+
+int TCPServer::IOMWaitFor(IOM_EVENT *event_list, int event_len)
+{
+    int count = 0;
+#if __linux__ == 1
+    count = epoll_wait(epollfd, event_list, event_len, epoll_timeout_ms);
+#elif defined(__APPLE__)
+    struct timespec timeout;
+    timeout.tv_sec = epoll_timeout_ms / 1000;
+    timeout.tv_nsec = (epoll_timeout_ms % 1000) * 1000 * 1000;
+    count = kevent(epollfd, NULL, 0, event_list, event_len, &timeout);
+#endif
+    return count;
+}
+
+int TCPServer::startServer()
+{
+    if ( ! initListen()) {
+        LOG_E("start server failed");
+        return -1;
+    }
+    if (listen(socketfd, 5) < 0)
+    {
+        LOG_E("socket listen failed : socketfd = %d", socketfd.load());
+        com_socket_close(socketfd);
+        return -3;
+    }
+    if ( ! IOMCreate())
+    {
+        LOG_E("IO multiplex create failed : fd = %d", getSocketfd());
+        return -4;
+    }
+    listener_running = true;
+    thread_listener = std::thread(ThreadTCPServerListener, this);
+    receiver_running = true;
+    thread_receiver = std::thread(ThreadTCPServerReceiver, this);
     return 0;
 }
 
-void UnixDomainTcpServer::closeClient(int fd)
+void TCPServer::closeClient(int fd)
 {
-    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
+    this->IOMRemoveMonitor(fd);
     CLIENT_DES des;
     des.clientfd = fd;
     mutex_clients.lock();
@@ -1485,7 +1180,7 @@ void UnixDomainTcpServer::closeClient(int fd)
     }
     des = clients[fd];
     mutex_clients.unlock();
-    onConnectionChanged(des.host, des.clientfd, false);
+    onConnectionChanged(des.host, des.port, des.clientfd, false);
     com_socket_close(fd);
     mutex_clients.lock();
     if (clients.count(fd) != 0)
@@ -1493,6 +1188,281 @@ void UnixDomainTcpServer::closeClient(int fd)
         clients.erase(fd);
     }
     mutex_clients.unlock();
+}
+
+void TCPServer::stopServer()
+{
+    listener_running = false;
+    if (thread_listener.joinable())
+    {
+        thread_listener.join();
+    }
+    receiver_running = false;
+    if (thread_receiver.joinable())
+    {
+        thread_receiver.join();
+    }
+    com_socket_close(socketfd);
+    socketfd = -1;
+    com_socket_close(epollfd);
+    epollfd = -1;
+    mutex_clients.lock();
+    for (int i = 0; i < clients.size(); i++)
+    {
+        com_socket_close(clients[i].clientfd);
+    }
+    mutex_clients.unlock();
+    LOG_I("socket server stopped");
+}
+
+int TCPServer::send(int clientfd, uint8* data, int dataSize)
+{
+    if (data == NULL || dataSize <= 0)
+    {
+        return 0;
+    }
+    int ret = com_socket_tcp_send(clientfd, data, dataSize);
+    if (ret == -1)
+    {
+        closeClient(clientfd);
+    }
+    return ret;
+}
+
+int TCPServer::recvData(int socketfd)
+{
+    mutex_clients.lock();
+    if (clients.count(socketfd) == 0)
+    {
+        mutex_clients.unlock();
+        return -1;
+    }
+    CLIENT_DES des = clients[socketfd];
+    mutex_clients.unlock();
+    mutexfds.lock();
+    ready_fds.push(des);
+    semfds.post();
+    mutexfds.unlock();
+    return 0;
+}
+
+void TCPServer::ThreadTCPServerListener(TCPServer* socket_server)
+{
+    if (socket_server == NULL)
+    {
+        LOG_E("arg incorrect");
+        return;
+    }
+    while (socket_server->listener_running)
+    {
+        socket_server->epoll_timeout_ms = 1000;
+        //epoll_wait
+        IOM_EVENT eventList[SOCKET_SERVER_MAX_CLIENTS];
+        int count = socket_server->IOMWaitFor(eventList, SOCKET_SERVER_MAX_CLIENTS);
+        if (count < 0)
+        {
+            LOG_E("iom_event error,errno=%d:%s", errno, strerror(errno));
+            break;
+        }
+        else if (count == 0)
+        {
+            LOG_D("iom_event timeout");
+            continue;
+        }
+        if (socket_server->listener_running == false)
+        {
+            break;
+        }
+        //直接获取了事件数量,给出了活动的流,这里是和poll区别的关键
+        for (int i = 0; i < count; i++)
+        {
+            int fd = iom_event_fd(eventList[i]);
+            int events = iom_event_events(eventList[i]);
+            if (iom_error_events(events))
+            {
+                LOG_D("iom_event client quit, fd=%d, event=0x%X", fd, events);
+                socket_server->closeClient(fd);
+                break;
+            }
+            if (fd == socket_server->socketfd)
+            {
+                socket_server->acceptClient();
+            }
+            else
+            {
+                socket_server->recvData(fd);
+            }
+        }
+    }
+    LOG_I("socket server quit, port=%d", socket_server->getPort());
+    return;
+}
+
+void TCPServer::ThreadTCPServerReceiver(TCPServer* socket_server)
+{
+    uint8 buf[4096];
+    while (socket_server->receiver_running)
+    {
+        socket_server->semfds.wait(1000);
+        socket_server->mutexfds.lock();
+        if (socket_server->ready_fds.size() <= 0)
+        {
+            socket_server->mutexfds.unlock();
+            continue;
+        }
+        CLIENT_DES des = socket_server->ready_fds.front();
+        socket_server->ready_fds.pop();
+        socket_server->mutexfds.unlock();
+        while (true)
+        {
+            memset(buf, 0, sizeof(buf));
+            int ret = (int)recv(des.clientfd, buf, sizeof(buf), MSG_DONTWAIT);
+            if (ret <= 0)
+            {
+                break;
+            }
+            socket_server->onRecv(des.host, des.port, des.clientfd, buf, ret);
+        }
+    }
+    return;
+}
+
+
+// SocketTcpServer
+SocketTcpServer::SocketTcpServer(uint16 port)
+{
+    setHost("127.0.0.1");
+    setPort(port);
+}
+
+SocketTcpServer::~SocketTcpServer()
+{
+    
+}
+
+bool SocketTcpServer::initListen()
+{
+    if (port == 0)
+    {
+        LOG_E("port not set");
+        return false;
+    }
+    socketfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (socketfd <= 0)
+    {
+        LOG_E("socket create failed : fd = %d", getSocketfd());
+        return false;
+    }
+    struct sockaddr_in server_addr;
+    bzero(&server_addr, sizeof(server_addr));
+    server_addr.sin_family  =  AF_INET;
+    server_addr.sin_port = htons(getPort());
+    server_addr.sin_addr.s_addr  =  htonl(INADDR_ANY);
+    int resuse_flag = 1;
+    setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &resuse_flag, sizeof(int));
+    if (bind(getSocketfd(), (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
+    {
+        LOG_E("socket bind failed : fd = %d", getSocketfd());
+        com_socket_close(socketfd);
+        return false;
+    }
+    return true;
+}
+
+int SocketTcpServer::acceptClient()
+{
+    struct sockaddr_in sin;
+    socklen_t len = sizeof(struct sockaddr_in);
+    memset(&sin, 0, len);
+    int clientfd = accept(socketfd, (struct sockaddr*)&sin, &len);
+    if (clientfd < 0)
+    {
+        LOG_E("bad accept client, errno=%d:%s", errno, strerror(errno));
+        return -1;
+    }
+    LOG_D("Accept Connection, fd=%d, addr=%s,port=%u",
+          clientfd, com_ip_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
+    CLIENT_DES des;
+    des.clientfd = clientfd;
+    des.host = com_ip_to_string(sin.sin_addr.s_addr);
+    des.port = sin.sin_port;
+    
+    mutex_clients.lock();
+    clients[des.clientfd] = des;
+    mutex_clients.unlock();
+    //将新建立的连接添加到监听队列中
+    IOMAddMonitor(clientfd);
+    onConnectionChanged(des.host, des.port, des.clientfd, true);
+    return 0;
+}
+
+int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSize)
+{
+    if (host == NULL || data == NULL || dataSize <= 0)
+    {
+        return 0;
+    }
+    mutex_clients.lock();
+    int clientfd = -1;
+    std::map<int, CLIENT_DES>::iterator it;
+    for (it = clients.begin(); it != clients.end(); it++)
+    {
+        CLIENT_DES des = it->second;
+        if (com_string_equal(des.host.c_str(), host) && des.port == port)
+        {
+            clientfd = des.clientfd;
+            break;
+        }
+    }
+    mutex_clients.unlock();
+    if (clientfd == -1)
+    {
+        return -1;
+    }
+    int ret = com_socket_tcp_send(clientfd, data, dataSize);
+    if (ret == -1)
+    {
+        closeClient(clientfd);
+    }
+    return ret;
+}
+
+
+// UnixDomainTcpServer
+UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
+{
+    setHost(server_file_name);
+    setPort(0);
+}
+
+UnixDomainTcpServer::~UnixDomainTcpServer()
+{
+    if (getHost().size() > 0) {
+        com_file_remove(getHost().c_str());
+    }
+}
+
+bool UnixDomainTcpServer::initListen()
+{
+    socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (socketfd <= 0)
+    {
+        LOG_E("socket create failed : socketfd = %d", socketfd.load());
+        return false;
+    }
+    com_file_remove(getHost().c_str());
+    struct sockaddr_un server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strcpy(server_addr.sun_path, getHost().c_str());
+    long len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
+    if (bind(socketfd.load(), (struct sockaddr*)(&server_addr), (int)len) < 0)
+    {
+        LOG_E("socket bind failed : socketfd = %d", socketfd.load());
+        com_socket_close(socketfd);
+        return false;
+    }
+    return true;
 }
 
 int UnixDomainTcpServer::acceptClient()
@@ -1510,97 +1480,14 @@ int UnixDomainTcpServer::acceptClient()
     CLIENT_DES des;
     des.clientfd = clientfd;
     des.host = client_addr.sun_path;
+    des.port = 0; // no use
     mutex_clients.lock();
     clients[des.clientfd] = des;
     mutex_clients.unlock();
-    //将新建立的连接添加到EPOLL的监听中
-    struct epoll_event event;
-    memset(&event, 0, sizeof(struct epoll_event));
-    event.data.fd = clientfd;
-    event.events =  EPOLLIN | EPOLLET | EPOLLRDHUP;//边缘触发
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, clientfd, &event);
-    onConnectionChanged(des.host, des.clientfd, true);
+    //将新建立的连接添加到监听队列中
+    IOMAddMonitor(clientfd);
+    onConnectionChanged(des.host, des.port, des.clientfd, true);
     return 0;
-}
-
-int UnixDomainTcpServer::startServer()
-{
-    socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (socketfd <= 0)
-    {
-        LOG_E("socket create failed : socketfd = %d", socketfd);
-        return -1;
-    }
-    com_file_remove(server_file_name.c_str());
-    struct sockaddr_un server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sun_family = AF_UNIX;
-    strcpy(server_addr.sun_path, server_file_name.c_str());
-    //int resuse_flag = 1;
-    //setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &resuse_flag, sizeof(int));
-    int len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
-    if (bind(socketfd, (struct sockaddr*)(&server_addr), len) < 0)
-    {
-        LOG_E("socket bind failed : socketfd = %d", socketfd);
-        com_socket_close(socketfd);
-        return -2;
-    }
-    if (listen(socketfd, 5) < 0)
-    {
-        LOG_E("socket listen failed : socketfd = %d", socketfd);
-        com_socket_close(socketfd);
-        return -3;
-    }
-    // epoll 初始化
-    epollfd = epoll_create(SOCKET_SERVER_MAX_CLIENTS);
-    struct epoll_event event;
-    memset(&event, 0, sizeof(struct epoll_event));
-    event.events = EPOLLIN;
-    event.data.fd = socketfd;
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
-    {
-        LOG_E("epoll add failed : socketfd = %d", socketfd);
-        return -4;
-    }
-    listener_running = true;
-    thread_listener = std::thread(ThreadUnixDomainServerListener, this);
-    receiver_running = true;
-    thread_receiver = std::thread(ThreadUnixDomainServerReceiver, this);
-    return 0;
-}
-
-void UnixDomainTcpServer::stopServer()
-{
-    listener_running = false;
-    if (thread_listener.joinable())
-    {
-        thread_listener.join();
-    }
-    receiver_running = false;
-    if (thread_receiver.joinable())
-    {
-        thread_receiver.join();
-    }
-    com_socket_close(socketfd);
-    socketfd = -1;
-    com_socket_close(epollfd);
-    epollfd = -1;
-    mutex_clients.lock();
-    for (size_t i = 0; i < clients.size(); i++)
-    {
-        com_socket_close(clients[i].clientfd);
-    }
-    mutex_clients.unlock();
-    LOG_I("socket server stopped");
-}
-
-int UnixDomainTcpServer::send(int clientfd, uint8* data, int data_size)
-{
-    if (data == NULL || data_size <= 0)
-    {
-        return 0;
-    }
-    return com_socket_tcp_send(clientfd, data, data_size);
 }
 
 int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8* data, int data_size)
@@ -1642,24 +1529,3 @@ int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8* data
     }
     return ret;
 }
-
-std::string& UnixDomainTcpServer::getServerFileName()
-{
-    return server_file_name;
-}
-
-int UnixDomainTcpServer::getSocketfd()
-{
-    return socketfd;
-}
-
-void UnixDomainTcpServer::onConnectionChanged(std::string& client_file_name, int socketfd, bool connected)
-{
-}
-
-void UnixDomainTcpServer::onRecv(std::string& client_file_name, int socketfd, uint8* data, int data_size)
-{
-}
-
-#endif
-
