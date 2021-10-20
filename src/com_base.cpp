@@ -354,6 +354,10 @@ char* com_string_to_lower(char* str)
 
 std::string com_string_format(const char* fmt, ...)
 {
+    if (NULL == fmt) 
+    {
+        return "";
+    }
     std::string str;
     va_list args;
     va_start(args, fmt);
@@ -1627,6 +1631,7 @@ std::string com_get_bin_name()
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
         if(ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
+            mutex_app_path.unlock();
             return std::string();
         }
         for(int i = ret; i >= 0; i--)
@@ -1663,6 +1668,7 @@ std::string com_get_bin_path()
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
         if(ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
+            mutex_app_path.unlock();
             return std::string();
         }
         for(int i = ret; i >= 0; i--)
