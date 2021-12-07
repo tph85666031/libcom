@@ -4,6 +4,13 @@
 #if __linux__ == 1
 #include "com_base.h"
 
+typedef struct
+{
+    std::string host;
+    uint16 port;
+    int clientfd;
+} CLIENT_DES;
+
 class SocketTcpServer
 {
 public:
@@ -24,8 +31,8 @@ private:
     static void ThreadSocketServerListener(SocketTcpServer* socket_server);
     static void ThreadSocketServerDispatcher(SocketTcpServer* socket_server);
 private:
-    std::atomic<uint16> port;
-    std::atomic<int> socketfd;
+    uint16 server_port;
+    int server_fd;
     int epollfd;
     std::atomic<bool> receiver_running;
     std::atomic<bool> listener_running;
@@ -60,7 +67,7 @@ private:
     static void ThreadUnixDomainServerListener(UnixDomainTcpServer* socket_server);
 private:
     std::string server_file_name;
-    int socketfd;
+    int server_fd;
     int epollfd;
     std::atomic<bool> listener_running;
     std::atomic<bool> receiver_running;

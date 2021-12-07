@@ -60,13 +60,6 @@ uint8 com_net_get_rpfilter(const char* interface_name);
 bool com_net_is_interface_exist(const char* interface_name);
 std::vector<std::string> com_net_get_interface_all();
 
-typedef struct
-{
-    std::string host;
-    uint16 port;
-    int clientfd;
-} CLIENT_DES;
-
 class Socket
 {
 public:

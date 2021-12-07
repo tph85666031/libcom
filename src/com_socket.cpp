@@ -20,18 +20,13 @@
 #include <sys/un.h>
 #include <stddef.h>
 #include <fnmatch.h>
-#elif __linxu__ == 1
+#elif __linux__ == 1
 #include <unistd.h>
 #include <sys/socket.h>
-#include <sys/epoll.h>
-
 #include <sys/ioctl.h>
 #include <net/if.h>
-#include <netinet/tcp.h>
 #include <netdb.h>
 #include <sys/un.h>
-#include <stddef.h>
-#include <fnmatch.h>
 #endif
 
 #include "com_socket.h"
@@ -92,7 +87,7 @@ void com_socket_set_send_timeout(int sock, int timeout_ms)
 */
 int com_socket_get_tcp_connection_status(int sock)
 {
-    if (sock <= 0)
+    if(sock <= 0)
     {
         return -1;
     }
@@ -100,12 +95,12 @@ int com_socket_get_tcp_connection_status(int sock)
     int optval = -1;
     int optlen = sizeof(int);
     int ret = getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*) &optval, &optlen);
-    if (ret != 0)
+    if(ret != 0)
     {
         LOG_D("failed to get tcp socket status, ret=%d", ret);
         return -1;
     }
-    if (optval != 0)
+    if(optval != 0)
     {
         return 0;
     }
@@ -113,12 +108,12 @@ int com_socket_get_tcp_connection_status(int sock)
     struct tcp_info info;
     int len = sizeof(info);
     int ret = getsockopt(sock, IPPROTO_TCP, TCP_INFO, &info, (socklen_t*)&len);
-    if (ret != 0)
+    if(ret != 0)
     {
         LOG_D("failed to get tcp socket status, ret=%d,errno=%d:%s", ret, errno, strerror(errno));
         return -1;
     }
-    if (info.tcpi_state != TCP_ESTABLISHED)
+    if(info.tcpi_state != TCP_ESTABLISHED)
     {
         LOG_D("tcp socket status=%d", info.tcpi_state);
         return 0;
@@ -126,13 +121,13 @@ int com_socket_get_tcp_connection_status(int sock)
 #elif defined(TCP_CONNECTION_INFO)
     struct tcp_connection_info info;
     int len = sizeof(info);
-    int ret = getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, (void *)&info, (socklen_t *)&len);
-    if (ret != 0)
+    int ret = getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, (void*)&info, (socklen_t*)&len);
+    if(ret != 0)
     {
         LOG_D("failed to get tcp socket status, ret=%d,errno=%d:%s", ret, errno, strerror(errno));
         return -1;
     }
-    if (info.tcpi_state != TCPS_ESTABLISHED)
+    if(info.tcpi_state != TCPS_ESTABLISHED)
     {
         LOG_D("tcp socket status=%d", info.tcpi_state);
         return 0;
@@ -145,15 +140,15 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
 {
     int socketfd = -1;
 #if defined(SOCK_CLOEXEC)
-    socketfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_IP)
+    socketfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_IP);
 #elif defined(O_CLOEXEC)
     socketfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if (socketfd > 0)
+    if(socketfd > 0)
     {
         fcntl(socketfd, O_CLOEXEC);
     }
 #endif
-    if (socketfd < 0)
+    if(socketfd < 0)
     {
         LOG_E("failed to open socket");
         return -1;
@@ -174,7 +169,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
         }
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, interface_name, sizeof(ifr.ifr_name));
+        strncpy(ifr.ifr_name, interface_name, sizeof(ifr.ifr_name) - 1);
         setsockopt(socketfd, SOL_SOCKET, SO_BINDTODEVICE, (char*)&ifr, sizeof(ifr));
     }
 #endif
@@ -215,7 +210,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
 
 int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
 {
-    if (my_name == NULL || server_name == NULL)
+    if(my_name == NULL || server_name == NULL)
     {
         LOG_E("arg incorrect");
         return -1;
@@ -238,7 +233,7 @@ int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
     }
     long len = offsetof(struct sockaddr_un, sun_path) + strlen(client_addr.sun_path);
     int ret = bind(socketfd, (struct sockaddr*)(&client_addr), (int)len);
-    if (ret < 0)
+    if(ret < 0)
     {
         com_socket_close(socketfd);
         LOG_E("bind failed");
@@ -246,7 +241,7 @@ int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
     }
     len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
     ret = connect(socketfd, (struct sockaddr*)(&server_addr), (int)len);
-    if (ret != 0)
+    if(ret != 0)
     {
         com_socket_close(socketfd);
         LOG_E("connect failed");
@@ -274,18 +269,18 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
     }
     uint32 remote_ip = ((sockaddr_in*)(res->ai_addr))->sin_addr.s_addr;
     freeaddrinfo(res);
-    
+
     int socketfd = -1;
 #if defined(SOCK_CLOEXEC)
     socketfd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_IP);
 #elif defined(O_CLOEXEC)
     socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
-    if (socketfd > 0)
+    if(socketfd > 0)
     {
         fcntl(socketfd, O_CLOEXEC);
     }
 #endif
-    if (socketfd < 0)
+    if(socketfd < 0)
     {
         LOG_E("socketfd fail");
         return -1;
@@ -691,7 +686,7 @@ bool com_net_get_mac(const char* interface_name, uint8* mac)
         LOG_E("socket failed");
         return false;
     }
-    strncpy(ifreq.ifr_name, interface_name, sizeof(ifreq.ifr_name));    //Currently, only get eth0
+    strncpy(ifreq.ifr_name, interface_name, sizeof(ifreq.ifr_name) - 1);  //Currently, only get eth0
 
     if(ioctl(sockfd, SIOCGIFHWADDR, &ifreq) < 0)
     {

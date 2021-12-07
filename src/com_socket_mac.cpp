@@ -73,15 +73,15 @@ int TCPServer::startServer()
         LOG_E("start server failed");
         return -1;
     }
-    if(listen(socketfd, 5) < 0)
+    if(listen(server_fd, 5) < 0)
     {
-        LOG_E("socket listen failed : socketfd = %d", socketfd.load());
+        LOG_E("socket listen failed : socketfd = %d", server_fd);
         com_socket_close(socketfd);
         return -3;
     }
     if(! IOMCreate())
     {
-        LOG_E("IO multiplex create failed : fd = %d", getSocketfd());
+        LOG_E("IO multiplex create failed : fd = %d", server_fd);
         return -4;
     }
     listener_running = true;
@@ -126,8 +126,8 @@ void TCPServer::stopServer()
     {
         thread_receiver.join();
     }
-    com_socket_close(socketfd);
-    socketfd = -1;
+    com_socket_close(server_fd);
+    server_fd = -1;
     com_socket_close(epollfd);
     epollfd = -1;
     mutex_clients.lock();
@@ -208,7 +208,7 @@ void TCPServer::ThreadTCPServerListener(TCPServer* socket_server)
                 socket_server->closeClient(fd);
                 break;
             }
-            if(fd == socket_server->socketfd)
+            if(fd == socket_server->server_fd)
             {
                 socket_server->acceptClient();
             }
@@ -218,7 +218,7 @@ void TCPServer::ThreadTCPServerListener(TCPServer* socket_server)
             }
         }
     }
-    LOG_I("socket server quit, port=%d", socket_server->getPort());
+    LOG_I("socket server quit, port=%d", server_port);
     return;
 }
 
@@ -255,8 +255,7 @@ void TCPServer::ThreadTCPServerReceiver(TCPServer* socket_server)
 // SocketTcpServer
 SocketTcpServer::SocketTcpServer(uint16 port)
 {
-    setHost("127.0.0.1");
-    setPort(port);
+    server_port = port;
 }
 
 SocketTcpServer::~SocketTcpServer()
@@ -271,23 +270,23 @@ bool SocketTcpServer::initListen()
         LOG_E("port not set");
         return false;
     }
-    socketfd = socket(AF_INET, SOCK_STREAM, 0);
-    if(socketfd <= 0)
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if(server_fd <= 0)
     {
-        LOG_E("socket create failed : fd = %d", getSocketfd());
+        LOG_E("socket create failed : fd = %d", server_fd);
         return false;
     }
     struct sockaddr_in server_addr;
     bzero(&server_addr, sizeof(server_addr));
     server_addr.sin_family  =  AF_INET;
-    server_addr.sin_port = htons(getPort());
+    server_addr.sin_port = htons(server_port);
     server_addr.sin_addr.s_addr  =  htonl(INADDR_ANY);
     int resuse_flag = 1;
-    setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &resuse_flag, sizeof(int));
-    if(bind(getSocketfd(), (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &resuse_flag, sizeof(int));
+    if(bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
     {
-        LOG_E("socket bind failed : fd = %d", getSocketfd());
-        com_socket_close(socketfd);
+        LOG_E("socket bind failed : fd = %d", server_fd);
+        com_socket_close(server_fd);
         return false;
     }
     return true;
@@ -298,7 +297,7 @@ int SocketTcpServer::acceptClient()
     struct sockaddr_in sin;
     socklen_t len = sizeof(struct sockaddr_in);
     memset(&sin, 0, len);
-    int clientfd = accept(socketfd, (struct sockaddr*)&sin, &len);
+    int clientfd = accept(server_fd, (struct sockaddr*)&sin, &len);
     if(clientfd < 0)
     {
         LOG_E("bad accept client, errno=%d:%s", errno, strerror(errno));
@@ -355,24 +354,23 @@ int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSi
 // UnixDomainTcpServer
 UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
 {
-    setHost(server_file_name);
-    setPort(0);
+    if(server_file_name != NULL)
+    {
+        this->server_file_name = server_file_name;
+    }
 }
 
 UnixDomainTcpServer::~UnixDomainTcpServer()
 {
-    if(getHost().size() > 0)
-    {
-        com_file_remove(getHost().c_str());
-    }
+    com_file_remove(server_file_name.c_str());
 }
 
 bool UnixDomainTcpServer::initListen()
 {
-    socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if(socketfd <= 0)
+    server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if(server_fd <= 0)
     {
-        LOG_E("socket create failed : socketfd = %d", socketfd.load());
+        LOG_E("socket create failed : socketfd = %d", server_fd.load());
         return false;
     }
     com_file_remove(getHost().c_str());
@@ -381,10 +379,10 @@ bool UnixDomainTcpServer::initListen()
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, getHost().c_str());
     long len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
-    if(bind(socketfd.load(), (struct sockaddr*)(&server_addr), (int)len) < 0)
+    if(bind(server_fd.load(), (struct sockaddr*)(&server_addr), (int)len) < 0)
     {
-        LOG_E("socket bind failed : socketfd = %d", socketfd.load());
-        com_socket_close(socketfd);
+        LOG_E("socket bind failed : socketfd = %d", server_fd.load());
+        com_socket_close(server_fd);
         return false;
     }
     return true;

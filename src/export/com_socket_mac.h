@@ -4,6 +4,13 @@
 #if defined(__APPLE__)
 #include "com_base.h"
 
+typedef struct
+{
+    std::string host;
+    uint16 port;
+    int clientfd;
+} CLIENT_DES;
+
 class TCPServer
 {
 public:
@@ -28,8 +35,8 @@ public:
     static void ThreadTCPServerReceiver(TCPServer* socket_server);
     static void ThreadTCPServerListener(TCPServer* socket_server);
 protected:
-    std::atomic<uint16> port;
-    std::atomic<int> socketfd;
+    uint16 server_port;
+    int server_fd;
     int epollfd;
     std::atomic<bool> receiver_running;
     std::atomic<bool> listener_running;
@@ -65,6 +72,9 @@ public:
     virtual bool initListen() override;
     virtual int acceptClient() override;
     int send(const char* client_file_name_wildcard, uint8* data, int data_size);
+private:
+    int server_fd;
+    std::string server_file_name;
 };
 #endif
 
