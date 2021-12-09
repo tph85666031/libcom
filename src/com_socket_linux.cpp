@@ -33,6 +33,12 @@ SocketTcpServer::~SocketTcpServer()
     stopServer();
 }
 
+SocketTcpServer& SocketTcpServer::setPort(uint16 port)
+{
+    this->server_port = port;
+    return *this;
+}
+
 void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* socket_server)
 {
     uint8 buf[4096];
@@ -112,7 +118,7 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* socket_server)
             }
         }
     }
-    LOG_I("socket server quit, port=%d", socket_server->server_port);
+    LOG_I("socket server quit, server_port=%d", socket_server->server_port);
     return;
 }
 
@@ -167,7 +173,7 @@ int SocketTcpServer::acceptClient()//ThreadSocketServerRunner线程
         LOG_E("bad accept client, errno=%d:%s", errno, strerror(errno));
         return -1;
     }
-    LOG_D("Accept Connection, fd=%d, addr=%s,port=%u",
+    LOG_D("Accept Connection, fd=%d, addr=%s,server_port=%u",
           clientfd, com_ip_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
     CLIENT_DES des;
     des.clientfd = clientfd;
@@ -190,7 +196,7 @@ int SocketTcpServer::startServer()
 {
     if(server_port == 0)
     {
-        LOG_E("port not set");
+        LOG_E("server_port not set");
         return -1;
     }
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -261,7 +267,7 @@ void SocketTcpServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSize)
+int SocketTcpServer::send(const char* host, uint16 port, const void* data, int dataSize)
 {
     if(host == NULL || data == NULL || dataSize <= 0)
     {
@@ -292,7 +298,7 @@ int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSi
     return ret;
 }
 
-int SocketTcpServer::send(int clientfd, uint8* data, int dataSize)
+int SocketTcpServer::send(int clientfd, const void* data, int dataSize)
 {
     if(data == NULL || dataSize <= 0)
     {

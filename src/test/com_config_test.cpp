@@ -99,17 +99,17 @@ void com_config_unit_test_suit(void** state)
     CPPConfig config2("2.ini");
     config2.set("hhh", "abc", 3);
     config2.set("hhh", "abcd", 4);
+    config2.set(NULL, "abcde", 5);
 
     ASSERT_INT_EQUAL(config2.getUInt32("hhh", "abc"), 3);
     ASSERT_INT_EQUAL(config2.getUInt32("hhh", "abcd"), 4);
+    ASSERT_INT_EQUAL(config2.getUInt32(NULL, "abcde"), 5);
     ASSERT_TRUE(config2.save());
-
-    ASSERT_INT_EQUAL(com_file_type(".2.ini"), FILE_TYPE_NOT_EXIST);
-    ASSERT_INT_EQUAL(com_file_type(".2.ini.bak"), FILE_TYPE_NOT_EXIST);
 
     ASSERT_TRUE(config.load("2.ini"));
     ASSERT_INT_EQUAL(config.getUInt32("hhh", "abc"), 3);
     ASSERT_INT_EQUAL(config.getUInt32("hhh", "abcd"), 4);
+    ASSERT_INT_EQUAL(config.getUInt32(NULL, "abcde"), 5);
 
     com_file_remove(".2.ini");
     com_file_remove(".2.ini.bak");

@@ -265,9 +265,9 @@ SocketTcpServer::~SocketTcpServer()
 
 bool SocketTcpServer::initListen()
 {
-    if(port == 0)
+    if(server_port == 0)
     {
-        LOG_E("port not set");
+        LOG_E("server_port not set");
         return false;
     }
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -303,7 +303,7 @@ int SocketTcpServer::acceptClient()
         LOG_E("bad accept client, errno=%d:%s", errno, strerror(errno));
         return -1;
     }
-    LOG_D("Accept Connection, fd=%d, addr=%s,port=%u",
+    LOG_D("Accept Connection, fd=%d, addr=%s,server_port=%u",
           clientfd, com_ip_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
     CLIENT_DES des;
     des.clientfd = clientfd;

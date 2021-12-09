@@ -8,14 +8,14 @@ void com_cache_unit_test_suit(void** state)
     cache_manager.clear(true);
     cache_manager.setFlushCount(10);
     cache_manager.setFlushInterval(10);
-    for (int i = 0; i < 10000; i++)
+    for (int i = 0; i < 1000; i++)
     {
         Cache cache(std::to_string(i).c_str(), (uint8*)"1234", 5);
         cache_manager.append(cache);
     }
 
-    ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 10000);
-    Cache cache_x(std::to_string(10001).c_str(), (uint8*)"5678", 5);
+    ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 1000);
+    Cache cache_x(std::to_string(1001).c_str(), (uint8*)"5678", 5);
     cache_manager.append(cache_x);
     cache_manager.flushToDisk();
     Cache cache = cache_manager.getFirst();
@@ -27,17 +27,17 @@ void com_cache_unit_test_suit(void** state)
     cache = cache_manager.getLast();
     ASSERT_NOT_NULL(cache.getData());
     ASSERT_STR_EQUAL((char*)cache.getData(), "5678");
-    ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 10001);
+    ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 1001);
     cache_manager.removeFirst(10);
-    ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 10001 - 10);
+    ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 1001 - 10);
     cache_manager.removeLast(10);
-    ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 10001 - 10 - 10);
+    ASSERT_INT_EQUAL(cache_manager.getCacheCount(), 1001 - 10 - 10);
     com_file_remove("./test.db");
 
     CacheManager cache_manager2;
     cache_manager2.startManager("./test_d.db");
     cache_manager2.clear(true);
-    for (int i = 0; i < 10000; i++)
+    for (int i = 0; i < 1000; i++)
     {
         Cache cache(std::to_string(i).c_str(), (uint8*)"1234", 5);
         cache_manager2.append(cache);
@@ -49,15 +49,15 @@ void com_cache_unit_test_suit(void** state)
 
     //0,1,2,3,4,5,6,7,8,9,10
     cache_manager2.dilution(2);
-    ASSERT_INT_EQUAL(cache_manager2.getCacheCount(), 6666);
+    ASSERT_INT_EQUAL(cache_manager2.getCacheCount(), 666);
 
     //1,2,4,5,7,8,10
     cache_manager2.dilution(2);
-    ASSERT_INT_EQUAL(cache_manager2.getCacheCount(), 4444);
+    ASSERT_INT_EQUAL(cache_manager2.getCacheCount(), 444);
 
     //2,4,7,8
     cache_manager2.dilution(3);
-    ASSERT_INT_EQUAL(cache_manager2.getCacheCount(), 3333);
+    ASSERT_INT_EQUAL(cache_manager2.getCacheCount(), 333);
 
     //4,7,8
     std::vector<Cache> vals = cache_manager2.getFirst(3);

@@ -1,6 +1,5 @@
 #include "com.h"
 
-#if __linux__ == 1 || defined(__APPLE__)
 class MySocketTcpClient : public SocketTcpClient
 {
 public:
@@ -71,12 +70,12 @@ public:
     {
         data_size = 0;
     }
-    void onConnectionChanged(std::string& client_name, uint16 port, int socketfd, bool connected)
+    void onConnectionChanged(std::string& client_name, int socketfd, bool connected)
     {
         LOG_D("%s connection %s", client_name.c_str(), connected ? "true" : "false");
     }
 
-    void onRecv(std::string& client_name, uint16 port, int socketfd, uint8* data, int data_size)
+    void onRecv(std::string& client_name, int socketfd, uint8* data, int data_size)
     {
         this->data_size += data_size;
         CPPBytes bytes(data, data_size);
@@ -84,16 +83,16 @@ public:
     }
     std::atomic<int> data_size;
 };
-#endif
 
 void com_socket_unit_test_suit(void** state)
 {
-#if __linux__ == 1 || defined(__APPLE__)
     uint8 mac[LENGTH_MAC]={0};
-    com_net_get_mac("eth0", mac);
+    std::vector<std::string> ifs = com_net_get_interface_all();
+    ASSERT_FALSE(ifs.empty());
+    ASSERT_TRUE(com_net_get_mac(ifs[0].c_str(), mac));
     std::string mac_str = com_string_format("%02X-%02X-%02X-%02X-%02X-%02X",
                                             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    LOG_D("mac=%s", mac_str.c_str());
+    LOG_D("if=%s, mac=%s", ifs[0].c_str(), mac_str.c_str());
     NicInfo nic;
     com_net_get_nic("eth0", nic);
     LOG_D("nic:%s,up=%s,mac_type=%d,mac=%02X-%02X-%02X-%02X-%02X-%02X,ip=%s,ip_mask=%s,ip_broadcast=%s",
@@ -111,29 +110,27 @@ void com_socket_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(socket_client2.startClient(), 0);
     com_sleep_s(1);
     int count = 0;
-    int data_size = 0;
+    int data_size_client = 0;
     while (count < 1000)
     {
         std::string v = std::to_string(count);
         v.append(" ");
-        data_size += v.size();
+        data_size_client += v.size();
         ASSERT_INT_EQUAL(socket_client1.send((uint8*)v.data(), v.size()), v.size());
-        data_size += v.size();
+        data_size_client += v.size();
         ASSERT_INT_EQUAL(socket_client2.send((uint8*)v.data(), v.size()), v.size());
         count++;
     }
     com_sleep_s(1);
     socket_client1.stopClient();
     socket_client2.stopClient();
-    ASSERT_INT_EQUAL(socket_server.data_size, data_size);
+    ASSERT_INT_EQUAL(socket_server.data_size, data_size_client);
     MySocketTcpServer* x = new MySocketTcpServer(1897);
     delete x;
-#endif
 }
 
 void com_unix_domain_unit_test_suit(void** state)
 {
-#if __linux__ == 1 || defined(__APPLE__)
     MyUnixDomainTcpServer ud_server("un_server_test");
     MyUnixDomainTcpClient ud_client1("un_server_test", "un_client1_test");
 
@@ -153,5 +150,4 @@ void com_unix_domain_unit_test_suit(void** state)
     }
     com_sleep_s(1);
     ASSERT_INT_EQUAL(ud_server.data_size, data_size);
-#endif
 }

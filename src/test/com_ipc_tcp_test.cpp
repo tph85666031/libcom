@@ -5,8 +5,11 @@ class MyTcpIpcClient : public TcpIpcClient
 {
 public:
     MyTcpIpcClient(const char* name, const char* server_name, const char* host, uint16 port)
-        : TcpIpcClient(name, server_name, host, port)
     {
+        setName(name);
+        setServerName(server_name);
+        setHost(host);
+        setPort(port);
         recv_count = 0;
     }
 
@@ -49,7 +52,7 @@ void com_ipc_tcp_unit_test_suit(void** state)
     int count_a = 50;
     char buf[2048];
     memset(buf, 'a', sizeof(buf));
-    for (int i = 0; i < count_a; i++)
+    for(int i = 0; i < count_a; i++)
     {
         //int ret = snprintf(buf, sizeof(buf), "%u", i);
         ASSERT_TRUE(ipcClient1.sendMessage("client*", (uint8*)buf, sizeof(buf)));

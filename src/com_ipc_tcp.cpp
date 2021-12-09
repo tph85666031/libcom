@@ -27,11 +27,11 @@ CPPBytes TcpIpcMessage::toBytes()
 
 bool TcpIpcMessage::FromBytes(TcpIpcMessage& msg, uint8* data, int data_size)
 {
-    if (data == NULL || data_size < (int)TCP_IPC_MSG_HEAD_SIZE)
+    if(data == NULL || data_size < (int)TCP_IPC_MSG_HEAD_SIZE)
     {
         return false;
     }
-    if (data[0] != TCP_IPC_SOF)
+    if(data[0] != TCP_IPC_SOF)
     {
         LOG_F("sof incorrect");
         return false;
@@ -43,7 +43,7 @@ bool TcpIpcMessage::FromBytes(TcpIpcMessage& msg, uint8* data, int data_size)
 
     int remain_size = 0;
     s.detach(remain_size);
-    if (remain_size > s.getDetachRemainSize())
+    if(remain_size > s.getDetachRemainSize())
     {
         //数据未接收完整
         return false;
@@ -53,22 +53,36 @@ bool TcpIpcMessage::FromBytes(TcpIpcMessage& msg, uint8* data, int data_size)
     return true;
 }
 
-TcpIpcServer::TcpIpcServer(const char* name, uint16 port) : SocketTcpServer(port)
+TcpIpcServer::TcpIpcServer()
 {
-    if (name != NULL)
+}
+
+TcpIpcServer::TcpIpcServer(const char* name, uint16 port)
+{
+    if(name != NULL)
     {
         this->name = name;
     }
-    forward_running = true;
-    thread_forward = std::thread(ThreadForward, this);
-    startServer();
+    setPort(port);
 }
 
 TcpIpcServer::~TcpIpcServer()
 {
+    stopIpcServer();
+}
+
+int TcpIpcServer::startIpcServer()
+{
+    forward_running = true;
+    thread_forward = std::thread(ThreadForward, this);
+    return startServer();
+}
+
+void TcpIpcServer::stopIpcServer()
+{
     stopServer();
     forward_running = false;
-    if (thread_forward.joinable())
+    if(thread_forward.joinable())
     {
         thread_forward.join();
     }
@@ -80,8 +94,9 @@ void TcpIpcServer::onMessage(std::string& from_name, uint8* data, int data_size)
 
 void TcpIpcServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
 {
+    LOG_I("connection from %s:%d %s", host.c_str(), port, connected ? "connected" : "disconnected");
     mutex_fds.lock();
-    if (connected)
+    if(connected)
     {
         TCP_IPC_CLIENT des;
         des.clinetfd = socketfd;
@@ -89,7 +104,7 @@ void TcpIpcServer::onConnectionChanged(std::string& host, uint16 port, int socke
     }
     else
     {
-        if (fdcaches.count(socketfd) != 0)
+        if(fdcaches.count(socketfd) != 0)
         {
             fdcaches.erase(socketfd);
         }
@@ -102,6 +117,15 @@ void TcpIpcServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* d
     buildMessage(socketfd, data, data_size);
 }
 
+TcpIpcServer& TcpIpcServer::setName(const char* name)
+{
+    if(name != NULL)
+    {
+        this->name = name;
+    }
+    return *this;
+}
+
 std::string& TcpIpcServer::getName()
 {
     return name;
@@ -109,7 +133,7 @@ std::string& TcpIpcServer::getName()
 
 void TcpIpcServer::buildMessage(int socketfd, uint8* data, int dataSize)
 {
-    if (socketfd <= 0 || data == NULL || dataSize <= 0)
+    if(socketfd <= 0 || data == NULL || dataSize <= 0)
     {
         return;
     }
@@ -118,37 +142,37 @@ void TcpIpcServer::buildMessage(int socketfd, uint8* data, int dataSize)
     des.clinetfd = socketfd;
     mutex_fds.lock();
     int count = fdcaches.count(socketfd);
-    if (count > 0)
+    if(count > 0)
     {
         des = fdcaches[socketfd];
     }
     mutex_fds.unlock();
-    if (count == 0)
+    if(count == 0)
     {
         LOG_W("fd not exist");
         return;
     }
 
     des.bytes.append(data, dataSize);
-    for (int i = 0; i < des.bytes.getDataSize(); i++)
+    for(int i = 0; i < des.bytes.getDataSize(); i++)
     {
-        if (des.bytes.getData()[i] == TCP_IPC_SOF)
+        if(des.bytes.getData()[i] == TCP_IPC_SOF)
         {
             des.bytes.removeHead(i);
             break;
         }
     }
 
-    if (des.bytes.empty())
+    if(des.bytes.empty())
     {
         return;
     }
 
     //LOG_W("raw=%s:%d", des.bytes.toHexString(true).c_str(), des.bytes.getDataSize());
-    while (true)
+    while(true)
     {
         TcpIpcMessage msg;
-        if (TcpIpcMessage::FromBytes(msg, des.bytes.getData(), des.bytes.getDataSize()) == false)
+        if(TcpIpcMessage::FromBytes(msg, des.bytes.getData(), des.bytes.getDataSize()) == false)
         {
             break;
         }
@@ -167,13 +191,35 @@ void TcpIpcServer::buildMessage(int socketfd, uint8* data, int dataSize)
     mutex_fds.unlock();
 }
 
+int TcpIpcServer::sendMessage(const char* name, uint8* data, int data_size)
+{
+    if(name == NULL || data == NULL || data_size <= 0)
+    {
+        return -1;
+    }
+
+    int ret = 0;
+    std::map<int, TCP_IPC_CLIENT>::iterator it;
+    mutex_fds.lock();
+    for(it = fdcaches.begin(); it != fdcaches.end(); ++it)
+    {
+        TCP_IPC_CLIENT* des = &it->second;
+        if(com_string_match(des->name.c_str(), name))
+        {
+            ret += send(des->clinetfd, data, data_size);
+        }
+    }
+    mutex_fds.unlock();
+    return ret;
+}
+
 void TcpIpcServer::ThreadForward(TcpIpcServer* server)
 {
-    while (server->forward_running)
+    while(server->forward_running)
     {
         server->sem_msgs.wait(1000);
         server->mutex_msgs.lock();
-        if (server->msgs.empty())
+        if(server->msgs.empty())
         {
             server->mutex_msgs.unlock();
             continue;
@@ -182,7 +228,7 @@ void TcpIpcServer::ThreadForward(TcpIpcServer* server)
         server->msgs.erase(server->msgs.begin());
         server->mutex_msgs.unlock();
 
-        if (msg.to == server->name)
+        if(msg.to == server->name)
         {
             server->onMessage(msg.from, msg.bytes.getData(), msg.bytes.getDataSize());
         }
@@ -190,10 +236,10 @@ void TcpIpcServer::ThreadForward(TcpIpcServer* server)
         {
             std::map<int, TCP_IPC_CLIENT>::iterator it;
             server->mutex_fds.lock();
-            for (it = server->fdcaches.begin(); it != server->fdcaches.end(); ++it)
+            for(it = server->fdcaches.begin(); it != server->fdcaches.end(); ++it)
             {
                 TCP_IPC_CLIENT* des = &it->second;
-                if (com_string_match(des->name.c_str(), msg.to.c_str()))
+                if(com_string_match(des->name.c_str(), msg.to.c_str()))
                 {
                     CPPBytes bytes = msg.toBytes();
                     server->send(des->clinetfd, bytes.getData(), bytes.getDataSize());
@@ -204,27 +250,46 @@ void TcpIpcServer::ThreadForward(TcpIpcServer* server)
     }
 }
 
-TcpIpcClient::TcpIpcClient(const char* name, const char* server_name, const char* host, uint16 port) : SocketTcpClient(host, port)
+TcpIpcClient::TcpIpcClient()
 {
-    if (name != NULL)
-    {
-        this->name = name;
-    }
-    if (server_name != NULL)
-    {
-        this->server_name = server_name;
-    }
-    startClient();
 }
 
 TcpIpcClient::~TcpIpcClient()
 {
+    stopIpcClient();
+}
+
+bool TcpIpcClient::startIpcClient()
+{
+    return startClient();
+}
+
+void TcpIpcClient::stopIpcClient()
+{
     stopClient();
+}
+
+TcpIpcClient& TcpIpcClient::setName(const char* name)
+{
+    if(name != NULL)
+    {
+        this->name = name;
+    }
+    return *this;
+}
+
+TcpIpcClient& TcpIpcClient::setServerName(const char* server_name)
+{
+    if(server_name != NULL)
+    {
+        this->server_name = server_name;
+    }
+    return *this;
 }
 
 bool TcpIpcClient::sendMessage(const char* target_name, uint8* data, int data_size)
 {
-    if (target_name == NULL)
+    if(target_name == NULL)
     {
         return false;
     }
@@ -244,7 +309,8 @@ void TcpIpcClient::onMessage(std::string& from_name, uint8* data, int data_size)
 
 void TcpIpcClient::onConnectionChanged(bool connected)
 {
-    if (connected)
+    LOG_I("connection %s", connected ? "connected" : "disconnected");
+    if(connected)
     {
         sendMessage(server_name.c_str(), NULL, 0);
     }
@@ -267,29 +333,29 @@ std::string TcpIpcClient::getServerName()
 
 void TcpIpcClient::buildMessage(uint8* data, int data_size)
 {
-    if (data == NULL || data_size <= 0)
+    if(data == NULL || data_size <= 0)
     {
         return;
     }
     bytes.append(data, data_size);
-    for (int i = 0; i < bytes.getDataSize(); i++)
+    for(int i = 0; i < bytes.getDataSize(); i++)
     {
-        if (bytes.getData()[i] == TCP_IPC_SOF)
+        if(bytes.getData()[i] == TCP_IPC_SOF)
         {
             bytes.removeHead(i);
             break;
         }
     }
 
-    if (bytes.empty())
+    if(bytes.empty())
     {
         return;
     }
 
-    while (true)
+    while(true)
     {
         TcpIpcMessage msg;
-        if (TcpIpcMessage::FromBytes(msg, bytes.getData(), bytes.getDataSize()) == false)
+        if(TcpIpcMessage::FromBytes(msg, bytes.getData(), bytes.getDataSize()) == false)
         {
             break;
         }

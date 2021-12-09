@@ -4,6 +4,7 @@
 #include <string>
 #include "com_base.h"
 
+//注意:能读取无GROUP的ini文件，但不能存储无GROUP的数据到文件
 class CPPConfig
 {
 public:

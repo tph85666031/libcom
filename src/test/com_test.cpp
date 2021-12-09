@@ -38,11 +38,11 @@ extern void com_dns_unit_test_suit(void** state);
 
 extern void com_base_xstring_unit_test(void** state);
 
-extern void com_ptrace_unit_test_suit(void** state);
+extern void com_auto_test_unit_test_suit(void** state);
 
 CMUnitTest test_cases_com_lib[] =
 {
-#if 1
+#if 0
     cmocka_unit_test(com_base_unit_test_suit),
     cmocka_unit_test(com_base_string_split_unit_test_suit),
     cmocka_unit_test(com_base_string_unit_test_suit),
@@ -72,7 +72,7 @@ CMUnitTest test_cases_com_lib[] =
     cmocka_unit_test(com_mem_unit_test_suit),
     cmocka_unit_test(com_dns_unit_test_suit),
 #else
-    cmocka_unit_test(com_thread_unit_test_suit),
+    cmocka_unit_test(com_auto_test_unit_test_suit),
 #endif
 };
 

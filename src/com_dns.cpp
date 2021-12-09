@@ -286,7 +286,7 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
         LOG_E("failed to get %s info", interface_name);
         return std::string();
     }
-    LOG_E("ip=%s for %s", nic.ip.c_str(), nic.name.c_str());
+    LOG_I("ip=%s for %s", nic.ip.c_str(), nic.name.c_str());
 
     bool rp_set = false;
     uint8 rpfilter_flag = com_net_get_rpfilter(interface_name);
@@ -313,6 +313,7 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
         com_net_set_rpfilter(interface_name, rpfilter_flag);
     }
 
+    LOG_I("ip_pri=%s, ip_pub=%s for %s", nic.ip.c_str(), ip.c_str(), nic.name.c_str());
     return ip;
 }
 #endif

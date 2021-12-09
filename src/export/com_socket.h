@@ -37,14 +37,14 @@ public:
 void com_socket_set_recv_timeout(int sock, int timeout_ms);
 void com_socket_set_send_timeout(int sock, int timeout_ms);
 
-int com_socket_get_tcp_connection_status(int sock);
+int com_socket_get_tcp_connection_status(int sock);//-1获取失败,0连接断开,1=连接成功
 int com_unix_domain_tcp_open(const char* my_name, const char* server_name);
 int com_socket_udp_open(const char* interface_name, uint16 recv_port, bool broadcast = false);
 int com_socket_tcp_open(const char* remote_host, uint16 remote_port,
                         uint32 timeout_ms = 10000, const char* interface_name = NULL);
 int com_socket_udp_send(int socketfd, const char* dest_host, int dest_port,
-                        void* data, int data_size);
-int com_socket_tcp_send(int socketfd, void* data, int data_size);
+                        const void* data, int data_size);
+int com_socket_tcp_send(int socketfd, const void* data, int data_size);
 int com_socket_udp_read(int socketfd, uint8* data, int data_size,
                         uint32 timeout_ms = 10000, char* sender_ip = NULL, int sender_ip_size = 0);
 int com_socket_tcp_read(int socketfd, uint8* data, int data_size,
@@ -88,9 +88,9 @@ public:
     SocketTcpClient();
     SocketTcpClient(const char* host, uint16 port);
     virtual ~SocketTcpClient();
-    virtual int startClient();
+    virtual bool startClient();
     virtual void stopClient();
-    int send(uint8* data, int data_size);
+    int send(const void* data, int data_size);
     bool isConnected();
     void reconnect();
     void setReconnectInterval(int reconnect_interval_ms);
@@ -114,7 +114,7 @@ public:
     virtual ~UnixDomainTcpClient();
     int startClient();
     void stopClient();
-    int send(uint8* data, int data_size);
+    int send(const void* data, int data_size);
     void reconnect();
     virtual void onConnectionChanged(bool connected);
     virtual void onRecv(uint8* data, int data_size);

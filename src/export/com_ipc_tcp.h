@@ -29,9 +29,14 @@ typedef struct
 class TcpIpcServer : public SocketTcpServer
 {
 public:
+    TcpIpcServer();
     TcpIpcServer(const char* name, uint16 port);
     virtual ~TcpIpcServer();
     std::string& getName();
+    TcpIpcServer& setName(const char* name);
+    int sendMessage(const char* name, uint8* data, int data_size);
+    int startIpcServer();
+    void stopIpcServer();
 private:
     virtual void onMessage(std::string& from_name, uint8* data, int data_size);
     void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
@@ -52,8 +57,13 @@ private:
 class TcpIpcClient: public SocketTcpClient
 {
 public:
-    TcpIpcClient(const char* name, const char* serverName, const char* host, uint16 port);
+    TcpIpcClient();
     virtual ~TcpIpcClient();
+    TcpIpcClient& setName(const char* name);
+    TcpIpcClient& setServerName(const char* server_name);
+    bool startIpcClient();
+    void stopIpcClient();
+
     bool sendMessage(const char* name, uint8* data, int dataSize);
     std::string getName();
     std::string getServerName();

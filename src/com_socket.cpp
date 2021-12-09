@@ -344,7 +344,7 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
 }
 
 int com_socket_udp_send(int socketfd, const char* remote_host, int remote_port,
-                        void* data, int data_size)
+                        const void* data, int data_size)
 {
     if(remote_host == NULL || data == NULL || data_size <= 0)
     {
@@ -382,7 +382,7 @@ int com_socket_udp_send(int socketfd, const char* remote_host, int remote_port,
                   sizeof(struct sockaddr));
 }
 
-int com_socket_tcp_send(int socketfd, void* data, int data_size)
+int com_socket_tcp_send(int socketfd, const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -597,7 +597,7 @@ std::vector<std::string> com_net_get_interface_all()
         if(com_string_len(p_ifr->ifr_name) > 0)
         {
             list.push_back(p_ifr->ifr_name);
-            LOG_E("int=%s", p_ifr->ifr_name);
+            LOG_D("int=%s", p_ifr->ifr_name);
         }
     }
 
@@ -676,6 +676,7 @@ bool com_net_get_mac(const char* interface_name, uint8* mac)
 #if __linux__ == 1
     if(interface_name == NULL || mac == NULL)
     {
+        LOG_E("arg incorrect, interface_name=%s,mac=%p", interface_name, mac);
         return false;
     }
     struct ifreq ifreq;
@@ -688,10 +689,11 @@ bool com_net_get_mac(const char* interface_name, uint8* mac)
     }
     strncpy(ifreq.ifr_name, interface_name, sizeof(ifreq.ifr_name) - 1);  //Currently, only get eth0
 
-    if(ioctl(sockfd, SIOCGIFHWADDR, &ifreq) < 0)
+    int ret = ioctl(sockfd, SIOCGIFHWADDR, &ifreq);
+    if(ret < 0)
     {
         close(sockfd);
-        LOG_E("ioctl failed");
+        LOG_E("ioctl failed for %s, ret=%d, errno=%d", interface_name, ret, errno);
         return false;
     }
     memcpy(mac, ifreq.ifr_hwaddr.sa_data, LENGTH_MAC);
@@ -850,16 +852,16 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* socket_client)
     return;
 }
 
-int SocketTcpClient::startClient()
+bool SocketTcpClient::startClient()
 {
     if(getHost().empty() || getPort() == 0)
     {
         LOG_E("host or port not set");
-        return -1;
+        return false;
     }
     running = true;
     thread_runner = std::thread(ThreadSocketClientRunner, this);
-    return 0;
+    return true;
 }
 
 void SocketTcpClient::stopClient()
@@ -889,7 +891,7 @@ void SocketTcpClient::setReconnectInterval(int reconnect_interval_ms)
     this->reconnect_interval_ms = reconnect_interval_ms;
 }
 
-int SocketTcpClient::send(uint8* data, int data_size)
+int SocketTcpClient::send(const void* data, int data_size)
 {
     if(connected == false || data == NULL || data_size <= 0)
     {
@@ -1016,7 +1018,7 @@ void UnixDomainTcpClient::reconnect()
     this->need_reconnect = true;
 }
 
-int UnixDomainTcpClient::send(uint8* data, int data_size)
+int UnixDomainTcpClient::send(const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {

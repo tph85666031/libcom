@@ -17,11 +17,12 @@ public:
     SocketTcpServer();
     SocketTcpServer(uint16 port);
     virtual ~SocketTcpServer();
+    SocketTcpServer& setPort(uint16 port);
     virtual int startServer();
     virtual void stopServer();
     void closeClient(int fd);
-    int send(int clientfd, uint8* data, int data_size);
-    int send(const char* host, uint16 port, uint8* data, int data_size);
+    int send(int clientfd, const void* data, int data_size);
+    int send(const char* host, uint16 port, const void* data, int data_size);
     virtual void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
     virtual void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
 private:
