@@ -26,7 +26,7 @@ static bool com_stack_name_of_pid(uint64 pid, char* name, int name_size)
     {
         return false;
     }
-#if __linux__ == 1
+#ifdef __GLIBC__
     memset(name, 0, name_size);
     char proc_pid_path[128];
     char buf[128];
@@ -194,7 +194,7 @@ static void stack_signal_function(int sig, siginfo_t* info, void* context)
 {
     if(signal_cb_func != NULL)
     {
-        if((*signal_cb_func)(sig, signal_cb_user_data))
+        if(signal_cb_func(sig, signal_cb_user_data))
         {
             return;
         }
@@ -245,7 +245,6 @@ static void stack_signal_function(int sig, siginfo_t* info, void* context)
 
 void com_stack_init()
 {
-#if __linux__ == 1
     signal_cb_func = NULL;
     signal_cb_user_data = NULL;
 
@@ -263,7 +262,8 @@ void com_stack_init()
     signal_value_none_reset.push_back(SIGUSR1);
     signal_value_none_reset.push_back(SIGUSR2);
 
-    for(size_t i = 0; i < signal_value_ignore.size(); i++)
+#ifdef __GLIBC__
+    for (size_t i = 0; i < signal_value_ignore.size(); i++)
     {
         signal(signal_value_ignore[i], SIG_IGN);
     }
@@ -349,14 +349,14 @@ void com_stack_set_hook(signal_cb cb, void* user_data)
 
 void com_system_send_signal(int sig)
 {
-#if __linux__ == 1
+#ifdef __GLIBC__
     raise(sig);
 #endif
 }
 
 void com_system_send_signal(uint64 pid, int sig)
 {
-#if __linux__ == 1
+#ifdef __GLIBC__
     kill(pid, sig);
 #endif
 }

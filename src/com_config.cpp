@@ -34,13 +34,17 @@ CPPConfig::CPPConfig(const char* file, bool thread_safe)
     {
         this->config_file = file;
         int file_type = com_file_type(file);
-        if(file_type == FILE_TYPE_FILE || file_type == FILE_TYPE_LINK)
+        if(file_type == FILE_TYPE_FILE)
         {
             load(file);
         }
-        else
+        else if(file_type == FILE_TYPE_NOT_EXIST)
         {
             this->data = (void*)dictionary_new(0);
+        }
+        else
+        {
+            LOG_W("%s may be directory or link file", file);
         }
     }
 }

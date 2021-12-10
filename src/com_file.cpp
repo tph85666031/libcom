@@ -139,6 +139,12 @@ int com_dir_remove(const char* dir_path)
     struct dirent* ptr = NULL;
     while((ptr = readdir(dir)) != NULL)
     {
+#if __ANDROID__ != 1
+        if(ptr->d_name == NULL)
+        {
+            continue;
+        }
+#endif
         int ret = strcmp(ptr->d_name, ".");
         if(0 == ret)
         {
