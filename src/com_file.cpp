@@ -1,4 +1,4 @@
-﻿#include <fcntl.h>
+#include <fcntl.h>
 #include "com_base.h"
 #include "com_file.h"
 #include "com_log.h"

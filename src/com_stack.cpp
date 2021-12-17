@@ -248,6 +248,7 @@ void com_stack_init()
     signal_cb_func = NULL;
     signal_cb_user_data = NULL;
 
+#ifdef __GLIBC__
     std::vector<int> signal_value_ignore;
     std::vector<int> signal_value_none_reset;
     std::vector<int> signal_value_reset;
@@ -262,7 +263,6 @@ void com_stack_init()
     signal_value_none_reset.push_back(SIGUSR1);
     signal_value_none_reset.push_back(SIGUSR2);
 
-#ifdef __GLIBC__
     for (size_t i = 0; i < signal_value_ignore.size(); i++)
     {
         signal(signal_value_ignore[i], SIG_IGN);

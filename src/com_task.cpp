@@ -7,16 +7,6 @@ TaskManager& GetTaskManager()
     return task_manager;
 }
 
-void InitTaskManager()
-{
-    GetTaskManager();
-}
-
-void UninitTaskManager()
-{
-    GetTaskManager().destroyTaskAll();
-}
-
 Task::Task(std::string name, Message init_msg)
 {
     this->name = name;
@@ -31,7 +21,7 @@ Task::~Task()
 void Task::startTask()
 {
     running = true;
-    thread_runner = std::thread(taskRunner, this);
+    thread_runner = std::thread(TaskRunner, this);
 }
 
 void Task::stopTask()
@@ -44,7 +34,7 @@ void Task::stopTask()
     }
 }
 
-void Task::taskRunner(Task* task)
+void Task::TaskRunner(Task* task)
 {
     if (task == NULL)
     {
@@ -111,6 +101,7 @@ TaskManager::TaskManager()
 
 TaskManager::~TaskManager()
 {
+    LOG_I("called");
     destroyTaskAll();
 }
 
@@ -142,6 +133,7 @@ void TaskManager::destroyTask(std::string task_name)
 
 void TaskManager::destroyTaskAll()
 {
+    LOG_I("called");
     mutex_tasks.lock();
     std::map<std::string, Task*>::iterator it;
     for (it = tasks.begin(); it != tasks.end(); it++)

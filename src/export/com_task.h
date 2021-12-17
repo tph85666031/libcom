@@ -52,7 +52,7 @@ private:
     void pushMessage(Message& msg);
     void startTask();
     void stopTask();
-    static void taskRunner(Task* task);
+    static void TaskRunner(Task* task);
 private:
     std::string name;
     std::thread thread_runner;
@@ -97,8 +97,6 @@ private:
 };
 
 TaskManager& GetTaskManager();
-void InitTaskManager();
-void UninitTaskManager();
 
 inline bool com_task_exist(std::string task_name)
 {

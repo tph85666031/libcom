@@ -1,7 +1,5 @@
 #include "com.h"
 
-ComInitializer initializer;
-
 extern void com_base_unit_test_suit(void** state);
 extern void com_base_string_split_unit_test_suit(void** state);
 extern void com_base_string_unit_test_suit(void** state);
@@ -24,21 +22,17 @@ extern void com_task_unit_test_suit(void** state);
 extern void com_file_unit_test_suit(void** state);
 
 extern void com_unix_domain_unit_test_suit(void** state);
-extern void com_ipc_ud_unit_test_suit(void** state);
 extern void com_kvs_unit_test_suit(void** state);
 extern void com_kv_unit_test_suit(void** state);
 extern void com_crc_unit_test_suit(void** state);
-extern void com_ipc_tcp_unit_test_suit(void** state);
 extern void com_timer_unit_test_suit(void** state);
 
 extern void com_nmea_unit_test_suit(void** state);
 extern void com_mem_unit_test_suit(void** state);
-
 extern void com_dns_unit_test_suit(void** state);
-
 extern void com_base_xstring_unit_test(void** state);
-
 extern void com_auto_test_unit_test_suit(void** state);
+extern void com_http_unit_test_suit(void** state);
 
 CMUnitTest test_cases_com_lib[] =
 {
@@ -63,14 +57,13 @@ CMUnitTest test_cases_com_lib[] =
     cmocka_unit_test(com_md5_unit_test_suit),
     cmocka_unit_test(com_task_unit_test_suit),
     cmocka_unit_test(com_file_unit_test_suit),
-    cmocka_unit_test(com_ipc_ud_unit_test_suit),
-    cmocka_unit_test(com_ipc_tcp_unit_test_suit),
     cmocka_unit_test(com_kv_unit_test_suit),
     cmocka_unit_test(com_kvs_unit_test_suit),
     cmocka_unit_test(com_crc_unit_test_suit),
     cmocka_unit_test(com_nmea_unit_test_suit),
     cmocka_unit_test(com_mem_unit_test_suit),
     cmocka_unit_test(com_dns_unit_test_suit),
+    cmocka_unit_test(com_auto_test_unit_test_suit),
 #else
     cmocka_unit_test(com_auto_test_unit_test_suit),
 #endif

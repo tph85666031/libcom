@@ -1,4 +1,4 @@
-﻿#include <cctype>
+#include <cctype>
 #include <algorithm>
 #if defined(_WIN32) || defined(_WIN64)
 #include <time.h>

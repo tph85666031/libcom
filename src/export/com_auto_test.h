@@ -1,9 +1,10 @@
 #ifndef __COM_AUTO_TEST_H__
 #define __COM_AUTO_TEST_H__
 
-#include "com_socket.h"
+#include "com_base.h"
+#include "httplib.h"
 
-class AutoTestService : public SocketTcpServer
+class AutoTestService
 {
 public:
     AutoTestService();
@@ -57,9 +58,8 @@ public:
     bool startService();
     void stopService();
 private:
+    void initHttpServer();
     static void ThreadController(AutoTestService* ctx);
-    virtual void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
-    virtual void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
 private:
     std::mutex mutex_latest_info;
     std::mutex mutex_statistic_info;
@@ -70,11 +70,9 @@ private:
     std::atomic<bool> thread_controller_running = {false};
     std::thread thread_controller;
 
-    std::string server_name;
+    httplib::Server http_server;
 };
 
 AutoTestService& GetAutoTestService();
-void InitAutoTestService();
-void UninitAutoTestService();
 
 #endif /* __COM_AUTO_TEST_H__ */

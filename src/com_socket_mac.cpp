@@ -94,7 +94,7 @@ int TCPServer::startServer()
 void TCPServer::closeClient(int fd)
 {
     this->IOMRemoveMonitor(fd);
-    CLIENT_DES des;
+    SOCKET_CLIENT_DES des;
     des.clientfd = fd;
     mutex_clients.lock();
     if(clients.count(fd) == 0)
@@ -139,7 +139,7 @@ void TCPServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int TCPServer::send(int clientfd, uint8* data, int dataSize)
+int TCPServer::send(int clientfd, const void* data, int dataSize)
 {
     if(data == NULL || dataSize <= 0)
     {
@@ -161,7 +161,7 @@ int TCPServer::recvData(int socketfd)
         mutex_clients.unlock();
         return -1;
     }
-    CLIENT_DES des = clients[socketfd];
+    SOCKET_CLIENT_DES des = clients[socketfd];
     mutex_clients.unlock();
     mutexfds.lock();
     ready_fds.push(des);
@@ -234,7 +234,7 @@ void TCPServer::ThreadTCPServerReceiver(TCPServer* socket_server)
             socket_server->mutexfds.unlock();
             continue;
         }
-        CLIENT_DES des = socket_server->ready_fds.front();
+        SOCKET_CLIENT_DES des = socket_server->ready_fds.front();
         socket_server->ready_fds.pop();
         socket_server->mutexfds.unlock();
         while(true)
@@ -253,6 +253,10 @@ void TCPServer::ThreadTCPServerReceiver(TCPServer* socket_server)
 
 
 // SocketTcpServer
+SocketTcpServer::SocketTcpServer()
+{
+}
+
 SocketTcpServer::SocketTcpServer(uint16 port)
 {
     server_port = port;
@@ -260,7 +264,12 @@ SocketTcpServer::SocketTcpServer(uint16 port)
 
 SocketTcpServer::~SocketTcpServer()
 {
+}
 
+SocketTcpServer& SocketTcpServer::setPort(uint16 port)
+{
+    this->server_port = port;
+    return *this;
 }
 
 bool SocketTcpServer::initListen()
@@ -305,7 +314,7 @@ int SocketTcpServer::acceptClient()
     }
     LOG_D("Accept Connection, fd=%d, addr=%s,server_port=%u",
           clientfd, com_ip_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
-    CLIENT_DES des;
+    SOCKET_CLIENT_DES des;
     des.clientfd = clientfd;
     des.host = com_ip_to_string(sin.sin_addr.s_addr);
     des.port = sin.sin_port;
@@ -319,7 +328,7 @@ int SocketTcpServer::acceptClient()
     return 0;
 }
 
-int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSize)
+int SocketTcpServer::send(const char* host, uint16 port, const void* data, int dataSize)
 {
     if(host == NULL || data == NULL || dataSize <= 0)
     {
@@ -327,10 +336,10 @@ int SocketTcpServer::send(const char* host, uint16 port, uint8* data, int dataSi
     }
     mutex_clients.lock();
     int clientfd = -1;
-    std::map<int, CLIENT_DES>::iterator it;
+    std::map<int, SOCKET_CLIENT_DES>::iterator it;
     for(it = clients.begin(); it != clients.end(); it++)
     {
-        CLIENT_DES des = it->second;
+        SOCKET_CLIENT_DES des = it->second;
         if(com_string_equal(des.host.c_str(), host) && des.port == port)
         {
             clientfd = des.clientfd;
@@ -400,7 +409,7 @@ int UnixDomainTcpServer::acceptClient()
         return -1;
     }
     LOG_D("Accept Connection, fd=%d, file_path=%s", clientfd, client_addr.sun_path);
-    CLIENT_DES des;
+    SOCKET_CLIENT_DES des;
     des.clientfd = clientfd;
     des.host = client_addr.sun_path;
     des.port = 0; // no use
@@ -413,7 +422,7 @@ int UnixDomainTcpServer::acceptClient()
     return 0;
 }
 
-int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8* data, int data_size)
+int UnixDomainTcpServer::send(const char* client_file_name_wildcard, const void* data, int data_size)
 {
     if(client_file_name_wildcard == NULL || data == NULL || data_size <= 0)
     {
@@ -430,10 +439,10 @@ int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8* data
     }
     std::vector<int> matched;
     mutex_clients.lock();
-    std::map<int, CLIENT_DES>::iterator it;
+    std::map<int, SOCKET_CLIENT_DES>::iterator it;
     for(it = clients.begin(); it != clients.end(); it++)
     {
-        CLIENT_DES des = it->second;
+        SOCKET_CLIENT_DES des = it->second;
         if(com_string_match(des.host.c_str(), client_file_name_wildcard))
         {
             matched.push_back(des.clientfd);

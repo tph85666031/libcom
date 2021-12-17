@@ -61,7 +61,4 @@ void com_mem_from_message(Message msg);
 void com_mem_add_notify(const char* key, cb_mem_data_change cb);
 void com_mem_remove_notify(const char* key, cb_mem_data_change cb);
 
-void InitMemDataSyncManager();
-void UninitMemDataSyncManager();
-
 #endif /* __COM_MEM_H__ */

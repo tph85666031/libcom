@@ -21,8 +21,6 @@
 #include "com_thread.h"
 #include "com_task.h"
 #include "com_timer.h"
-#include "com_ipc_tcp.h"
-#include "com_ipc_ud.h"
 #include "com_mem.h"
 #include "com_dns.h"
 
@@ -33,21 +31,6 @@
 #include "sqlite3.h"
 #include "tinyxml2.h"
 
-class ComInitializer
-{
-public:
-    ComInitializer()
-    {
-        InitTaskManager();
-        InitTimerManager();
-        InitMemDataSyncManager();
-    };
-    ~ComInitializer()
-    {
-        UninitMemDataSyncManager();
-        UninitTimerManager();
-        UninitTaskManager();
-    };
-};
+
 
 #endif /* __COM_H__ */

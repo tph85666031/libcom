@@ -106,8 +106,8 @@ void com_socket_unit_test_suit(void** state)
     com_sleep_s(1);
     MySocketTcpClient socket_client1("127.0.0.1", 9000);
     MySocketTcpClient socket_client2("127.0.0.1", 9000);
-    ASSERT_INT_EQUAL(socket_client1.startClient(), 0);
-    ASSERT_INT_EQUAL(socket_client2.startClient(), 0);
+    ASSERT_TRUE(socket_client1.startClient());
+    ASSERT_TRUE(socket_client2.startClient());
     com_sleep_s(1);
     int count = 0;
     int data_size_client = 0;

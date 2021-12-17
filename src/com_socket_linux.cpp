@@ -51,7 +51,7 @@ void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* socket_server)
             socket_server->mutexfds.unlock();
             continue;
         }
-        CLIENT_DES des = socket_server->ready_fds.front();
+        SOCKET_CLIENT_DES des = socket_server->ready_fds.front();
         socket_server->ready_fds.pop();
         socket_server->mutexfds.unlock();
         while(true)
@@ -130,7 +130,7 @@ int SocketTcpServer::recvData(int socketfd)//ThreadSocketServerRunner线程
         mutex_clients.unlock();
         return -1;
     }
-    CLIENT_DES des = clients[socketfd];
+    SOCKET_CLIENT_DES des = clients[socketfd];
     mutex_clients.unlock();
     mutexfds.lock();
     ready_fds.push(des);
@@ -142,7 +142,7 @@ int SocketTcpServer::recvData(int socketfd)//ThreadSocketServerRunner线程
 void SocketTcpServer::closeClient(int fd)
 {
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
-    CLIENT_DES des;
+    SOCKET_CLIENT_DES des;
     des.clientfd = fd;
     mutex_clients.lock();
     if(clients.count(fd) == 0)
@@ -175,7 +175,7 @@ int SocketTcpServer::acceptClient()//ThreadSocketServerRunner线程
     }
     LOG_D("Accept Connection, fd=%d, addr=%s,server_port=%u",
           clientfd, com_ip_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
-    CLIENT_DES des;
+    SOCKET_CLIENT_DES des;
     des.clientfd = clientfd;
     des.host = com_ip_to_string(sin.sin_addr.s_addr);
     des.port = sin.sin_port;
@@ -275,10 +275,10 @@ int SocketTcpServer::send(const char* host, uint16 port, const void* data, int d
     }
     mutex_clients.lock();
     int clientfd = -1;
-    std::map<int, CLIENT_DES>::iterator it;
+    std::map<int, SOCKET_CLIENT_DES>::iterator it;
     for(it = clients.begin(); it != clients.end(); it++)
     {
-        CLIENT_DES des = it->second;
+        SOCKET_CLIENT_DES des = it->second;
         if(com_string_equal(des.host.c_str(), host) && des.port == port)
         {
             clientfd = des.clientfd;
@@ -352,7 +352,7 @@ void UnixDomainTcpServer::ThreadUnixDomainServerReceiver(UnixDomainTcpServer* so
             continue;
         }
 
-        CLIENT_DES des = socket_server->fds.front();
+        SOCKET_CLIENT_DES des = socket_server->fds.front();
         socket_server->fds.pop();
         socket_server->mutexfds.unlock();
         while(true)
@@ -431,7 +431,7 @@ int UnixDomainTcpServer::recvData(int socketfd)
         mutex_clients.unlock();
         return -1;
     }
-    CLIENT_DES des = clients[socketfd];
+    SOCKET_CLIENT_DES des = clients[socketfd];
     mutex_clients.unlock();
     mutexfds.lock();
     fds.push(des);
@@ -443,7 +443,7 @@ int UnixDomainTcpServer::recvData(int socketfd)
 void UnixDomainTcpServer::closeClient(int fd)
 {
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
-    CLIENT_DES des;
+    SOCKET_CLIENT_DES des;
     des.clientfd = fd;
     mutex_clients.lock();
     if(clients.count(fd) == 0)
@@ -475,7 +475,7 @@ int UnixDomainTcpServer::acceptClient()
         return -1;
     }
     LOG_D("Accept Connection, fd=%d, file_path=%s", clientfd, client_addr.sun_path);
-    CLIENT_DES des;
+    SOCKET_CLIENT_DES des;
     des.clientfd = clientfd;
     des.host = client_addr.sun_path;
     mutex_clients.lock();
@@ -562,7 +562,7 @@ void UnixDomainTcpServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int UnixDomainTcpServer::send(int clientfd, uint8* data, int data_size)
+int UnixDomainTcpServer::send(int clientfd, const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -571,7 +571,7 @@ int UnixDomainTcpServer::send(int clientfd, uint8* data, int data_size)
     return com_socket_tcp_send(clientfd, data, data_size);
 }
 
-int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8* data, int data_size)
+int UnixDomainTcpServer::send(const char* client_file_name_wildcard, const void* data, int data_size)
 {
     if(client_file_name_wildcard == NULL || data == NULL || data_size <= 0)
     {
@@ -588,10 +588,10 @@ int UnixDomainTcpServer::send(const char* client_file_name_wildcard, uint8* data
     }
     std::vector<int> matched;
     mutex_clients.lock();
-    std::map<int, CLIENT_DES>::iterator it;
+    std::map<int, SOCKET_CLIENT_DES>::iterator it;
     for(it = clients.begin(); it != clients.end(); it++)
     {
-        CLIENT_DES des = it->second;
+        SOCKET_CLIENT_DES des = it->second;
         if(com_string_match(des.host.c_str(), client_file_name_wildcard))
         {
             matched.push_back(des.clientfd);

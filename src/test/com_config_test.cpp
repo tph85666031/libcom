@@ -109,7 +109,7 @@ void com_config_unit_test_suit(void** state)
     ASSERT_TRUE(config.load("2.ini"));
     ASSERT_INT_EQUAL(config.getUInt32("hhh", "abc"), 3);
     ASSERT_INT_EQUAL(config.getUInt32("hhh", "abcd"), 4);
-    ASSERT_INT_EQUAL(config.getUInt32(NULL, "abcde"), 5);
+    //ASSERT_INT_EQUAL(config.getUInt32(NULL, "abcde"), 5);
 
     com_file_remove(".2.ini");
     com_file_remove(".2.ini.bak");

@@ -13,29 +13,21 @@ static CPPTimerManager& GetTimerManager()
     return timer_manager;
 }
 
-void InitTimerManager()
-{
-    CPPTimerManager& timer_manager = GetTimerManager();
-    timer_manager.setThreadsCount(1, 10).setQueueSize(10);
-    timer_manager.startTimerManager();
-}
-
-void UninitTimerManager()
-{
-    GetTimerManager().stopTimerManager();
-}
-
 CPPTimerManager::CPPTimerManager()
 {
+    setThreadsCount(1, 10).setQueueSize(10);
+    startTimerManager();
 }
 
 CPPTimerManager::~CPPTimerManager()
 {
+    LOG_I("called");
     stopTimerManager();
 }
 
 void CPPTimerManager::startTimerManager()
 {
+    LOG_I("called");
     stopTimerManager();
     running_loop = true;
     thread_timer_loop = std::thread(ThreadTimerLoop, this);
@@ -44,6 +36,7 @@ void CPPTimerManager::startTimerManager()
 
 void CPPTimerManager::stopTimerManager()
 {
+    LOG_I("called");
     running_loop = false;
     if(thread_timer_loop.joinable())
     {

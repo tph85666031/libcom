@@ -4,13 +4,6 @@
 #if __linux__ == 1
 #include "com_base.h"
 
-typedef struct
-{
-    std::string host;
-    uint16 port;
-    int clientfd;
-} CLIENT_DES;
-
 class SocketTcpServer
 {
 public:
@@ -18,11 +11,12 @@ public:
     SocketTcpServer(uint16 port);
     virtual ~SocketTcpServer();
     SocketTcpServer& setPort(uint16 port);
-    virtual int startServer();
-    virtual void stopServer();
+    int startServer();
+    void stopServer();
     void closeClient(int fd);
     int send(int clientfd, const void* data, int data_size);
     int send(const char* host, uint16 port, const void* data, int data_size);
+protected:
     virtual void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
     virtual void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
 private:
@@ -41,10 +35,10 @@ private:
     std::thread thread_listener;
     std::thread thread_receiver;
     CPPMutex mutex_clients;
-    std::map<int, CLIENT_DES> clients;
+    std::map<int, SOCKET_CLIENT_DES> clients;
     CPPMutex mutexfds;
     CPPSem semfds;
-    std::queue<CLIENT_DES> ready_fds;
+    std::queue<SOCKET_CLIENT_DES> ready_fds;
 };
 
 class UnixDomainTcpServer
@@ -54,10 +48,11 @@ public:
     virtual ~UnixDomainTcpServer();
     int startServer();
     void stopServer();
-    int send(const char* client_file_name_wildcard, uint8* data, int data_size);
-    int send(int clientfd, uint8* data, int data_size);
+    int send(const char* client_file_name_wildcard, const void* data, int data_size);
+    int send(int clientfd, const void* data, int data_size);
     std::string& getServerFileName();
     int getSocketfd();
+protected:
     virtual void onConnectionChanged(std::string& client_file_name, int socketfd, bool connected);
     virtual void onRecv(std::string& client_file_name, int socketfd, uint8* data, int data_size);
 private:
@@ -76,10 +71,10 @@ private:
     std::thread thread_listener;
     std::thread thread_receiver;
     CPPMutex mutex_clients;
-    std::map<int, CLIENT_DES> clients;
+    std::map<int, SOCKET_CLIENT_DES> clients;
     CPPMutex mutexfds;
     CPPSem semfds;
-    std::queue<CLIENT_DES> fds;
+    std::queue<SOCKET_CLIENT_DES> fds;
 };
 
 #endif

@@ -1,4 +1,4 @@
-﻿#include <thread>
+#include <thread>
 #include <atomic>
 #include "sqlite3.h"
 #include "com_sqlite.h"

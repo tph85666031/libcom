@@ -4,13 +4,6 @@
 #if defined(__APPLE__)
 #include "com_base.h"
 
-typedef struct
-{
-    std::string host;
-    uint16 port;
-    int clientfd;
-} CLIENT_DES;
-
 class TCPServer
 {
 public:
@@ -27,7 +20,7 @@ public:
     virtual int acceptClient() { return -1; }
     virtual void closeClient(int fd);
     virtual void stopServer();
-    virtual int send(int clientfd, uint8* data, int data_size);
+    virtual int send(int clientfd, const void* data, int data_size);
     virtual int recvData(int clientfd);
     virtual void onConnectionChanged(std::string& host_or_file, uint16 port, int socketfd, bool connected) {}
     virtual void onRecv(std::string& host_or_file, uint16 port, int socketfd, uint8* data, int data_size) {}
@@ -44,21 +37,23 @@ protected:
     std::thread thread_listener;
     std::thread thread_receiver;
     CPPMutex mutex_clients;
-    std::map<int, CLIENT_DES> clients;
+    std::map<int, SOCKET_CLIENT_DES> clients;
     CPPMutex mutexfds;
     CPPSem semfds;
-    std::queue<CLIENT_DES> ready_fds;
+    std::queue<SOCKET_CLIENT_DES> ready_fds;
 };
 
 class SocketTcpServer : public TCPServer
 {
 public:
+    SocketTcpServer();
     SocketTcpServer(uint16 port);
     virtual ~SocketTcpServer();
+    SocketTcpServer& setPort(uint16 port);
 public:
     virtual bool initListen() override;
     virtual int acceptClient() override;
-    int send(const char* host, uint16 port, uint8* data, int data_size);
+    int send(const char* host, uint16 port, const void* data, int data_size);
 private:
     static void ThreadSocketServerDispatcher(SocketTcpServer* socket_server);
 };
@@ -71,7 +66,7 @@ public:
 public:
     virtual bool initListen() override;
     virtual int acceptClient() override;
-    int send(const char* client_file_name_wildcard, uint8* data, int data_size);
+    int send(const char* client_file_name_wildcard, const void* data, int data_size);
 private:
     int server_fd;
     std::string server_file_name;

@@ -210,6 +210,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
 
 int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
 {
+#if __linux__ == 1
     if(my_name == NULL || server_name == NULL)
     {
         LOG_E("arg incorrect");
@@ -248,6 +249,9 @@ int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
         return -1;
     }
     return socketfd;
+#else
+    return -1;
+#endif
 }
 
 int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 timeout_ms, const char* interface_name)

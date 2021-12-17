@@ -149,6 +149,13 @@ typedef struct
     uint32 time;//秒
 } GPS;
 
+typedef struct
+{
+    std::string host;
+    uint16 port;
+    int clientfd;
+} SOCKET_CLIENT_DES;
+
 class xstring : public std::string
 {
 public:
