@@ -35,38 +35,10 @@ C：
 
 
 
-2:配置
-修改config.txt文件进行模块配置
-模块配置包括：
-module_ver=1.0.0          #模块版本号
-module_name=example       #模块名称
-module_model=EBD.FAW001RV #模块类型
-module_define="-DMACRO_A -DMACRO_B=\"value\" -DMACRO_C"  #模块私有的宏定义，需要以双引号包含，若宏定义为字符串，需要加\做转义
-depend_app=app_example:1.0.0:tricheer,yyy    #依赖的app，若不带版本号，将直接使用本机已安装的文件，否则将从服务器下载对应版本,若附带了目标运行系统名则只在编译对应目标系统版本时才下载此依赖文件
-depend_lib=ipc:1.0.3,com:1.0.4:tricheer,xxx  #依赖的lib库，若不带版本号，将直接使用本机已安装的文件，否则将从服务器下载对应版本,若附带了目标运行系统名则只在编译对应目标系统版本时才下载此依赖文件
-
-
-
-3：目录结构
+2：目录结构
 文件夹结构必须要保留src/export
 需要对外输出的头文件必须置于src/export下面
 src/export不允许有子文件夹
 所有源码均放置于src目录下,不建议存放于src下的子文件夹，否则需要修改CMakeLists.txt文件
 所有头文件(除需要对外输出)均放置于src目录下,不建议存放于src下的子文件夹，否则需要修改CMakeLists.txt文件
 
-
-4:系统内置宏
-HOST_LINUX_X64
-HOST_TRICHEER
-HOST_TRICHEER_V2
-
-__DEBUG__
-UNIT_TEST
-
-MODULE_TYPE
-MODULE_VER
-MODULE_NAME
-
-以下三个在bcp_com.h中被整合为一个宏MODULE_DEPEND，MODULE_DEPEND可直接用于DEV报文中的“模块其它信息”字段
-MODULE_DEPEND_LIB
-MODULE_DEPEND_APP
