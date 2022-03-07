@@ -127,5 +127,7 @@ void com_task_unit_test_suit(void** state)
     ASSERT_FALSE(GetTaskManager().isTaskExist("task1"));
     ASSERT_TRUE(GetTaskManager().isTaskExist("task2"));
     ASSERT_TRUE(GetTaskManager().isTaskExist("task3"));
+
+    //GetTaskManager().destroyTaskAll();
 }
 

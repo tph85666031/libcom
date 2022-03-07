@@ -506,8 +506,8 @@ int UnixDomainTcpServer::startServer()
     strcpy(server_addr.sun_path, server_file_name.c_str());
     //int resuse_flag = 1;
     //setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &resuse_flag, sizeof(int));
-    int len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
-    if(bind(server_fd, (struct sockaddr*)(&server_addr), len) < 0)
+    //int len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
+    if(bind(server_fd, (struct sockaddr*)(&server_addr), sizeof(server_addr)) < 0)
     {
         LOG_E("socket bind failed : socketfd = %d", server_fd);
         com_socket_close(server_fd);

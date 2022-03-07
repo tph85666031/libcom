@@ -232,16 +232,16 @@ int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
         LOG_E("failed to create unix domain socket");
         return -1;
     }
-    long len = offsetof(struct sockaddr_un, sun_path) + strlen(client_addr.sun_path);
-    int ret = bind(socketfd, (struct sockaddr*)(&client_addr), (int)len);
+    //long len = offsetof(struct sockaddr_un, sun_path) + strlen(client_addr.sun_path);
+    int ret = bind(socketfd, (struct sockaddr*)(&client_addr), sizeof(client_addr));
     if(ret < 0)
     {
         com_socket_close(socketfd);
         LOG_E("bind failed");
         return -1;
     }
-    len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
-    ret = connect(socketfd, (struct sockaddr*)(&server_addr), (int)len);
+    //len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
+    ret = connect(socketfd, (struct sockaddr*)(&server_addr), sizeof(server_addr));
     if(ret != 0)
     {
         com_socket_close(socketfd);

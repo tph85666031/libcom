@@ -24,7 +24,7 @@ private:
     uint16 server_port;
 };
 
-//ÒÔÏÂÁô¿Õ¼´¿É£¬win²»Ö§³Ö
+//ä»¥ä¸‹ç•™ç©ºå³å¯ï¼Œwinä¸æ”¯æŒ
 class UnixDomainTcpServer
 {
 public:

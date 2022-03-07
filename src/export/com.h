@@ -23,7 +23,7 @@
 #include "com_timer.h"
 #include "com_mem.h"
 #include "com_dns.h"
-
+#include "com_auto_test.h"
 #include "com_test.h"
 
 #include "CJsonObject.h"

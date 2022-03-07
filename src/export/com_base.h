@@ -31,8 +31,8 @@ typedef unsigned long long uint64;
 #include <math.h>
 
 #if defined(_WIN32) || defined(_WIN64)
+#include <winsock2.h> //ntohl
 #include <windows.h>
-#include <winsock.h> //ntohl
 #elif defined(__APPLE__)
 #include <dispatch/dispatch.h>
 #include <sys/time.h>
@@ -245,14 +245,11 @@ int32 com_timezone_get_s();
 std::string com_time_to_string(uint32 time_s);
 std::string com_time_to_string(uint32 time_s, const char* format) __attribute__((format(strftime, 2, 0)));
 bool com_time_to_tm(uint32 time_s,  struct tm* tm_val);
-bool com_time_to_bcd(uint32 time_s, uint8 bcd_time[6]);
-uint32 com_time_from_bcd(uint8 bcd_time[6]);
 
 /* date_str格式为 yyyy-mm-dd HH:MM:SS */
-uint32 com_string_to_time(const char* date_str);
+uint32 com_time_from_string(const char* date_str);
 
-uint32 com_tm_to_time(struct tm* tm_val);
-bool com_tm_to_bcd_date(struct tm* tm_val, uint8 bcd_date[6]);
+uint32 com_time_from_tm(struct tm* tm_val);
 bool com_gettimeofday(struct timeval* tp);
 
 uint8 com_uint8_to_bcd(uint8 v);
@@ -300,11 +297,13 @@ std::string com_get_cwd();
 void com_set_cwd(const char* dir);
 
 std::string com_uuid_generator();
-
 int com_gcd(int x, int y);
+
+std::string com_get_login_user_display();
 std::string com_get_login_user_name();
 int com_get_login_user_id();
 std::string com_get_login_user_home();
+int com_get_login_group_id();
 
 template <class... T>
 int com_gcd(int x, int y, T...ns)
@@ -479,7 +478,7 @@ public:
     std::string getString(const char* key, std::string default_val = std::string());
     CPPBytes getBytes(const char* key);
 
-    std::string toJSON();
+    std::string toJSON(bool pretty_style = false);
     static Message FromJSON(std::string json);
 
 private:

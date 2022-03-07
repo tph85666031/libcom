@@ -15,7 +15,11 @@ static std::atomic<log_hook_fc> log_hook = {NULL};
 
 static spdlog::level::level_enum level_convert(int level)
 {
-    if(level == LOG_LEVEL_DEBUG)
+    if(level == LOG_LEVEL_TRACE)
+    {
+        return spdlog::level::trace;
+    }
+    else if(level == LOG_LEVEL_DEBUG)
     {
         return spdlog::level::debug;
     }
@@ -118,7 +122,11 @@ void com_log_output(int level, const char* fmt, ...)
         str.assign(buf.data());
     }
 
-    if(level & LOG_LEVEL_DEBUG)
+    if(level & LOG_LEVEL_TRACE)
+    {
+        my_logger->trace(str);
+    }
+    else if(level & LOG_LEVEL_DEBUG)
     {
         my_logger->debug(str);
     }

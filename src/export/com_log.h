@@ -3,6 +3,7 @@
 
 #include "com_stack.h"
 
+#define LOG_LEVEL_TRACE       0x0000
 #define LOG_LEVEL_DEBUG       0x0001
 #define LOG_LEVEL_INFO        0x0002
 #define LOG_LEVEL_WARNING     0x0004
@@ -18,11 +19,13 @@
 typedef void (*log_hook_fc)(int level, const char* buf);
 
 void com_log_init(const char* file, const char* file_err, bool console_enable,
-                  int file_size_max, int file_count, int level, int flush_interval_s);
+                  int file_size_max = 10 * 1024 * 1024, int file_count = 3, int level = LOG_LEVEL_INFO, int flush_interval_s = 5);
 void com_log_uninit(void);
+void com_log_use_log4xx();
 void com_log_set_hook(log_hook_fc hook_fc);
 void com_log_output(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 
+#define LOG_T(fmt,...)    com_log_output(LOG_LEVEL_TRACE,   "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_D(fmt,...)    com_log_output(LOG_LEVEL_DEBUG,   "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_I(fmt,...)    com_log_output(LOG_LEVEL_INFO,    "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_W(fmt,...)    com_log_output(LOG_LEVEL_WARNING, "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)

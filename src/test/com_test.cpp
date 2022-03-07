@@ -65,7 +65,7 @@ CMUnitTest test_cases_com_lib[] =
     cmocka_unit_test(com_dns_unit_test_suit),
     cmocka_unit_test(com_auto_test_unit_test_suit),
 #else
-    cmocka_unit_test(com_auto_test_unit_test_suit),
+    cmocka_unit_test(com_unix_domain_unit_test_suit),
 #endif
 };
 

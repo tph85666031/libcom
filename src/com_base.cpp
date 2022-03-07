@@ -14,6 +14,10 @@
 #endif
 #endif
 
+#if defined(__APPLE__)
+#include <libproc.h>
+#endif
+
 #include "CJsonObject.h"
 #include "com_base.h"
 #include "com_md5.h"
@@ -354,7 +358,7 @@ char* com_string_to_lower(char* str)
 
 std::string com_string_format(const char* fmt, ...)
 {
-    if (NULL == fmt) 
+    if(NULL == fmt)
     {
         return "";
     }
@@ -864,42 +868,7 @@ bool com_time_to_tm(uint32 time_s,  struct tm* tm_val)
 }
 
 //UTC
-bool com_time_to_bcd(uint32 time_s, uint8 bcd_time[6])
-{
-    if(bcd_time == NULL)
-    {
-        return false;
-    }
-    struct tm tm_val;
-    memset(&tm_val, 0, sizeof(struct tm));
-    if(com_time_to_tm(time_s, &tm_val) == false)
-    {
-        return false;
-    }
-    return com_tm_to_bcd_date(&tm_val, bcd_time);
-}
-
-uint32 com_time_from_bcd(uint8 bcd_date[6])
-{
-    if(bcd_date == NULL)
-    {
-        return 0;
-    }
-    struct tm tm_val;
-    memset(&tm_val, 0, sizeof(struct tm));
-    tm_val.tm_year = 2000 + com_bcd_to_uint8(bcd_date[0]) - 1900;
-    tm_val.tm_mon = com_bcd_to_uint8(bcd_date[1]) - 1;
-    tm_val.tm_mday = com_bcd_to_uint8(bcd_date[2]);
-
-    tm_val.tm_hour = com_bcd_to_uint8(bcd_date[3]);
-    tm_val.tm_min = com_bcd_to_uint8(bcd_date[4]);
-    tm_val.tm_sec = com_bcd_to_uint8(bcd_date[5]);
-
-    return com_tm_to_time(&tm_val);
-}
-
-//UTC
-uint32 com_tm_to_time(struct tm* tm_val)
+uint32 com_time_from_tm(struct tm* tm_val)
 {
     if(tm_val == NULL)
     {
@@ -914,31 +883,8 @@ uint32 com_tm_to_time(struct tm* tm_val)
     return (uint32)(mktime(tm_val) + com_timezone_get_s());
 }
 
-//UTC
-bool com_tm_to_bcd_date(struct tm* tm_val, uint8 bcd_date[6])
-{
-    if(tm_val == NULL || bcd_date == NULL)
-    {
-        return false;
-    }
-    if(tm_val->tm_year > 100)
-    {
-        bcd_date[0] = com_uint8_to_bcd(tm_val->tm_year - 100);
-    }
-    else
-    {
-        bcd_date[0] = 100 + tm_val->tm_year;
-    }
-    bcd_date[1] = com_uint8_to_bcd(tm_val->tm_mon + 1);
-    bcd_date[2] = com_uint8_to_bcd(tm_val->tm_mday);
-    bcd_date[3] = com_uint8_to_bcd(tm_val->tm_hour);
-    bcd_date[4] = com_uint8_to_bcd(tm_val->tm_min);
-    bcd_date[5] = com_uint8_to_bcd(tm_val->tm_sec);
-    return true;
-}
-
 /* UTC date_str格式为 yyyy-mm-dd HH:MM:SS */
-uint32 com_string_to_time(const char* date_str)
+uint32 com_time_from_string(const char* date_str)
 {
     if(date_str == NULL)
     {
@@ -955,7 +901,7 @@ uint32 com_string_to_time(const char* date_str)
     }
     tm_val.tm_year -= 1900;
     tm_val.tm_mon -= 1;
-    return com_tm_to_time(&tm_val);
+    return com_time_from_tm(&tm_val);
 }
 
 uint8 com_uint8_to_bcd(uint8 v)
@@ -1625,6 +1571,13 @@ std::string com_get_bin_name()
             szRes++;
             name = szRes;
         }
+#elif defined(__APPLE__)
+        char buf[256];
+        memset(buf, 0, sizeof(buf));
+        int ret = proc_name(getpid(), buf, sizeof(buf));
+        if (ret > 0) {
+            name = buf;
+        }
 #else
         char buf[256];
         memset(buf, 0, sizeof(buf));
@@ -1661,6 +1614,13 @@ std::string com_get_bin_path()
         if(szRes)
         {
             path = std::string(szName).assign(szName, strlen(szName) - strlen(szRes) + 1);
+        }
+#elif defined(__APPLE__)
+        char buf[PROC_PIDPATHINFO_MAXSIZE];
+        memset(buf, 0, sizeof(buf));
+        int ret = proc_pidpath(getpid(), buf, sizeof(buf));
+        if (ret > 0) {
+            path = buf;
         }
 #else
         char buf[256];
@@ -1746,6 +1706,20 @@ int com_gcd(int x, int y)
     return y ? com_gcd(y, x % y) : x;
 }
 
+std::string com_get_login_user_display()
+{
+#if __linux__ == 1
+    const char* display = getenv("DISPLAY");
+    if(display == NULL)
+    {
+        return std::string();
+    }
+    return display;
+#else
+    return std::string();
+#endif
+}
+
 std::string com_get_login_user_name()
 {
 #if __linux__ == 1
@@ -1793,6 +1767,26 @@ std::string com_get_login_user_home()
     return result->pw_dir;
 #else
     return std::string();
+#endif
+}
+
+int com_get_login_group_id()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return 0;
+#else
+    struct passwd pwd;
+    struct passwd* result = NULL;
+    char buf[1024];
+    memset(&pwd, 0, sizeof(pwd));
+    memset(buf, 0, sizeof(buf));
+    int ret = getpwuid_r(com_get_login_user_id(), &pwd, buf,
+                         sizeof(buf), &result);
+    if(ret != 0 || result == NULL)
+    {
+        return 0;
+    }
+    return result->pw_gid;
 #endif
 }
 
@@ -2226,6 +2220,7 @@ Message::Message(uint32 id)
 
 Message::~Message()
 {
+    datas.clear();
 }
 
 void Message::reset()
@@ -2431,7 +2426,7 @@ CPPBytes Message::getBytes(const char* key)
     return CPPBytes((uint8*)val.data(), val.length());
 }
 
-std::string Message::toJSON()
+std::string Message::toJSON(bool pretty_style)
 {
     CJsonObject cjson;
 
@@ -2440,7 +2435,14 @@ std::string Message::toJSON()
     {
         cjson.Add(it->first, it->second);
     }
-    return cjson.ToString();
+    if(pretty_style)
+    {
+        return cjson.ToFormattedString();
+    }
+    else
+    {
+        return cjson.ToString();
+    }
 }
 
 Message Message::FromJSON(std::string json)

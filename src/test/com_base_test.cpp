@@ -325,8 +325,6 @@ void com_base_time_unit_test_suit(void** state)
     struct tm tm_val;
     val_32 = com_time_rtc_s();
     com_time_to_tm(val_32, &tm_val);
-    uint8 bcd_time[6] = {0x19, 0x10, 0x09, 0x16, 0x56, 0x32};
-    ASSERT_INT_EQUAL(com_time_from_bcd(bcd_time), 1570640192);
 #if 0
     printf("tm=%d-%d-%d %d:%d:%d week=%d\n",
            tm_val.tm_year + 1900, tm_val.tm_mon + 1, tm_val.tm_mday,
@@ -339,14 +337,11 @@ void com_base_time_unit_test_suit(void** state)
 #endif
     ASSERT_TRUE(com_time_to_string(com_time_rtc_s(), "%Y-%m-%d %H:%M:%S %z").length() > 0);
     //printf("date=%s\n", date_str);
-    ASSERT_TRUE(com_string_to_time("2018-07-27 13:59:01") > 0);
-    ASSERT_TRUE(com_time_to_string(com_tm_to_time(&tm_val), "%Y-%m-%d %H:%M:%S %z").length() > 0);
+    ASSERT_TRUE(com_time_from_string("2018-07-27 13:59:01") > 0);
+    ASSERT_TRUE(com_time_to_string(com_time_from_tm(&tm_val), "%Y-%m-%d %H:%M:%S %z").length() > 0);
     //printf("date_check=%s      %s\n", "2018-07-27 13:59:01", date_str);
     uint32 time_cur_s = com_time_rtc_s();
     com_time_to_tm(time_cur_s, &tm_val);
-    uint8 bcd[6];
-    com_tm_to_bcd_date(&tm_val, bcd);
-    ASSERT_INT_EQUAL(com_tm_to_time(&tm_val), time_cur_s);
 }
 
 void com_base_gps_unit_test_suit(void** state)
@@ -509,6 +504,8 @@ void com_base_unit_test_suit(void** state)
     {
         ASSERT_STR_EQUAL("test exception", e.what());
     }
+
+    ASSERT_STR_EQUAL(com_get_bin_name(), "com");
 }
 
 void com_base_bytearray_unit_test_suit(void** state)

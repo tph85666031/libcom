@@ -13,7 +13,7 @@ public:
     template<class T>
     void setLatestInfo(const char* group, const char* key, const T val)
     {
-        std::lock_guard<std::mutex> lck(mutex_statistic_info);
+        std::lock_guard<std::mutex> lck(mutex_latest_info);
         if(group != NULL && key != NULL)
         {
             if(latest_info.count(group) == 0)
@@ -50,15 +50,21 @@ public:
         }
     };
 
+    bool hasLatestInfo(const char* group, const char* key = NULL);
+    bool hasStatisticInfo(const char* group, const char* key = NULL);
+    void removeLatestInfo(const char* group = NULL, const char* key = NULL);
+    void removeStatisticInfo(const char* group = NULL, const char* key = NULL);
     Message getLatestInfo(const char* name);
     std::string getLatestInfo(const char* group, const char* name);
     Message getStatisticInfo(const char* name);
     std::string getStatisticInfo(const char* group, const char* name);
+    httplib::Server& getHttpServer();
+    bool isHttpServerRunning();
 
     bool startService();
     void stopService();
 private:
-    void initHttpServer();
+    void initHttpController();
     static void ThreadController(AutoTestService* ctx);
 private:
     std::mutex mutex_latest_info;
@@ -71,6 +77,7 @@ private:
     std::thread thread_controller;
 
     httplib::Server http_server;
+    std::atomic<bool> http_server_running = {false};
 };
 
 AutoTestService& GetAutoTestService();

@@ -1,6 +1,26 @@
 #ifdef __APPLE__
+#include <sys/event.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <netinet/tcp_fsm.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <netinet/tcp.h>
+#include <netdb.h>
+#include <sys/un.h>
+#include <stddef.h>
+#include <fnmatch.h>
 
-typedef struct kevent IOM_EVENT;
+#include "com_socket.h"
+#include "com_serializer.h"
+#include "com_thread.h"
+#include "com_file.h"
+#include "com_log.h"
+
 #define iom_event_fd(x)         (int)(intptr_t)((x).udata)
 #define iom_event_events(x)     (x).filter
 #define iom_error_events(x)     (!((x) & EVFILT_READ))
@@ -27,10 +47,10 @@ bool TCPServer::IOMCreate()
         return false;
     }
     struct kevent events[1];
-    EV_SET(&events[0], socketfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void*)(intptr_t)socketfd);
+    EV_SET(&events[0], server_fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void*)(intptr_t)server_fd);
     if(kevent(epollfd, events, 1, NULL, 0, NULL) < 0)
     {
-        LOG_E("kqueue add failed : fd = %d", getSocketfd());
+        LOG_E("kqueue add failed : fd = %d", server_fd);
         return false;
     }
     return true;
@@ -56,7 +76,7 @@ void TCPServer::IOMRemoveMonitor(int fd)
     }
 }
 
-int TCPServer::IOMWaitFor(IOM_EVENT* event_list, int event_len)
+int TCPServer::IOMWaitFor(struct kevent* event_list, int event_len)
 {
     int count = 0;
     struct timespec timeout;
@@ -76,7 +96,7 @@ int TCPServer::startServer()
     if(listen(server_fd, 5) < 0)
     {
         LOG_E("socket listen failed : socketfd = %d", server_fd);
-        com_socket_close(socketfd);
+        com_socket_close(server_fd);
         return -3;
     }
     if(! IOMCreate())
@@ -181,7 +201,7 @@ void TCPServer::ThreadTCPServerListener(TCPServer* socket_server)
     {
         socket_server->epoll_timeout_ms = 1000;
         //epoll_wait
-        IOM_EVENT eventList[SOCKET_SERVER_MAX_CLIENTS];
+        struct kevent eventList[SOCKET_SERVER_MAX_CLIENTS];
         int count = socket_server->IOMWaitFor(eventList, SOCKET_SERVER_MAX_CLIENTS);
         if(count < 0)
         {
@@ -218,7 +238,7 @@ void TCPServer::ThreadTCPServerListener(TCPServer* socket_server)
             }
         }
     }
-    LOG_I("socket server quit, port=%d", server_port);
+    LOG_I("socket server quit");
     return;
 }
 
@@ -379,18 +399,18 @@ bool UnixDomainTcpServer::initListen()
     server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(server_fd <= 0)
     {
-        LOG_E("socket create failed : socketfd = %d", server_fd.load());
+        LOG_E("socket create failed : socketfd = %d", server_fd);
         return false;
     }
-    com_file_remove(getHost().c_str());
+    com_file_remove(this->server_file_name.c_str());
     struct sockaddr_un server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sun_family = AF_UNIX;
-    strcpy(server_addr.sun_path, getHost().c_str());
+    strcpy(server_addr.sun_path, this->server_file_name.c_str());
     long len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
-    if(bind(server_fd.load(), (struct sockaddr*)(&server_addr), (int)len) < 0)
+    if(bind(server_fd, (struct sockaddr*)(&server_addr), (int)len) < 0)
     {
-        LOG_E("socket bind failed : socketfd = %d", server_fd.load());
+        LOG_E("socket bind failed : socketfd = %d", server_fd);
         com_socket_close(server_fd);
         return false;
     }
@@ -402,7 +422,7 @@ int UnixDomainTcpServer::acceptClient()
     struct sockaddr_un client_addr;
     memset(&client_addr, 0, sizeof(struct sockaddr_un));
     socklen_t len = sizeof(struct sockaddr_un);
-    int clientfd = accept(socketfd, (struct sockaddr*)&client_addr, &len);
+    int clientfd = accept(server_fd, (struct sockaddr*)&client_addr, &len);
     if(clientfd < 0)
     {
         LOG_E("bad accept client");

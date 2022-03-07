@@ -13,7 +13,7 @@ public:
     bool IOMCreate();
     void IOMAddMonitor(int clientfd);
     void IOMRemoveMonitor(int fd);
-    int IOMWaitFor(IOM_EVENT *event_list, int event_len);
+    int IOMWaitFor(struct kevent *event_list, int event_len);
 public:
     virtual int startServer();
     virtual bool initListen() { return false; }
