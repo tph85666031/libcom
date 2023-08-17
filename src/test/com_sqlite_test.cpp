@@ -1,8 +1,11 @@
-#include "com.h"
+#include "com_sqlite.h"
+#include "com_log.h"
+#include "com_file.h"
+#include "com_test.h"
 
 std::atomic<uint32> progress_cur;
 std::atomic<uint32> progress_all;
-void sqlite3_test_thread_progress()
+void sqlite_test_thread_progress()
 {
     while (progress_cur < progress_all)
     {
@@ -27,15 +30,15 @@ void sqlite3_test_thread(void* fd, std::string table_name, int count, int start)
     }
 }
 
-void com_sqlite3_unit_test_suit(void** state)
+void com_sqlite_unit_test_suit(void** state)
 {
     TIME_COST();
     void* fd = com_sqlite_open("./settings.db");
     ASSERT_TRUE(com_string_end_with(com_sqlite_file_name(fd), "settings.db"));
 
-    ASSERT_INT_EQUAL(com_file_get_create_time(NULL), 0);
-    ASSERT_INT_EQUAL(com_file_get_create_time("./not_exist_file"), 0);
-    ASSERT_TRUE(com_time_to_string(com_file_get_create_time("./settings.db"), "%Y-%m-%d %H:%M:%S %z").length() > 0);
+    ASSERT_INT_EQUAL(com_file_get_change_time(NULL), 0);
+    ASSERT_INT_EQUAL(com_file_get_change_time("./not_exist_file"), 0);
+    ASSERT_TRUE(com_time_to_string(com_file_get_change_time("./settings.db"), "%Y-%m-%d %H:%M:%S %z").length() > 0);
     ASSERT_TRUE(com_time_to_string(com_file_get_modify_time("./settings.db"), "%Y-%m-%d %H:%M:%S %z").length() > 0);
     ASSERT_TRUE(com_time_to_string(com_file_get_access_time("./settings.db"), "%Y-%m-%d %H:%M:%S %z").length() > 0);
     ASSERT_NOT_NULL(fd);
@@ -53,7 +56,7 @@ void com_sqlite3_unit_test_suit(void** state)
              "TYPE",
              "VALUE");
 
-    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),COM_SQL_ERR_OK);
+    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),0);
 
     snprintf(sql_create_table, sizeof(sql_create_table),
              "CREATE TABLE \"%s\" ( \
@@ -67,7 +70,7 @@ void com_sqlite3_unit_test_suit(void** state)
              "TYPE",
              "VALUE");
 
-    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),COM_SQL_ERR_OK);
+    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),0);
     const char* sql = "select * from setting";
     int row_count;
     int column_count;
@@ -86,7 +89,7 @@ void com_sqlite3_unit_test_suit(void** state)
     int thread_count = 5;
     progress_cur = 0;
     progress_all = item_count * thread_count * 2;
-    std::thread t_progress = std::thread(sqlite3_test_thread_progress);
+    std::thread t_progress = std::thread(sqlite_test_thread_progress);
     LOG_D("start create %d threads for setting table, each will insert %d items", thread_count, item_count);
     for (int i = 0; i < thread_count; i++)
     {

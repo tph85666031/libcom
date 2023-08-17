@@ -13,7 +13,7 @@ typedef struct
 } CACHE_FLAG;
 #pragma pack(pop)
 
-class Cache
+class COM_EXPORT Cache
 {
 public:
     Cache();
@@ -53,7 +53,7 @@ CacheManager由一级内存缓存+二级磁盘存储构成
 数据增删改查优先从一级缓冲中获取，若一级缓存中没有命中再从磁盘缓存中获取
 一级缓存会定期刷写到磁盘缓存（顺序不定）
 */
-class CacheManager
+class COM_EXPORT CacheManager
 {
 public:
     CacheManager();

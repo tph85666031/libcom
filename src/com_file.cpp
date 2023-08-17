@@ -1,7 +1,158 @@
+﻿#include <iostream>
+#include <fstream>
 #include <fcntl.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <io.h>
+#include <direct.h>
+#include <sys/utime.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#elif __linux__ == 1
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/vfs.h>
+#include <dirent.h>
+#include <utime.h>
+#include <glob.h>
+#elif defined(__APPLE__)
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mount.h>
+#include <dirent.h>
+#include <utime.h>
+#include <glob.h>
+#endif
+
 #include "com_base.h"
 #include "com_file.h"
 #include "com_log.h"
+#include "com_thread.h"
+
+std::string PATH_TO_DOS(const char* path)
+{
+    if(path == NULL)
+    {
+        return std::string();
+    }
+    std::string val = path;
+    com_string_replace(val, "/", "\\");
+    return val;
+}
+
+std::string PATH_TO_DOS(const std::string& path)
+{
+    std::string val = path;
+    com_string_replace(val, "/", "\\");
+    return val;
+}
+
+std::string PATH_FROM_DOS(const char* path)
+{
+    if(path == NULL)
+    {
+        return std::string();
+    }
+    std::string val = path;
+    com_string_replace(val, "\\", "/");
+    return val;
+}
+
+std::string PATH_FROM_DOS(const std::string& path)
+{
+    std::string val = path;
+    com_string_replace(val, "\\", "/");
+    return val;
+}
+
+std::string PATH_TO_LOCAL(const char* path)
+{
+    if(path == NULL)
+    {
+        return std::string();
+    }
+    std::string val = path;
+#if defined(_WIN32) || defined(_WIN64)
+    com_string_replace(val, "/", "\\");
+#else
+    com_string_replace(val, "\\", "/");
+#endif
+    return val;
+}
+
+std::string PATH_TO_LOCAL(const std::string& path)
+{
+    std::string val = path;
+#if defined(_WIN32) || defined(_WIN64)
+    com_string_replace(val, "/", "\\");
+#else
+    com_string_replace(val, "\\", "/");
+#endif
+    return val;
+}
+
+std::string com_dir_system_temp()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    wchar_t buf[MAX_PATH + 1];
+    int len = GetTempPathW(MAX_PATH, buf);
+    if(len <= 0)
+    {
+        LOG_E("failed to get system temp dir,GetLastError=%d", GetLastError());
+        return std::string();
+    }
+    else if(len >= sizeof(buf) / sizeof(wchar_t))
+    {
+        LOG_E("buf space not enough,require %d", len);
+        return std::string();
+    }
+    buf[len] = L'\0';
+    std::string dir = com_string_utf16_to_utf8(buf);
+    while(dir.empty() == false)
+    {
+        if(dir.back() != '\0')
+        {
+            break;
+        }
+        dir.pop_back();
+    }
+    if(dir.back() == PATH_DELIM_CHAR)
+    {
+        dir.pop_back();
+    }
+    return dir;
+#else
+    const char* dir = NULL;
+    dir = getenv("TMPDIR");
+    if(dir != NULL && dir[0] != '\0')
+    {
+        return dir;
+    }
+    dir = getenv("TMP");
+    if(dir != NULL && dir[0] != '\0')
+    {
+        return dir;
+    }
+    dir = getenv("TEMP");
+    if(dir != NULL && dir[0] != '\0')
+    {
+        return dir;
+    }
+    dir = getenv("TEMPDIR");
+    if(dir != NULL && dir[0] != '\0')
+    {
+        return dir;
+    }
+    return "/tmp";
+#endif
+}
+
+bool com_dir_exists(const char* dir)
+{
+    return FILE_TYPE_DIR == com_file_type(dir);
+}
 
 bool com_dir_create(const char* full_path)
 {
@@ -10,12 +161,7 @@ bool com_dir_create(const char* full_path)
         LOG_E("arg incorrect");
         return false;
     }
-#if defined(_WIN32) || defined(_WIN64)
-    const char* delim = "\\";
-#else
-    const char* delim = "/";
-#endif
-    std::vector<std::string> paths = com_string_split(full_path, delim);
+    std::vector<std::string> paths = com_string_split(full_path, PATH_DELIM_STR);
     if(paths.empty())
     {
         LOG_E("path incorrect");
@@ -28,33 +174,33 @@ bool com_dir_create(const char* full_path)
         path.append(paths[i]);
         if(path.empty())
         {
-            path += delim;
+            path += PATH_DELIM_STR;
             continue;
         }
-        if(com_file_type(path.c_str()) != FILE_TYPE_NOT_EXIST)
+        int file_type = com_file_type(path.c_str());
+        if(file_type != FILE_TYPE_NOT_EXIST)
         {
-            if(com_file_type(path.c_str()) != FILE_TYPE_DIR)
+            if(file_type != FILE_TYPE_DIR)
             {
-                LOG_E("file %s already exist", path.c_str());
+                LOG_E("file %s already exist:%d", path.c_str(), file_type);
                 return false;
             }
-            path += delim;
+            path += PATH_DELIM_STR;
             continue;
         }
 #if defined(_WIN32) || defined(_WIN64)
-        if(_mkdir(path.c_str()) != 0)
+        if(path.back() != ':' && _wmkdir(com_string_utf8_to_utf16(path).c_str()) != 0)
         {
-            LOG_E("make dir %s failed", path.c_str());
+            LOG_W("make dir %s failed, dir may already exist", path.c_str());
             return false;
         }
 #else
         if(mkdir(path.c_str(), 0775) != 0)
         {
-            LOG_E("make dir %s failed, err=%s", path.c_str(), strerror(errno));
             return false;
         }
 #endif
-        path += delim;
+        path += PATH_DELIM_STR;
     }
     return true;
 }
@@ -68,8 +214,8 @@ int64 com_dir_size_max(const char* dir)
     int64 total_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     int64 free_size_byte = 0;
-    if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
-                          (ULARGE_INTEGER*)&free_size_byte) == 0)
+    if(GetDiskFreeSpaceExW(com_string_utf8_to_utf16(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+                           (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
     }
@@ -99,8 +245,8 @@ int64 com_dir_size_used(const char* dir)
     int64 total_size_byte = 0;
     int64 free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
-                          (ULARGE_INTEGER*)&free_size_byte) == 0)
+    if(GetDiskFreeSpaceExW(com_string_utf8_to_utf16(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+                           (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
     }
@@ -121,60 +267,6 @@ int64 com_dir_size_used(const char* dir)
     return total_size_byte - free_size_byte;
 }
 
-int com_dir_remove(const char* dir_path)
-{
-#if defined(_WIN32) || defined(_WIN64)
-    return _rmdir(dir_path);
-#else
-    if(dir_path == NULL)
-    {
-        return -1;
-    }
-    DIR* dir = opendir(dir_path);
-    if(dir == NULL)
-    {
-        return -1;
-    }
-
-    struct dirent* ptr = NULL;
-    while((ptr = readdir(dir)) != NULL)
-    {
-#if __ANDROID__ != 1
-        if(ptr->d_name == NULL)
-        {
-            continue;
-        }
-#endif
-        int ret = strcmp(ptr->d_name, ".");
-        if(0 == ret)
-        {
-            continue;
-        }
-        ret = strcmp(ptr->d_name, "..");
-        if(0 == ret)
-        {
-            continue;
-        }
-        std::string path = dir_path;
-        path.append("/");
-        path.append(ptr->d_name);
-
-        if(com_file_type(path.c_str()) == FILE_TYPE_DIR)
-        {
-            com_dir_remove(path.c_str());
-        }
-        else
-        {
-            com_file_remove(path.c_str());
-        }
-    }
-
-    remove(dir_path);
-    closedir(dir);
-    return 0;
-#endif
-}
-
 int64 com_dir_size_freed(const char* dir)
 {
     if(dir == NULL)
@@ -184,8 +276,8 @@ int64 com_dir_size_freed(const char* dir)
     int64 free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     int64 total_size_byte = 0;
-    if(GetDiskFreeSpaceExA((LPCSTR)dir, NULL, (ULARGE_INTEGER*)&total_size_byte,
-                          (ULARGE_INTEGER*)&free_size_byte) == 0)
+    if(GetDiskFreeSpaceExW(com_string_utf8_to_utf16(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+                           (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
     }
@@ -206,16 +298,263 @@ int64 com_dir_size_freed(const char* dir)
     return free_size_byte;
 }
 
+int com_dir_remove(const char* dir_path)
+{
+    if(dir_path == NULL)
+    {
+        return -1;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    struct _wfinddata_t file_info;
+    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", com_string_utf8_to_utf16(dir_path).c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
+    if(handle == -1)
+    {
+        _rmdir(dir_path);
+        return false;
+    }
+    do
+    {
+        std::string path = dir_path;
+        path.append(PATH_DELIM_STR);
+        path.append(com_string_utf16_to_utf8(file_info.name));
+        if(file_info.attrib & _A_SUBDIR)
+        {
+            if(wcscmp(file_info.name, L".") == 0 || wcscmp(file_info.name, L"..") == 0)
+            {
+                continue;
+            }
+            com_dir_remove(path.c_str());
+        }
+        else
+        {
+            com_file_remove(path.c_str());
+        }
+    }
+    while(_wfindnext(handle, &file_info) == 0);
+    _findclose(handle);
+    _rmdir(dir_path);
+    return 0;
+#else
+    DIR* dir = opendir(dir_path);
+    if(dir == NULL)
+    {
+        remove(dir_path);
+        return -1;
+    }
+
+    struct dirent* ptr = NULL;
+    while((ptr = readdir(dir)) != NULL)
+    {
+#if __ANDROID__ != 1
+        if(ptr->d_name == NULL)
+        {
+            continue;
+        }
+#endif
+        if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0)
+        {
+            continue;
+        }
+        std::string path = dir_path;
+        path.append("/");
+        path.append(ptr->d_name);
+
+        if(ptr->d_type == DT_DIR)
+        {
+            com_dir_remove(path.c_str());
+        }
+        else
+        {
+            com_file_remove(path.c_str());
+        }
+    }
+
+    remove(dir_path);
+    closedir(dir);
+    return 0;
+#endif
+}
+
+void com_dir_clear(const char* dir_path)
+{
+    std::map<std::string, int> files;
+    com_dir_list(dir_path, files, false);
+    for(auto it = files.begin(); it != files.end(); it++)
+    {
+        if(it->second == FILE_TYPE_DIR)
+        {
+            com_dir_remove(it->first.c_str());
+        }
+        else
+        {
+            com_file_remove(it->first.c_str());
+        }
+    }
+}
+
+static bool com_dir_list(const char* dir_root, std::map<std::string, int>& list, const char* path_pattern, bool pattern_as_path)
+{
+    if(dir_root == NULL)
+    {
+        return false;
+    }
+
+#if defined(_WIN32) || defined(_WIN64)
+    struct _wfinddata_t file_info;
+    std::wstring dir_root_w = com_string_utf8_to_utf16(dir_root);
+    if(dir_root_w.back() != PATH_DELIM_WCHAR)
+    {
+        dir_root_w.append(PATH_DELIM_WSTR);
+    }
+    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", dir_root_w.c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
+    if(handle == -1)
+    {
+        return false;
+    }
+    do
+    {
+        std::string path = dir_root;
+        if(path.back() != PATH_DELIM_CHAR)
+        {
+            path.append(PATH_DELIM_STR);
+        }
+        path.append(com_string_utf16_to_utf8(file_info.name));
+        if(file_info.attrib & _A_SUBDIR)
+        {
+            if(wcscmp(file_info.name, L".") == 0 || wcscmp(file_info.name, L"..") == 0)
+            {
+                continue;
+            }
+            if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+            {
+                list[path] = FILE_TYPE_DIR;
+            }
+            com_dir_list(path.c_str(), list, path_pattern, pattern_as_path);
+        }
+        else if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+        {
+            list[path] = FILE_TYPE_FILE;
+        }
+    }
+    while(_wfindnext(handle, &file_info) == 0);
+    _findclose(handle);
+    return true;
+#else
+    DIR* dir = opendir(dir_root);
+    if(dir == NULL)
+    {
+        return false;
+    }
+
+    struct dirent* ptr = NULL;
+    while((ptr = readdir(dir)) != NULL)
+    {
+#if __ANDROID__ != 1
+        if(ptr->d_name == NULL)
+        {
+            continue;
+        }
+#endif
+        std::string path = dir_root;
+        if(path.back() != '/')
+        {
+            path.append("/");
+        }
+        path.append(ptr->d_name);
+        switch(ptr->d_type)
+        {
+            case DT_DIR:
+                if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0)
+                {
+                    continue;
+                }
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_DIR;
+                }
+                com_dir_list(path.c_str(), list, path_pattern, pattern_as_path);
+                break;
+            case DT_REG:
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_FILE;
+                }
+                break;
+            case DT_SOCK:
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_SOCK;
+                }
+                break;
+            case DT_LNK:
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_LINK;
+                }
+                break;
+            default:
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_UNKNOWN;
+                }
+                break;
+        }
+    }
+
+    closedir(dir);
+    return true;
+#endif
+}
+
+bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool recursion)
+{
+    if(dir_path == NULL || dir_path[0] == '\0')
+    {
+        return false;
+    }
+    const char* p = dir_path;
+    const char* p_delim = NULL;
+    do
+    {
+        if(*p == PATH_DELIM_CHAR)
+        {
+            p_delim = p;
+            continue;
+        }
+        if(*p == '?' || *p == '*' || *p == '[' || *p == ']')
+        {
+            //has pattern
+            return com_dir_list(p_delim == NULL ? "." : std::string(dir_path, (int)(p_delim - dir_path)).c_str(),
+                                list, dir_path, recursion ? false : true);
+        }
+    }
+    while(*p++);
+    std::string dir_pattern = dir_path;
+    if(dir_pattern.back() != PATH_DELIM_CHAR)
+    {
+        dir_pattern.append(PATH_DELIM_STR);
+    }
+    dir_pattern.append("*");
+
+    return com_dir_list(dir_path, list, dir_pattern.c_str(), recursion ? false : true);
+}
+
 std::string com_path_name(const char* path)
 {
     FilePath file_path(path);
     return file_path.getName();
 }
 
+std::string com_path_name_without_suffix(const char* path)
+{
+    FilePath file_path(path);
+    return file_path.getNameWithoutSuffix();
+}
+
 std::string com_path_dir(const char* path)
 {
     FilePath file_path(path);
-    return file_path.getLocationDirectory();
+    return file_path.getDir();
 }
 
 int com_file_type(const char* file)
@@ -224,6 +563,26 @@ int com_file_type(const char* file)
     {
         return FILE_TYPE_NOT_EXIST;
     }
+#if defined(_WIN32) || defined(_WIN64)
+    struct _stat buf;
+    int ret = _wstat(com_string_utf8_to_utf16(file).c_str(), &buf);
+    if(0 != ret)
+    {
+        if(errno == ENOENT)
+        {
+            return FILE_TYPE_NOT_EXIST;
+        }
+        return FILE_TYPE_UNKNOWN;
+    }
+    if(buf.st_mode & S_IFDIR)
+    {
+        return FILE_TYPE_DIR;
+    }
+    if(buf.st_mode & S_IFREG)
+    {
+        return FILE_TYPE_FILE;
+    }
+#else
     struct stat buf;
     int ret = stat(file, &buf);
     if(0 != ret)
@@ -242,13 +601,48 @@ int com_file_type(const char* file)
     {
         return FILE_TYPE_FILE;
     }
-#if __linux__ == 1
     if(buf.st_mode & S_IFLNK)
     {
         return FILE_TYPE_LINK;
     }
+    if(buf.st_mode & S_IFSOCK)
+    {
+        return FILE_TYPE_SOCK;
+    }
 #endif
     return FILE_TYPE_UNKNOWN;
+}
+
+int64 com_file_size(int fd)
+{
+    if(fd < 0)
+    {
+        return -1;
+    }
+    unsigned long filesize = 0;
+#if defined(_WIN32) || defined(_WIN64)
+    struct _stat statbuff;
+    if(_fstat(fd, &statbuff) == 0)
+    {
+        filesize = statbuff.st_size;
+    }
+#else
+    struct stat statbuff;
+    if(fstat(fd, &statbuff) == 0)
+    {
+        filesize = statbuff.st_size;
+    }
+#endif
+    return filesize;
+}
+
+int64 com_file_size(FILE* file)
+{
+    if(file == NULL)
+    {
+        return -1;
+    }
+    return com_file_size(fileno(file));
 }
 
 int64 com_file_size(const char* file_path)
@@ -260,7 +654,7 @@ int64 com_file_size(const char* file_path)
     unsigned long filesize = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
-    if(_stat(file_path, &statbuff) == 0)
+    if(_wstat(com_string_utf8_to_utf16(file_path).c_str(), &statbuff) == 0)
     {
         filesize = statbuff.st_size;
     }
@@ -274,7 +668,41 @@ int64 com_file_size(const char* file_path)
     return filesize;
 }
 
-uint32 com_file_get_create_time(const char* file_path)
+uint64 com_file_get_id(const char* file_path)
+{
+    if(file_path == NULL)
+    {
+        return 0;
+    }
+    uint64 inode = 0;
+#if defined(_WIN32) || defined(_WIN64)
+    HANDLE fp = CreateFileW(com_string_utf8_to_utf16(file_path).c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+    if(fp == NULL)
+    {
+        return 0;
+    }
+    BY_HANDLE_FILE_INFORMATION info;
+    if(GetFileInformationByHandle(fp, &info) == false)
+    {
+        return 0;
+    }
+    inode = ((uint64)info.nFileIndexHigh) << 32 | info.nFileIndexLow;
+    CloseHandle(fp);
+#else
+    if(file_path == NULL)
+    {
+        return 0;
+    }
+    struct stat statbuff;
+    if(stat(file_path, &statbuff) == 0)
+    {
+        inode = statbuff.st_ino;
+    }
+#endif
+    return inode;
+}
+
+uint32 com_file_get_change_time(const char* file_path)
 {
     if(file_path == NULL)
     {
@@ -283,7 +711,7 @@ uint32 com_file_get_create_time(const char* file_path)
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
-    if(_stat(file_path, &statbuff) == 0)
+    if(_wstat(com_string_utf8_to_utf16(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_ctime;
     }
@@ -306,7 +734,7 @@ uint32 com_file_get_modify_time(const char* file_path)
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
-    if(_stat(file_path, &statbuff) == 0)
+    if(_wstat(com_string_utf8_to_utf16(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_mtime;
     }
@@ -329,7 +757,7 @@ uint32 com_file_get_access_time(const char* file_path)
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
-    if(_stat(file_path, &statbuff) == 0)
+    if(_wstat(com_string_utf8_to_utf16(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_atime;
     }
@@ -343,104 +771,238 @@ uint32 com_file_get_access_time(const char* file_path)
     return timestamp;
 }
 
-void com_file_copy(const char* file_path_to, const char* file_path_from, bool append)
+bool com_file_set_access_time(const char* path, uint32 time_s)
+{
+    if(path == NULL)
+    {
+        return false;
+    }
+    if(time_s == 0)
+    {
+        time_s = com_time_rtc_s();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    struct _utimbuf buf;
+    buf.actime = time_s;
+    buf.modtime = com_file_get_modify_time(path);
+    _wutime(com_string_utf8_to_utf16(path).c_str(), &buf);
+#else
+    struct utimbuf buf;
+    buf.actime = time_s;
+    buf.modtime = com_file_get_modify_time(path);
+    utime(path, &buf);
+#endif
+    return true;
+}
+
+bool com_file_set_modify_time(const char* path, uint32 time_s)
+{
+    if(path == NULL)
+    {
+        return false;
+    }
+    if(time_s == 0)
+    {
+        time_s = com_time_rtc_s();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    struct _utimbuf buf;
+    buf.actime = time_s;
+    buf.modtime = time_s;
+    _wutime(com_string_utf8_to_utf16(path).c_str(), &buf);
+#else
+    struct utimbuf buf;
+    buf.actime = time_s;
+    buf.modtime = time_s;
+    utime(path, &buf);
+#endif
+    return true;
+}
+
+bool com_file_set_owner(const char* file, int uid, int gid)
+{
+#if __linux__==1
+    if(file == NULL || uid < 0 || gid < 0)
+    {
+        return false;
+    }
+    return (chown(file, uid, gid) == 0);
+#else
+    return false;
+#endif
+}
+
+bool com_file_set_mod(const char* file, int mod)
+{
+#if __linux__==1
+    if(file == NULL || mod < 0)
+    {
+        return false;
+    }
+    return (chmod(file, mod) == 0);
+#else
+    return false;
+#endif
+}
+
+bool com_file_copy(const char* file_path_to, const char* file_path_from, bool append)
 {
     if(file_path_to == NULL || file_path_from == NULL)
     {
-        return;
+        return false;
     }
-    FILE* fpR, *fpW;
-    //char buffer[8];
-    int buffer_size = 1 * 1024 * 1024;
-    uint8* buffer = new uint8[buffer_size]();
-    int lenR, lenW;
-    if((fpR = fopen(file_path_from, "r")) == NULL)
+    std::string dir = com_path_dir(file_path_to);
+    if(com_file_type(dir.c_str()) == FILE_TYPE_NOT_EXIST)
     {
-        delete[] buffer;
-        return;
+        com_dir_create(dir.c_str());
     }
-    if((fpW = fopen(file_path_to, append ? "a" : "w")) == NULL)
-    {
-        delete[] buffer;
-        com_file_close(fpR);
-        return;
-    }
-    memset(buffer, 0, buffer_size);
-    while((lenR = fread(buffer, 1, buffer_size, fpR)) > 0)
-    {
-        if((lenW = fwrite(buffer, 1, lenR, fpW)) != lenR)
-        {
-            com_file_flush(fpW);
-            com_file_close(fpR);
-            com_file_close(fpW);
-            return;
-        }
-        memset(buffer, 0, buffer_size);
-    }
-    com_file_flush(fpW);
-    com_file_close(fpR);
-    com_file_close(fpW);
-    delete[] buffer;
-    return;
-}
-
-void com_file_clean(const char* file_path)
-{
-    FILE* file = com_file_open(file_path, "w");
-    if(file)
-    {
 #if defined(_WIN32) || defined(_WIN64)
-        if(_lseeki64(_fileno(file), 0, SEEK_SET) < 0)
-        {
-            com_file_close(file);
-            return;
-        }
-        if(!SetEndOfFile((HANDLE)file))
-        {
-            com_file_close(file);
-            return;
-        }
+    std::wifstream ifs(com_string_utf8_to_utf16(file_path_from), std::ios::binary);
+    std::wofstream ofs(com_string_utf8_to_utf16(file_path_to), append ? std::ios::binary | std::ios_base::app : std::ios::binary);
 #else
-        ftruncate(fileno(file), 0);
-        lseek(fileno(file), 0, SEEK_SET);
+    std::ifstream ifs(file_path_from, std::ios::binary);
+    std::ofstream ofs(file_path_to, append ? std::ios::binary | std::ios_base::app : std::ios::binary);
 #endif
+    ofs << ifs.rdbuf();
+    ofs.flush();
+    ifs.close();
+    ofs.close();
+    return true;
+}
+
+bool com_file_truncate(FILE* file, int64 size)
+{
+    if(file == NULL)
+    {
+        LOG_E("arg incorrect");
+        return false;
+    }
+    int64 pos = com_file_seek_get(file);
+    com_file_seek_tail(file);
+    int64 total_size = com_file_seek_get(file);
+    if(size < 0)
+    {
+        size = total_size;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    if(_chsize_s(fileno(file), total_size - size) != 0)
+    {
+        com_file_seek_set(file, pos);
+        LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
+        return false;
+    }
+#else
+    if(ftruncate(fileno(file), total_size - size) != 0)
+    {
+        com_file_seek_set(file, pos);
+        LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
+        return false;
+    }
+    com_file_seek_set(file, pos);
+#endif
+    return true;
+}
+
+bool com_file_truncate(const char* file_path, int64 size)
+{
+    if(file_path == NULL)
+    {
+        LOG_E("arg incorrect");
+        return false;
+    }
+    FILE* file = com_file_open(file_path, "ab");
+    if(file == NULL)
+    {
+        LOG_E("failed to open file,errno=%d", errno);
+        return false;
+    }
+    com_file_seek_tail(file);
+    int64 total_size = com_file_seek_get(file);
+    if(size < 0)
+    {
+        size = total_size;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    if(_chsize_s(fileno(file), total_size - size) != 0)
+    {
         com_file_close(file);
+        LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
+        return false;
     }
-    return;
+#else
+    if(ftruncate(fileno(file), total_size - size) != 0)
+    {
+        com_file_close(file);
+        LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
+        return false;
+    }
+    lseek(fileno(file), total_size - size, SEEK_SET);
+#endif
+    com_file_flush(file);
+    com_file_close(file);
+    return true;
 }
 
-int com_file_seek_head(FILE* file)
+bool com_file_clean(const char* file_path)
+{
+    return com_file_truncate(file_path, -1);
+}
+
+bool com_file_seek_head(FILE* file)
 {
     if(file == NULL)
     {
-        return -1;
+        return false;
     }
-    return fseek(file, 0L, SEEK_SET);
+    return (fseek(file, 0L, SEEK_SET) == 0);
 }
 
-int com_file_seek_tail(FILE* file)
+bool com_file_seek_tail(FILE* file)
 {
     if(file == NULL)
     {
-        return -1;
+        return false;
     }
-    return fseek(file, 0L, SEEK_END);
+    return (fseek(file, 0L, SEEK_END) == 0);
 }
 
-int com_file_seek(FILE* file, int64 pos)
+bool com_file_seek_step(FILE* file, int64 pos)
 {
     if(file == NULL)
     {
-        return -1;
+        return false;
     }
-    if(pos > 0)
+    return (fseek(file, pos, SEEK_CUR) == 0);
+}
+
+bool com_file_seek_set(FILE* file, int64 pos)
+{
+    if(file == NULL)
     {
-        return fseek(file, pos, SEEK_SET);
+        return false;
+    }
+    if(pos >= 0)
+    {
+        return (fseek(file, pos, SEEK_SET) == 0);
     }
     else
     {
-        return fseek(file, pos, SEEK_END);
+        return (fseek(file, pos, SEEK_END) == 0);
     }
+}
+
+int64 com_file_seek_get(FILE* file)
+{
+    if(file == NULL)
+    {
+        return -1;
+    }
+    return ftell(file);
+}
+
+bool com_file_exist(const char* file_path)
+{
+    return FILE_TYPE_FILE == com_file_type(file_path);
 }
 
 bool com_file_create(const char* file_path)
@@ -456,7 +1018,11 @@ bool com_file_rename(const char* file_name_new, const char* file_name_old)
     {
         return false;
     }
-    return rename(file_name_old, file_name_new) == 0 ? true : false;
+#if defined(_WIN32) || defined(_WIN64)
+    return (_wrename(com_string_utf8_to_utf16(file_name_old).c_str(), com_string_utf8_to_utf16(file_name_new).c_str()) == 0);
+#else
+    return (rename(file_name_old, file_name_new) == 0);
+#endif
 }
 
 FILE* com_file_open(const char* file_path, const char* flag)
@@ -465,22 +1031,305 @@ FILE* com_file_open(const char* file_path, const char* flag)
     {
         return NULL;
     }
+#if defined(_WIN32) || defined(_WIN64)
+    return _wfopen(com_string_utf8_to_utf16(file_path).c_str(), com_string_utf8_to_utf16(flag).c_str());
+#else
     return fopen(file_path, flag);
+#endif
 }
 
-int com_file_read(FILE* file, void* buf, int size)
+CPPBytes com_file_read(const char* file, int size, int64 offset)
+{
+    if(file == NULL || size <= 0)
+    {
+        return CPPBytes();
+    }
+    FILE* fp = com_file_open(file, "rb");
+    if(fp == NULL)
+    {
+        return CPPBytes();
+    }
+    if(offset > 0)
+    {
+        com_file_seek_set(fp, offset);
+    }
+
+    CPPBytes data;
+    uint8 buf[1024];
+
+    for(size_t i = 0; i < size / sizeof(buf); i++)
+    {
+        int ret = com_file_read(fp, buf, sizeof(buf));
+        data.append(buf, ret);
+    }
+
+    int ret = com_file_read(fp, buf, size % sizeof(buf));
+    data.append(buf, ret);
+
+    com_file_close(fp);
+    return std::move(data);
+}
+
+CPPBytes com_file_read(FILE* file, int size)
+{
+    if(file == NULL || size <= 0)
+    {
+        return CPPBytes();
+    }
+
+    CPPBytes data;
+    uint8 buf[1024];
+
+    for(size_t i = 0; i < size / sizeof(buf); i++)
+    {
+        int ret = com_file_read(file, buf, sizeof(buf));
+        data.append(buf, ret);
+    }
+
+    int ret = com_file_read(file, buf, size % sizeof(buf));
+    data.append(buf, ret);
+
+    return std::move(data);
+}
+
+int64 com_file_read(FILE* file, void* buf, int64 size)
 {
     if(file == NULL || buf == NULL || size <= 0)
     {
-        return 0;
+        LOG_E("arg incorrect,file=%p,buf=%p,size=%lld", file, buf, size);
+        return -1;
     }
-    int size_readed = 0;
+    int64 size_readed = 0;
+#if 1
+    do
+    {
+        int ret = fread((uint8*)buf + size_readed, 1, size - size_readed, file);
+        if(ret <= 0)
+        {
+            if(feof(file))
+            {
+                break;
+            }
+            if(ferror(file))
+            {
+                return -1;
+            }
+        }
+        else
+        {
+            size_readed += ret;
+        }
+    }
+    while(size_readed < size);
+
+#else
     do
     {
         size_readed += fread((uint8*)buf + size_readed, 1, size - size_readed, file);
     }
     while(feof(file) == 0 && ferror(file) == 0 && size_readed < size);
+#endif
+
     return size_readed;
+}
+
+CPPBytes com_file_read_until(FILE* file, const char* str)
+{
+    return com_file_read_until(file, (const uint8*)str, com_string_len(str));
+}
+
+CPPBytes com_file_read_until(FILE* file, const uint8* data, int data_size)
+{
+    if(file == NULL || data == NULL || data_size <= 0)
+    {
+        return CPPBytes();
+    }
+
+    CPPBytes result;
+    int match_count = 0;
+    uint8 val = 0;
+    while(true)
+    {
+        if(fread(&val, 1, 1, file) != 1)
+        {
+            break;
+        }
+        result.append(val);
+        if(val != data[match_count])
+        {
+            match_count = 0;
+            continue;
+        }
+        match_count++;
+        if(match_count == data_size)
+        {
+            result.removeTail(data_size);
+            fseek(file, -1 * data_size, SEEK_CUR);
+            break;
+        }
+    }
+    return std::move(result);
+}
+
+CPPBytes com_file_read_until(FILE* file, std::function<bool(uint8)> func)
+{
+    if(file == NULL || func == NULL)
+    {
+        return CPPBytes();
+    }
+
+    CPPBytes result;
+    uint8 val = 0;
+    while(true)
+    {
+        if(fread(&val, 1, 1, file) != 1)
+        {
+            break;
+        }
+        if(func(val))
+        {
+            fseek(file, -1, SEEK_CUR);
+            break;
+        }
+        result.append(val);
+    }
+    return std::move(result);
+}
+
+int64 com_file_find(const char* file, const char* key, int64 offset)
+{
+    FILE* fp = com_file_open(file, "rb");
+    if(offset > 0)
+    {
+        com_file_seek_set(fp, offset);
+    }
+    int64 ret = com_file_find(fp, key);
+    com_file_close(fp);
+    return ret;
+}
+
+int64 com_file_find(const char* file, const uint8* key, int key_size, int64 offset)
+{
+    FILE* fp = com_file_open(file, "rb");
+    if(offset > 0)
+    {
+        com_file_seek_set(fp, offset);
+    }
+    int64 ret = com_file_find(fp, key, key_size);
+    com_file_close(fp);
+    return ret;
+}
+
+int64 com_file_find(FILE* file, const char* key)
+{
+    return com_file_find(file, (const uint8*)key, com_string_len(key));
+}
+
+int64 com_file_find(FILE* file, const uint8* key, int key_size)
+{
+    if(file == NULL || key == NULL || key_size <= 0)
+    {
+        return -1;
+    }
+    int match_count = 0;
+    while(true)
+    {
+        uint8 val = 0;
+        if(fread(&val, 1, 1, file) != 1)
+        {
+            break;
+        }
+        if(val != key[match_count])
+        {
+            match_count = 0;
+            continue;
+        }
+        match_count++;
+        if(match_count == key_size)
+        {
+            com_file_seek_step(file, -1 * key_size);
+            return com_file_seek_get(file);
+        }
+    }
+    return -3;
+}
+
+int64 com_file_rfind(const char* file, const char* key, int64 offset)
+{
+    FILE* fp = com_file_open(file, "rb");
+    if(offset < 0)
+    {
+        com_file_seek_set(fp, offset);
+    }
+    int64 ret = com_file_rfind(fp, key);
+    com_file_close(fp);
+    return ret;
+}
+
+int64 com_file_rfind(const char* file, const uint8* key, int key_size, int64 offset)
+{
+    FILE* fp = com_file_open(file, "rb");
+    if(offset < 0)
+    {
+        com_file_seek_set(fp, offset);
+    }
+    int64 ret = com_file_rfind(fp, key, key_size);
+    com_file_close(fp);
+    return ret;
+}
+
+int64 com_file_rfind(FILE* file, const char* key)
+{
+    return com_file_rfind(file, (const uint8*)key, com_string_len(key));
+}
+
+int64 com_file_rfind(FILE* file, const uint8* key, int key_size)
+{
+    if(file == NULL || key == NULL || key_size <= 0)
+    {
+        return -1;
+    }
+    com_file_seek_tail(file);
+    if(fseek(file, -1, SEEK_CUR) != 0)
+    {
+        return -2;
+    }
+    bool checked_first_char = false;
+    int match_count = 0;
+    while(true)
+    {
+        uint8 val = 0;
+        if(fread(&val, 1, 1, file) != 1)
+        {
+            break;
+        }
+        if(fseek(file, -2, SEEK_CUR) != 0)
+        {
+            int64 pos_cur = ftell(file);
+            if(pos_cur > 1)
+            {
+                break;
+            }
+
+            checked_first_char = true;
+            com_file_seek_head(file);
+        }
+        if(val != key[key_size - match_count - 1])
+        {
+            match_count = 0;
+            continue;
+        }
+        match_count++;
+        if(match_count == key_size)
+        {
+            if(!checked_first_char)
+            {
+                com_file_seek_step(file, 1);
+            }
+            return com_file_seek_get(file);
+        }
+    }
+    return -3;
 }
 
 bool com_file_readline(FILE* file, char* buf, int size)
@@ -489,24 +1338,51 @@ bool com_file_readline(FILE* file, char* buf, int size)
     {
         return false;
     }
-    if(fgets(buf, size, file) != NULL)
-    {
-        buf[size - 1] = '\0';
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    std::string result = com_file_readline(file);
+    strncpy(buf, result.c_str(), size - 1);
+    buf[size - 1] = '\0';
+    return true;
 }
 
-CPPBytes com_file_readall(const char* file_path)
+std::string com_file_readline(FILE* file)
+{
+    if(file == NULL)
+    {
+        return std::string();
+    }
+    std::string result;
+    char buf[1024];
+    while(fgets(buf, sizeof(buf), file) != NULL)
+    {
+        result.append(buf);
+        if(result.rfind('\n') != std::string::npos)
+        {
+            break;
+        }
+    }
+    if(result.back() == '\n')
+    {
+        result.pop_back();
+    }
+    return result;
+}
+
+CPPBytes com_file_readall(const std::string& file_path, int64 offset)
+{
+    return com_file_readall(file_path.c_str());
+}
+
+CPPBytes com_file_readall(const char* file_path, int64 offset)
 {
     CPPBytes bytes;
-    FILE* file = com_file_open(file_path, "r");
+    FILE* file = com_file_open(file_path, "rb");
     if(file == NULL)
     {
         return bytes;
+    }
+    if(offset > 0)
+    {
+        com_file_seek_set(file, offset);
     }
     uint8 buf[1024];
     int size = 0;
@@ -518,7 +1394,7 @@ CPPBytes com_file_readall(const char* file_path)
     return bytes;
 }
 
-int com_file_write(FILE* file, const void* buf, int size)
+int64 com_file_write(FILE* file, const void* buf, int size)
 {
     if(file == NULL || buf == NULL || size <= 0)
     {
@@ -526,7 +1402,7 @@ int com_file_write(FILE* file, const void* buf, int size)
     }
 
     int len = -1;
-    int total_size = 0;
+    int64 total_size = 0;
     while(total_size < size
             && (len = fwrite((uint8*)buf + total_size, 1, size - total_size, file)) > 0)
     {
@@ -536,13 +1412,17 @@ int com_file_write(FILE* file, const void* buf, int size)
     {
         return total_size;
     }
-    LOG_W("total_size=%d,size=%d,ferror=%d", total_size, size, ferror(file));
+    LOG_E("len=%d,total_size=%lld,size=%d,errno=%d", len, total_size, size, errno);
     return -1;
 }
 
 
-int com_file_writef(FILE* fp, const char* fmt, ...)
+int64 com_file_writef(FILE* fp, const char* fmt, ...)
 {
+    if(fp == NULL || fmt == NULL)
+    {
+        return -1;
+    }
     std::string str;
     va_list args;
     va_start(args, fmt);
@@ -561,6 +1441,78 @@ int com_file_writef(FILE* fp, const char* fmt, ...)
         }
     }
     return com_file_write(fp, str.data(), str.length());
+}
+
+int64 com_file_writef(const char* file, const char* fmt, ...)
+{
+    if(file == NULL || fmt == NULL)
+    {
+        return -1;
+    }
+
+    std::string str;
+    va_list args;
+    va_start(args, fmt);
+    int len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+    if(len > 0)
+    {
+        len += 1;  //上面返回的长度不包含\0，这里加上
+        std::vector<char> buf(len);
+        va_start(args, fmt);
+        len = vsnprintf(buf.data(), len, fmt, args);
+        va_end(args);
+        if(len > 0)
+        {
+            str.assign(buf.data(), len);
+        }
+    }
+
+    FILE* fp = com_file_open(file, "w+b");
+    if(fp == NULL)
+    {
+        return -1;
+    }
+    int64 ret = com_file_write(fp, str.data(), str.length());
+    com_file_flush(fp);
+    com_file_close(fp);
+    return ret;
+}
+
+int64 com_file_appendf(const char* file, const char* fmt, ...)
+{
+    if(file == NULL || fmt == NULL)
+    {
+        return -1;
+    }
+
+    std::string str;
+    va_list args;
+    va_start(args, fmt);
+    int len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+    if(len > 0)
+    {
+        len += 1;  //上面返回的长度不包含\0，这里加上
+        std::vector<char> buf(len);
+        va_start(args, fmt);
+        len = vsnprintf(buf.data(), len, fmt, args);
+        va_end(args);
+        if(len > 0)
+        {
+            str.assign(buf.data(), len);
+        }
+    }
+
+    FILE* fp = com_file_open(file, "a+b");
+    if(fp == NULL)
+    {
+        return -1;
+    }
+    int64 ret = com_file_write(fp, str.data(), str.length());
+    com_file_flush(fp);
+    com_file_close(fp);
+    return ret;
 }
 
 void com_file_close(FILE* file)
@@ -660,9 +1612,24 @@ bool com_file_crop(const char* file_name, uint8 start_percent_keepd, uint8 end_p
     return com_file_rename(file_name, file_temp);
 }
 
-void com_file_remove(const char* file_name)
+bool com_file_remove(const char* file_name)
 {
-    remove(file_name);
+    if(file_name == NULL)
+    {
+        return false;
+    }
+    int ret = 0;
+#if defined(_WIN32) || defined(_WIN64)
+    ret = _wremove(com_string_utf8_to_utf16(file_name).c_str());
+#else
+    ret = remove(file_name);
+#endif
+    if(ret != 0)
+    {
+        LOG_E("failed to remove %s,ret=%d", file_name, errno);
+        return false;
+    }
+    return true;
 }
 
 int com_file_get_fd(FILE* file)
@@ -674,70 +1641,85 @@ int com_file_get_fd(FILE* file)
     return fileno(file);
 }
 
-bool com_file_lock(FILE* file, bool read_lock, bool wait)
+bool com_file_lock(FILE* file, bool share_read, bool wait)
 {
     if(file == NULL)
     {
         return false;
     }
-    return com_file_lock(fileno(file), read_lock, wait);
+    return com_file_lock(fileno(file), share_read, wait);
 }
-bool com_file_lock(int fd, bool read_lock, bool wait)
+
+bool com_file_lock(int fd, bool share_read, bool wait)
 {
     if(fd < 0)
     {
         return false;
     }
-#if __linux__ == 1
-    struct flock fl;
-    memset(&fl, 0, sizeof(struct flock));
-    fl.l_type = read_lock ? F_RDLCK : F_WRLCK;
-    fl.l_whence = SEEK_SET;
-    fl.l_start = 0;
-    fl.l_len = 0;//意味着加锁一直加到EOF
-
-    int ret = fcntl(fd, wait ? F_SETLKW : F_SETLK, &fl);
-    return (ret == 0);
-#else
+#if defined(_WIN32) || defined(_WIN64)
     return false;
+#else
+    struct flock lock;
+    memset(&lock, 0, sizeof(struct flock));
+    lock.l_type = share_read ? F_RDLCK : F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+
+    int ret = fcntl(fd, wait ? F_SETLKW : F_SETLK, &lock);
+    return (ret == 0);
 #endif
 }
 
-bool com_file_is_locked(FILE* file, bool read_lock)
+bool com_file_is_locked(FILE* file)
+{
+    return com_file_is_locked(fileno(file));
+}
+
+bool com_file_is_locked(FILE* file, int& type, int64& pid)
 {
     if(file == NULL)
     {
         return false;
     }
-    return com_file_is_locked(fileno(file), read_lock);
+    return com_file_is_locked(fileno(file), type, pid);
 }
-bool com_file_is_locked(int fd, bool read_lock)
+
+bool com_file_is_locked(int fd)
+{
+    int type = 0;
+    int64 pid = 0;
+    return com_file_is_locked(fd, type, pid);
+}
+
+bool com_file_is_locked(int fd, int& type, int64& pid)
 {
     if(fd < 0)
     {
         return false;
     }
-#if __linux__ == 1
-    struct flock fl;
-    memset(&fl, 0, sizeof(struct flock));
-    fl.l_type = read_lock ? F_RDLCK : F_WRLCK;
-    fl.l_whence = SEEK_SET;
-    fl.l_start = 0;
-    fl.l_len = 0;//意味着加锁一直加到EOF
+#if defined(_WIN32) || defined(_WIN64)
+    return false;
+#else
+    struct flock lock;
+    memset(&lock, 0, sizeof(struct flock));
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
 
-    int ret = fcntl(fd, F_GETLK, &fl);
+    int ret = fcntl(fd, F_GETLK, &lock);
     if(ret != 0)
     {
         return false;
     }
-    if(fl.l_type == F_UNLCK)
+    type = lock.l_type;
+    if(lock.l_type == F_UNLCK)
     {
         return false;
     }
+    pid = (int64)lock.l_pid;
 
-    return (fl.l_pid != 0);
-#else
-    return false;
+    return true;
 #endif
 }
 
@@ -756,7 +1738,9 @@ bool com_file_unlock(int fd)
     {
         return false;
     }
-#if __linux__ == 1
+#if defined(_WIN32) || defined(_WIN64)
+    return false;
+#else
     struct flock fl;
     memset(&fl, 0, sizeof(struct flock));
     fl.l_type = F_UNLCK;
@@ -766,8 +1750,29 @@ bool com_file_unlock(int fd)
 
     int ret = fcntl(fd, F_SETLK, &fl);
     return (ret == 0);
+#endif
+}
+
+std::string com_file_path_absolute(const char* path)
+{
+    if(path == NULL || path[0] == '\0')
+    {
+        return std::string();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    wchar_t path_full[_MAX_PATH];
+    if(_wfullpath(path_full, com_string_utf8_to_utf16(path).c_str(), sizeof(path_full)) == NULL)
+    {
+        return std::string();
+    }
+    return com_string_utf16_to_utf8(path_full);
 #else
-    return false;
+    char path_full[PATH_MAX];
+    if(realpath(path, path_full) == NULL)
+    {
+        return std::string();
+    }
+    return path_full;
 #endif
 }
 
@@ -792,47 +1797,42 @@ bool FilePath::parse(const char* path)
         return false;
     }
 
-    std::string path_str = path;
-    if(path_str == PATH_DELIM_STR)
+    this->path = path;
+    if(this->path.length() > 1 && this->path.back() == PATH_DELIM_CHAR)
     {
-        is_dir = true;
-        dir = PATH_DELIM_STR;
-        name = dir;
-        return false;
+        this->path.pop_back();
+    }
+    if(this->path.back() == ':'  /* C: */
+            || this->path == PATH_DELIM_STR
+            || this->path == "."
+            || this->path == "..")
+    {
+        dir = path;
+        name = path;
+        return true;
     }
 
-    if(path_str == ".")
-    {
-        is_dir = true;
-        dir = ".";
-        name = dir;
-        return false;
-    }
-
-    if(path_str == "..")
-    {
-        is_dir = true;
-        dir = "..";
-        name = dir;
-        return false;
-    }
-
-    if(path_str.back() == PATH_DELIM_CHAR)
-    {
-        is_dir = true;
-        path_str.erase(path_str.length() - 1, 1);
-    }
     //  ./1.txt   /1.txt  ./a/1.txt  /a/1.txt ./a/b/ /a/b/
-    std::string::size_type pos = path_str.find_last_of(PATH_DELIM_CHAR);
+    std::string::size_type pos = this->path.find_last_of(PATH_DELIM_CHAR);
     if(pos == std::string::npos)
     {
         dir = ".";
-        name = path_str;
+        name = this->path;
         return false;
     }
 
-    name = path_str.substr(pos + 1);
-    dir = path_str.substr(0, pos + 1);
+    name = this->path.substr(pos + 1);
+    dir = this->path.substr(0, pos + 1);
+    if(dir != "/") /*  /1.txt  */
+    {
+        dir.pop_back();//目录不带最后的分隔符，除非是单独的一个根目录
+    }
+    pos = name.find_last_of('.');
+    if(pos != std::string::npos)
+    {
+        suffix = name.substr(pos + 1);
+        name_without_suffix = name.substr(0, pos);
+    }
     return true;
 }
 
@@ -841,13 +1841,225 @@ std::string FilePath::getName()
     return name;
 }
 
-std::string FilePath::getLocationDirectory()
+std::string FilePath::getNameWithoutSuffix()
+{
+    return name_without_suffix;
+}
+
+std::string FilePath::getDir()
 {
     return dir;
 }
 
-bool FilePath::isDirectory()
+std::string FilePath::getPath()
 {
-    return is_dir;
+    return path;
+}
+
+std::string FilePath::getSuffix()
+{
+    return suffix;
+}
+
+FileDetail::FileDetail(const char* path) : FilePath(path)
+{
+    if(path == NULL)
+    {
+        return;
+    }
+    parse(path);
+    this->path = path;
+#if defined(_WIN32) || defined(_WIN64)
+    struct _stat buf;
+    int ret = _wstat(com_string_utf8_to_utf16(path).c_str(), &buf);
+    if(0 != ret)
+    {
+        if(errno == ENOENT)
+        {
+            type = FILE_TYPE_NOT_EXIST;
+        }
+        return;
+    }
+    if(buf.st_mode & S_IFDIR)
+    {
+        type = FILE_TYPE_DIR;
+    }
+    else if(buf.st_mode & S_IFREG)
+    {
+        type = FILE_TYPE_FILE;
+    }
+#else
+    struct stat buf;
+    int ret = stat(this->path.c_str(), &buf);
+    if(0 != ret)
+    {
+        if(errno == ENOENT)
+        {
+            type = FILE_TYPE_NOT_EXIST;
+        }
+        return;
+    }
+    if(buf.st_mode & S_IFDIR)
+    {
+        type = FILE_TYPE_DIR;
+    }
+    else if(buf.st_mode & S_IFREG)
+    {
+        type = FILE_TYPE_FILE;
+    }
+    else if(buf.st_mode & S_IFLNK)
+    {
+        type = FILE_TYPE_LINK;
+    }
+    else if(buf.st_mode & S_IFSOCK)
+    {
+        type = FILE_TYPE_SOCK;
+    }
+#endif
+    size = buf.st_size;
+    time_change_s = buf.st_ctime;
+    time_access_s = buf.st_atime;
+    time_modify_s = buf.st_mtime;
+    return;
+}
+
+FileDetail::~FileDetail()
+{
+}
+
+int FileDetail::getType()
+{
+    return type;
+}
+
+uint64 FileDetail::getSize()
+{
+    return size;
+}
+
+uint32 FileDetail::getChangeTimeS()
+{
+    return time_change_s;
+}
+
+uint32 FileDetail::getAccessTimeS()
+{
+    return time_access_s;
+}
+
+uint32 FileDetail::getModifyTimeS()
+{
+    return time_modify_s;
+}
+
+bool FileDetail::setAccessTime(uint32 timestamp_s)
+{
+    if(path.empty())
+    {
+        return false;
+    }
+    if(timestamp_s == 0)
+    {
+        timestamp_s = com_time_rtc_s();
+    }
+    time_access_s = timestamp_s;
+    time_change_s = timestamp_s;
+#if defined(_WIN32) || defined(_WIN64)
+    struct _utimbuf buf;
+    buf.actime = time_access_s;
+    buf.modtime = time_modify_s;
+    _wutime(com_string_utf8_to_utf16(path).c_str(), &buf);
+#else
+    struct utimbuf buf;
+    buf.actime = time_access_s;
+    buf.modtime = time_modify_s;
+    utime(path.c_str(), &buf);
+#endif
+    return true;
+}
+
+bool FileDetail::setModifyTime(uint32 timestamp_s)
+{
+    if(path.empty())
+    {
+        return false;
+    }
+    if(timestamp_s == 0)
+    {
+        timestamp_s = com_time_rtc_s();
+    }
+    time_access_s = timestamp_s;
+    time_modify_s = timestamp_s;
+    time_change_s = timestamp_s;
+#if defined(_WIN32) || defined(_WIN64)
+    struct _utimbuf buf;
+    buf.actime = time_access_s;
+    buf.modtime = time_modify_s;
+    _wutime(com_string_utf8_to_utf16(path).c_str(), &buf);
+#else
+    struct utimbuf buf;
+    buf.actime = time_access_s;
+    buf.modtime = time_modify_s;
+    utime(path.c_str(), &buf);
+#endif
+    return true;
+}
+
+SingleInstanceProcess::SingleInstanceProcess(const char* file_lock)
+{
+    std::string file;
+    if(file_lock == NULL)
+    {
+        file = com_string_format("%s%ssip_%s.lck", com_dir_system_temp().c_str(), PATH_DELIM_STR, com_get_bin_name().c_str());
+    }
+    else
+    {
+        file = file_lock;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    SECURITY_ATTRIBUTES sa;
+    SECURITY_DESCRIPTOR sd;
+    InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+    SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = FALSE;
+    sa.lpSecurityDescriptor = &sd;
+
+    fp = CreateMutexW(&sa, FALSE, com_string_utf8_to_utf16(file).c_str());
+    if(ERROR_ALREADY_EXISTS == GetLastError())
+    {
+        LOG_W("process already running");
+        exit(0);
+    }
+#else
+    fp = com_file_open(file.c_str(), "w+");
+    if(fp == NULL)
+    {
+        LOG_E("file to create process lock file, errno=%d", errno);
+    }
+    else
+    {
+        int type = 0;
+        int64 pid = 0;
+        if(com_file_is_locked((FILE*)fp, type, pid))
+        {
+            LOG_W("process already running, pid=%llu, type=%d", pid, type);
+            exit(0);
+        }
+        com_file_lock((FILE*)fp);
+    }
+#endif
+}
+
+SingleInstanceProcess::~SingleInstanceProcess()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    if(fp)
+    {
+        CloseHandle((HANDLE)fp);
+    }
+#else
+    com_file_close((FILE*)fp);
+#endif
 }
 

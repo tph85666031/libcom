@@ -16,15 +16,15 @@ public:
     void closeClient(int fd);
     int send(int clientfd, const void* data, int data_size);
     int send(const char* host, uint16 port, const void* data, int data_size);
+    virtual void broadcast(const void* data, int data_size);
 protected:
     virtual void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
     virtual void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
 private:
     int acceptClient();
     int recvData(int clientfd);
-    static void ThreadSocketServerReceiver(SocketTcpServer* socket_server);
-    static void ThreadSocketServerListener(SocketTcpServer* socket_server);
-    static void ThreadSocketServerDispatcher(SocketTcpServer* socket_server);
+    static void ThreadSocketServerReceiver(SocketTcpServer* ctx);
+    static void ThreadSocketServerListener(SocketTcpServer* ctx);
 private:
     uint16 server_port;
     int server_fd;
@@ -38,7 +38,7 @@ private:
     std::map<int, SOCKET_CLIENT_DES> clients;
     CPPMutex mutexfds;
     CPPSem semfds;
-    std::queue<SOCKET_CLIENT_DES> ready_fds;
+    std::deque<SOCKET_CLIENT_DES> ready_fds;
 };
 
 class UnixDomainTcpServer
@@ -52,6 +52,7 @@ public:
     int send(int clientfd, const void* data, int data_size);
     std::string& getServerFileName();
     int getSocketfd();
+    virtual void broadcast(const void* data, int data_size);
 protected:
     virtual void onConnectionChanged(std::string& client_file_name, int socketfd, bool connected);
     virtual void onRecv(std::string& client_file_name, int socketfd, uint8* data, int data_size);

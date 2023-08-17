@@ -1,4 +1,7 @@
-#include "com.h"
+#include "com_cache.h"
+#include "com_file.h"
+#include "com_log.h"
+#include "com_test.h"
 
 void com_cache_unit_test_suit(void** state)
 {

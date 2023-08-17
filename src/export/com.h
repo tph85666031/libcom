@@ -9,9 +9,7 @@
 #include "com_err.h"
 #include "com_file.h"
 #include "com_kv.h"
-#include "com_kvs.h"
 #include "com_md5.h"
-#include "com_nmea.h"
 #include "com_stack.h"
 #include "com_log.h"
 #include "com_serializer.h"
@@ -25,9 +23,10 @@
 #include "com_dns.h"
 #include "com_auto_test.h"
 #include "com_test.h"
+#include "com_xml.h"
+#include "com_sync.h"
 
 #include "CJsonObject.h"
-#include "minmea.h"
 #include "sqlite3.h"
 #include "tinyxml2.h"
 

@@ -3,7 +3,7 @@
 
 #include "com_base.h"
 
-class URL
+class COM_EXPORT URL
 {
 public:
     URL();

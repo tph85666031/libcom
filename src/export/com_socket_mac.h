@@ -1,5 +1,5 @@
-#ifndef __COM_SOCKET_LINUX_H__
-#define __COM_SOCKET_LINUX_H__
+#ifndef __COM_SOCKET_MAC_H__
+#define __COM_SOCKET_MAC_H__
 
 #if defined(__APPLE__)
 #include "com_base.h"
@@ -13,14 +13,21 @@ public:
     bool IOMCreate();
     void IOMAddMonitor(int clientfd);
     void IOMRemoveMonitor(int fd);
-    int IOMWaitFor(struct kevent *event_list, int event_len);
+    int IOMWaitFor(struct kevent* event_list, int event_len);
 public:
     virtual int startServer();
-    virtual bool initListen() { return false; }
-    virtual int acceptClient() { return -1; }
+    virtual bool initListen()
+    {
+        return false;
+    }
+    virtual int acceptClient()
+    {
+        return -1;
+    }
     virtual void closeClient(int fd);
     virtual void stopServer();
     virtual int send(int clientfd, const void* data, int data_size);
+    virtual void broadcast(const void* data, int data_size);
     virtual int recvData(int clientfd);
     virtual void onConnectionChanged(std::string& host_or_file, uint16 port, int socketfd, bool connected) {}
     virtual void onRecv(std::string& host_or_file, uint16 port, int socketfd, uint8* data, int data_size) {}
@@ -53,7 +60,9 @@ public:
 public:
     virtual bool initListen() override;
     virtual int acceptClient() override;
+    int send(int clientfd, const void* data, int data_size) override;
     int send(const char* host, uint16 port, const void* data, int data_size);
+    virtual void broadcast(const void* data, int data_size) override;
 private:
     static void ThreadSocketServerDispatcher(SocketTcpServer* socket_server);
 };
@@ -66,12 +75,13 @@ public:
 public:
     virtual bool initListen() override;
     virtual int acceptClient() override;
+    int send(int clientfd, const void* data, int data_size) override;
     int send(const char* client_file_name_wildcard, const void* data, int data_size);
+    virtual void broadcast(const void* data, int data_size) override;
 private:
-    int server_fd;
     std::string server_file_name;
 };
 #endif
 
-#endif /* __COM_SOCKET_LINUX_H__ */
+#endif /* __COM_SOCKET_MAC_H__ */
 

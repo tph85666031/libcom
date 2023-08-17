@@ -1,4 +1,6 @@
-#include "com.h"
+#include "com_crc.h"
+#include "com_log.h"
+#include "com_test.h"
 
 void com_crc_unit_test_suit(void** state)
 {

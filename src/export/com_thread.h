@@ -6,40 +6,50 @@
 #include <map>
 #include <thread>
 #include "com_base.h"
-#include "com_log.h"
 
-void com_thread_set_name(std::thread* t, const char* name);
-void com_thread_set_name(std::thread& t, const char* name);
-void com_thread_set_name(uint64 tid_posix, const char* name);
-void com_thread_set_name(const char* name);
-std::string com_thread_get_name(std::thread* t);
-std::string com_thread_get_name(std::thread& t);
-std::string com_thread_get_name(uint64 tid_posix);
-std::string com_thread_get_name();
-uint64 com_thread_get_tid_posix();
-uint64 com_thread_get_tid();
-uint64 com_thread_get_pid();
+COM_EXPORT bool com_process_exist(int pid);
+COM_EXPORT int com_process_join(int pid);
+COM_EXPORT int com_process_create(const char* app, std::vector<std::string> args = std::vector<std::string>());
+COM_EXPORT int com_process_get_pid(const char* name = NULL);
+COM_EXPORT std::vector<int> com_process_get_pid_all(const char* name = NULL);
+COM_EXPORT int com_process_get_ppid(int pid = 0);
+COM_EXPORT std::string com_process_get_name(int pid = 0);
 
+COM_EXPORT void com_thread_set_name(std::thread* t, const char* name);
+COM_EXPORT void com_thread_set_name(std::thread& t, const char* name);
+COM_EXPORT void com_thread_set_name(uint64 tid_posix, const char* name);
+COM_EXPORT void com_thread_set_name(const char* name);
+COM_EXPORT std::string com_thread_get_name(std::thread* t);
+COM_EXPORT std::string com_thread_get_name(std::thread& t);
+COM_EXPORT std::string com_thread_get_name(uint64 tid_posix);
+COM_EXPORT std::string com_thread_get_name();
+COM_EXPORT uint64 com_thread_get_tid_posix();
+COM_EXPORT uint64 com_thread_get_tid();
+
+#pragma pack(push)
+#pragma pack(4)
 typedef struct
 {
     std::thread* t;
     int running_flag;//-1=quit,0=pause,1=running,
 } THREAD_POLL_INFO;
+#pragma pack(pop)
 
-class ThreadPool
+class COM_EXPORT ThreadPool
 {
 public:
     ThreadPool();
     virtual ~ThreadPool();
     ThreadPool& setThreadsCount(int minThreads, int maxThreads);
     ThreadPool& setQueueSize(int queue_size_per_thread);
-    bool pushMessage(Message& msg);
+    bool pushPoolMessage(Message&& msg);
+    bool pushPoolMessage(const Message& msg);
     void waitAllDone(int timeout_ms = 0);
     void startThreadPool();
     void stopThreadPool();
     virtual void threadPoolRunner(Message& msg) {};
 private:
-    static void ThreadRunner(ThreadPool* poll);
+    static void ThreadLoop(ThreadPool* poll);
     static void ThreadManager(ThreadPool* poll);
     void createThread(int count);
     void recycleThread();
@@ -56,8 +66,95 @@ private:
     std::atomic<int> min_thread_count;
     std::atomic<int> max_thread_count;
     std::atomic<int> queue_size_per_thread;
-    std::atomic<bool> running;
+    std::atomic<bool> thread_mgr_running;
     std::thread thread_mgr;
+};
+
+template <typename T>
+class COM_EXPORT ThreadRunner
+{
+public:
+    ThreadRunner()
+    {
+        thread_runner_running = true;
+        thread_runner = std::thread(ThreadLoop, this);
+    };
+    virtual ~ThreadRunner()
+    {
+        thread_runner_running = false;
+        if(thread_runner.joinable())
+        {
+            thread_runner.join();
+        }
+    };
+
+    bool pushRunnerMessage(const T& msg)
+    {
+        if(thread_runner_running == false)
+        {
+            return false;
+        }
+        mutex_msgs.lock();
+        msgs.push(msg);
+        mutex_msgs.unlock();
+        condition.notifyOne();
+        return true;
+    };
+
+    bool pushRunnerMessage(T&& msg)
+    {
+        if(thread_runner_running == false)
+        {
+            return false;
+        }
+        mutex_msgs.lock();
+        msgs.push(msg);
+        mutex_msgs.unlock();
+        condition.notifyOne();
+        return true;
+    };
+
+    size_t getMessageCount()
+    {
+        std::lock_guard<std::mutex> lck(mutex_msgs);
+        return msgs.size();
+    }
+private:
+    virtual void threadRunner(T& msg) {};
+    static void ThreadLoop(ThreadRunner<T>* ctx)
+    {
+        if(ctx == NULL)
+        {
+            return;
+        }
+        while(ctx->thread_runner_running)
+        {
+            ctx->condition.wait(1000);
+            if(ctx->thread_runner_running == false)
+            {
+                break;
+            }
+
+            ctx->mutex_msgs.lock();
+            if(ctx->msgs.empty())
+            {
+                ctx->mutex_msgs.unlock();
+                continue;
+            }
+            T msg = ctx->msgs.front();
+            ctx->msgs.pop();
+            ctx->mutex_msgs.unlock();
+            ctx->threadRunner(msg);
+        }
+        return;
+    };
+private:
+    std::mutex mutex_msgs;
+    std::queue<T> msgs;
+    CPPCondition condition;
+
+    std::thread thread_runner;
+    std::atomic<bool> thread_runner_running = {false};
 };
 
 #endif /* __COM_THREAD_H__ */

@@ -2,6 +2,7 @@
 #include "com_base.h"
 #include "com_file.h"
 #include "com_md5.h"
+#include "com_log.h"
 
 #define READ_DATA_SIZE  1024
 
@@ -49,7 +50,7 @@ static void md5_encode(unsigned char* output, unsigned int* input, unsigned int 
     unsigned int i = 0;
     unsigned int j = 0;
 
-    while (j < len)
+    while(j < len)
     {
         output[j] = input[i] & 0xFF;
         output[j + 1] = (input[i] >> 8) & 0xFF;
@@ -65,7 +66,7 @@ static void md5_decode(unsigned int* output, unsigned char* input, unsigned int 
     unsigned int i = 0;
     unsigned int j = 0;
 
-    while (j < len)
+    while(j < len)
     {
         output[i] = (input[j]) |
                     (input[j + 1] << 8) |
@@ -164,7 +165,7 @@ static void md5_transform(unsigned int state[4], unsigned char block[64])
 
 static void md5_init(CPPMD5_CTX* context)
 {
-    if (context == NULL)
+    if(context == NULL)
     {
         return;
     }
@@ -187,18 +188,18 @@ static void md5_update(CPPMD5_CTX* context, unsigned char* input, unsigned int i
     partlen = 64 - index;
     context->count[0] += inputlen << 3;
 
-    if (context->count[0] < (inputlen << 3))
+    if(context->count[0] < (inputlen << 3))
     {
         context->count[1]++;
     }
     context->count[1] += inputlen >> 29;
 
-    if (inputlen >= partlen)
+    if(inputlen >= partlen)
     {
         memcpy(&context->buffer[index], input, partlen);
         md5_transform(context->state, context->buffer);
 
-        for (i = partlen; i + 64 <= inputlen; i += 64)
+        for(i = partlen; i + 64 <= inputlen; i += 64)
         {
             md5_transform(context->state, &input[i]);
         }
@@ -234,35 +235,51 @@ CPPMD5::~CPPMD5()
 {
 }
 
-void CPPMD5::append(const uint8* data, uint32 data_size)
+void CPPMD5::append(const void* data, int data_size)
 {
-    if (data == NULL || data_size == 0)
+    if(data == NULL || data_size <= 0)
     {
         return;
     }
     md5_update(&ctx, (unsigned char*)data, data_size);
 }
 
-void CPPMD5::appendFile(const char* file_path)
+void CPPMD5::appendFile(const char* file_path, int64 offset, int64 size)
 {
-    if (file_path == NULL)
+    if(file_path == NULL || size < -1 || offset < 0)
     {
+        LOG_E("arg incorrect");
         return;
     }
-    FILE* file = com_file_open(file_path, "r");
-    if (file == NULL)
+    FILE* file = com_file_open(PATH_TO_LOCAL(file_path).c_str(), "rb");
+    if(file == NULL)
     {
+        LOG_E("failed to open file:%s,errno=%d", file_path, errno);
         return;
+    }
+    if(size == -1)
+    {
+        size = com_file_size(file);
+    }
+    if(offset > 0)
+    {
+        com_file_seek_set(file, offset);
     }
     uint8 buf[READ_DATA_SIZE];
-    while (true)
+    int64 size_readed = 0;
+    while(size_readed < size)
     {
-        int ret = com_file_read(file, buf, sizeof(buf));
-        if (ret <= 0)
+        int64 ret = com_file_read(file, buf, sizeof(buf));
+        if(ret <= 0)
         {
             break;
         }
+        if(size_readed + ret > size)
+        {
+            ret = size - size_readed;
+        }
         append(buf, ret);
+        size_readed += ret;
     }
     com_file_close(file);
     return;
@@ -275,5 +292,19 @@ CPPBytes CPPMD5::finish()
     md5_final(&ctx, data);
     md5_init(&ctx);
     return CPPBytes(data, sizeof(data));
+}
+
+CPPBytes CPPMD5::Digest(const void* data, int data_size)
+{
+    CPPMD5 md5;
+    md5.append(data, data_size);
+    return md5.finish();
+}
+
+CPPBytes CPPMD5::Digest(const char* file_path)
+{
+    CPPMD5 md5;
+    md5.appendFile(file_path);
+    return md5.finish();
 }
 

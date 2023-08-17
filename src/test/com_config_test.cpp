@@ -1,11 +1,12 @@
-#include "com.h"
+#include "com_config.h"
+#include "com_file.h"
+#include "com_log.h"
+#include "com_test.h"
 
 void com_config_unit_test_suit(void** state)
 {
-    com_file_remove("1.ini");
-    com_file_remove("/tmp/.1.ini");
-    com_file_remove("/tmp/.1.ini.bak");
-    FILE* file =  com_file_open("1.ini", "w+");
+    com_file_remove("测试配置文件.ini");
+    FILE* file =  com_file_open("测试配置文件.ini", "w+");
     ASSERT_NOT_NULL(file);
     com_file_writef(file, "id=%d\n", 0);
     com_file_writef(file, "name=%s\n", "000");
@@ -41,62 +42,63 @@ void com_config_unit_test_suit(void** state)
     com_file_writef(file, "empty=\n");
     com_file_flush(file);
     com_file_close(file);
-    CPPConfig config("1.ini", false);
-    ASSERT_FALSE(config.isGroupExist(NULL));
-    ASSERT_TRUE(config.isGroupExist("GROUP_1"));
-    ASSERT_TRUE(config.isGroupExist("GROUP_2"));
-    ASSERT_TRUE(config.isGroupExist("GROUP_3"));
-    ASSERT_INT_EQUAL(config.getGroupKeyCount(NULL), -1);
+    CPPConfig configx("测试配置文件.ini");
+    CPPConfig config = configx;
+    ASSERT_FALSE(config.isSectionExist(NULL));
+    ASSERT_TRUE(config.isSectionExist("GROUP_1"));
+    ASSERT_TRUE(config.isSectionExist("GROUP_2"));
+    ASSERT_TRUE(config.isSectionExist("GROUP_3"));
+    ASSERT_INT_EQUAL(config.getSectionKeyCount(NULL), 7);
     ASSERT_INT_EQUAL(config.getInt32(NULL, "id"), 0);
     ASSERT_STR_EQUAL(config.getString(NULL, "name").c_str(), "000");
     ASSERT_INT_EQUAL(config.getInt32(NULL, "int"), -100);
     ASSERT_INT_EQUAL(config.getUInt32(NULL, "uint"), 100);
     ASSERT_TRUE(config.getBool(NULL, "bool", false));
-    ASSERT_INT_EQUAL(config.getGroupKeyCount("GROUP_1"), 7);
+    ASSERT_INT_EQUAL(config.getSectionKeyCount("GROUP_1"), 7);
     ASSERT_INT_EQUAL(config.getInt32("GROUP_1", "id"), 1);
     ASSERT_STR_EQUAL(config.getString("GROUP_1", "name").c_str(), "abc");
     ASSERT_INT_EQUAL(config.getInt32("GROUP_1", "int"), -101);
     ASSERT_INT_EQUAL(config.getUInt32("GROUP_1", "uint"), 101);
     ASSERT_TRUE(config.getBool("GROUP_1", "bool", false));
-    ASSERT_INT_EQUAL(config.getGroupKeyCount("GROUP_2"), 7);
+    ASSERT_INT_EQUAL(config.getSectionKeyCount("GROUP_2"), 7);
     ASSERT_INT_EQUAL(config.getInt32("GROUP_2", "id"), 2);
     ASSERT_STR_EQUAL(config.getString("GROUP_2", "name").c_str(), "def");
     ASSERT_INT_EQUAL(config.getInt32("GROUP_2", "int"), -102);
     ASSERT_INT_EQUAL(config.getUInt32("GROUP_2", "uint"), 102);
     ASSERT_FALSE(config.getBool("GROUP_2", "bool", false));
-    ASSERT_INT_EQUAL(config.getGroupKeyCount("GROUP_3"), 8);
+    ASSERT_INT_EQUAL(config.getSectionKeyCount("GROUP_3"), 8);
     ASSERT_INT_EQUAL(config.getInt32("GROUP_3", "id"), 3);
-    ASSERT_STR_EQUAL(config.getString("GROUP_3", "name").c_str(), "ghi");
+    ASSERT_STR_EQUAL(config.getString("GROUP_3", "name").c_str(), "ghi;comment");
     ASSERT_INT_EQUAL(config.getInt32("GROUP_3", "int"), -103);
     ASSERT_INT_EQUAL(config.getUInt32("GROUP_3", "uint"), 103);
     ASSERT_FALSE(config.getBool("GROUP_3", "bool", false));
     ASSERT_STR_EQUAL(config.getString("GROUP_3", "empty").c_str(), "");
-    com_file_remove("1.ini");
+    com_file_remove("测试配置文件.ini");
     LOG_D("bin name=%s", com_get_bin_name().c_str());
     LOG_D("bin name=%s", com_get_bin_name().c_str());
     LOG_D("bin path=%s", com_get_bin_path().c_str());
     LOG_D("bin path=%s", com_get_bin_path().c_str());
 
-    config.removeGroup("group_3");
+    config.removeSection("group_3");
     config.removeItem("group_2", "bool");
-    config.addGroup("group_4");
     config.set("group_4", "bool", 0);
     config.set("group_4", "int", std::to_string(6));
     config.set("group_4", "char*", "char*");
     config.set("group_4", "string", std::string("string"));
     config.set("group_4", "double", 123.5735);
 
-    ASSERT_TRUE(config.saveAs("1.ini.bak"));
-    com_file_remove("1.ini.bak");
+    ASSERT_TRUE(config.saveAs("测试配置文件.ini.bak"));
+    com_file_remove("测试配置文件.ini.bak");
 
     ASSERT_TRUE(config.save());
-    com_file_remove("1.ini");
-    com_file_remove("/tmp/.1.ini");
-    com_file_remove("/tmp/.1.ini.bak");
+    com_file_remove("测试配置文件.ini");
+#if defined(_WIN32) || defined(_WIN64)
+    ASSERT_STR_EQUAL("\\1\\2\\3", com_path_dir("\\1\\2\\3\\4.txt").c_str());
+#else
+    ASSERT_STR_EQUAL("/1/2/3", com_path_dir("/1/2/3/4.txt").c_str());
+#endif
 
-    ASSERT_STR_EQUAL("/1/2/3/", com_path_dir("/1/2/3/4.txt").c_str());
-
-    CPPConfig config2("2.ini");
+    CPPConfig config2("测试配置文件2.ini");
     config2.set("hhh", "abc", 3);
     config2.set("hhh", "abcd", 4);
     config2.set(NULL, "abcde", 5);
@@ -106,12 +108,11 @@ void com_config_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(config2.getUInt32(NULL, "abcde"), 5);
     ASSERT_TRUE(config2.save());
 
-    ASSERT_TRUE(config.load("2.ini"));
+    ASSERT_TRUE(config.load("测试配置文件2.ini"));
     ASSERT_INT_EQUAL(config.getUInt32("hhh", "abc"), 3);
     ASSERT_INT_EQUAL(config.getUInt32("hhh", "abcd"), 4);
     //ASSERT_INT_EQUAL(config.getUInt32(NULL, "abcde"), 5);
 
-    com_file_remove(".2.ini");
-    com_file_remove(".2.ini.bak");
+    com_file_remove("测试配置文件2.ini");
 }
 

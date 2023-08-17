@@ -248,13 +248,13 @@ static const uint64 crc64_tab[256] =
 
 uint8 com_crc8(uint8* data, int data_size, uint8 init_val)
 {
-    if (data == NULL || data_size <= 0)
+    if(data == NULL || data_size <= 0)
     {
         return 0;
     }
 
     uint8 crc = init_val;
-    for (int i = 0; i < data_size; i++)
+    for(int i = 0; i < data_size; i++)
     {
         crc = crc8_tab[data[i] ^ crc];
     }
@@ -264,12 +264,12 @@ uint8 com_crc8(uint8* data, int data_size, uint8 init_val)
 
 uint16 com_crc16(uint8* data, int data_size, uint16 init_val)
 {
-    if (data == NULL || data_size <= 0)
+    if(data == NULL || data_size <= 0)
     {
         return 0;
     }
     uint16 crc = init_val;
-    for (int i = 0; i < data_size; i++)
+    for(int i = 0; i < data_size; i++)
     {
         crc = (crc << 8) ^ crc16_tab[((crc >> 8) ^ data[i]) & 0x00FF];
     }
@@ -278,7 +278,7 @@ uint16 com_crc16(uint8* data, int data_size, uint16 init_val)
 
 uint32 com_crc32(uint8* data, int data_size, uint32 init_val)
 {
-    if (data == NULL || data_size <= 0)
+    if(data == NULL || data_size <= 0)
     {
         return 0;
     }
@@ -287,7 +287,7 @@ uint32 com_crc32(uint8* data, int data_size, uint32 init_val)
     int i;
     crc ^= 0xFFFFFFFF;
 
-    for (i = 0;  i < data_size;  i++)
+    for(i = 0; i < data_size; i++)
     {
         crc = crc32_tab[(crc ^ data[i]) & 0xFF] ^ ((crc >> 8) & 0x00FFFFFF);
     }
@@ -297,13 +297,13 @@ uint32 com_crc32(uint8* data, int data_size, uint32 init_val)
 
 uint64 com_crc64(uint8* data, int data_size, uint64 init_val)
 {
-    if (data == NULL || data_size <= 0)
+    if(data == NULL || data_size <= 0)
     {
         return 0;
     }
 
     uint64 crc = init_val;
-    for (int j = 0; j < data_size; j++)
+    for(int j = 0; j < data_size; j++)
     {
         crc = crc64_tab[(uint8)crc ^ data[j]] ^ (crc >> 8);
     }

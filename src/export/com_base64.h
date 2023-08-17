@@ -4,7 +4,7 @@
 #include "com_base.h"
 #include "com_serializer.h"
 
-class Base64
+class COM_EXPORT Base64
 {
 public:
     Base64();

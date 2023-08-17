@@ -1,9 +1,7 @@
 #include "com_base.h"
 #include "com_file.h"
-#include "com_config.h"
 #include "com_log.h"
-
-static CPPConfig global_config;
+#include "com_config.h"
 
 CPPConfig::CPPConfig()
 {
@@ -13,15 +11,32 @@ CPPConfig::CPPConfig()
 CPPConfig::CPPConfig(const char* file)
 {
     ini.SetUnicode();
-    if(file != NULL)
+    load(file);
+}
+
+CPPConfig::CPPConfig(const CPPConfig& config)
+{
+    if(this == &config)
     {
-        this->file_config = file;
-        ini.LoadFile(file);
+        return;
     }
+    this->load(config.getConfigFile().c_str());
 }
 
 CPPConfig::~CPPConfig()
 {
+    ini.Reset();
+}
+
+CPPConfig& CPPConfig::operator=(const CPPConfig& config)
+{
+    if(this == &config)
+    {
+        return *this;
+    }
+
+    this->load(config.getConfigFile().c_str());
+    return *this;
 }
 
 bool CPPConfig::load(const char* file)
@@ -31,11 +46,33 @@ bool CPPConfig::load(const char* file)
         return false;
     }
     this->file_config = file;
-
     std::lock_guard<std::mutex> lck(mutex_ini);
-    return (ini.LoadFile(file) == SI_OK);
+    this->ini.Reset();
+#if defined(_WIN32) || defined(_WIN64)
+	SI_Error ret = ini.LoadFile(com_string_utf8_to_ansi(file).c_str());
+#else
+	SI_Error ret = ini.LoadFile(file);
+#endif
+    return (ret == SI_OK);
 }
 
+bool CPPConfig::loadFromString(const char* value)
+{
+    if(value == NULL)
+    {
+        return false;
+    }
+    std::lock_guard<std::mutex> lck(mutex_ini);
+    this->file_config.clear();
+    this->ini.Reset();
+	SI_Error ret = ini.LoadData(value);
+	if (ret != SI_OK)
+	{
+		LOG_E("failed to load config from data: %s", value);
+		return false;
+	}
+    return true;
+}
 
 bool CPPConfig::save()
 {
@@ -49,7 +86,12 @@ bool CPPConfig::saveAs(const char* config_file)
         return false;
     }
     std::lock_guard<std::mutex> lck(mutex_ini);
-    return (ini.SaveFile(config_file) == SI_OK);
+#if defined(_WIN32) || defined(_WIN64)
+	SI_Error ret = ini.SaveFile(com_string_utf8_to_ansi(config_file).c_str(), false);
+#else
+	SI_Error ret = ini.SaveFile(config_file, false);
+#endif
+    return (ret == SI_OK);
 }
 
 Message CPPConfig::toMessage()
@@ -292,7 +334,6 @@ bool CPPConfig::set(const char* section, const char* key, const char* val)
 {
     if(key == NULL || val == NULL)
     {
-        LOG_E("arg incorrect");
         return false;
     }
 
@@ -332,155 +373,5 @@ bool CPPConfig::removeItem(const char* section, const char* key)
     std::lock_guard<std::mutex> lck(mutex_ini);
     ini.Delete(section, key);
     return true;
-}
-
-Message com_global_config_to_message()
-{
-    return global_config.toMessage();
-}
-
-bool com_global_config_load(const char* config_file)
-{
-    return global_config.load(config_file);
-}
-
-bool com_global_config_save()
-{
-    return global_config.save();
-}
-
-bool com_global_config_save_as(const char* config_file)
-{
-    return global_config.saveAs(config_file);
-}
-
-bool com_global_config_is_section_exist(const char* section)
-{
-    return global_config.isSectionExist(section);
-}
-
-bool com_global_config_is_key_exist(const char* section, const char* key)
-{
-    return global_config.isKeyExist(section, key);
-}
-
-bool com_global_config_set(const char* section, const char* key, const bool val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const double val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const int8 val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const int16 val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const int32 val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const int64 val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const uint8 val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const uint16 val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const uint32 val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const uint64 val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const std::string& val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_set(const char* section, const char* key, const char* val)
-{
-    return global_config.set(section, key, val);
-}
-
-bool com_global_config_remove(const char* section, const char* key)
-{
-    return global_config.removeItem(section, key);
-}
-
-bool com_global_config_get_bool(const char* section, const char* key, bool default_val)
-{
-    return global_config.getBool(section, key, default_val);
-}
-
-double com_global_config_get_double(const char* section, const char* key, double default_val)
-{
-    return global_config.getDouble(section, key, default_val);
-}
-
-int8 com_global_config_get_int8(const char* section, const char* key, int8 default_val)
-{
-    return global_config.getInt8(section, key, default_val);
-}
-
-int16 com_global_config_get_int16(const char* section, const char* key, int16 default_val)
-{
-    return global_config.getInt16(section, key, default_val);
-}
-
-int32 com_global_config_get_int32(const char* section, const char* key, int32 default_val)
-{
-    return global_config.getInt32(section, key, default_val);
-}
-
-int64 com_global_config_get_int64(const char* section, const char* key, int64 default_val)
-{
-    return global_config.getInt64(section, key, default_val);
-}
-
-uint8 com_global_config_get_uint8(const char* section, const char* key, uint8 default_val)
-{
-    return global_config.getUInt8(section, key, default_val);
-}
-
-uint16 com_global_config_get_uint16(const char* section, const char* key, uint16 default_val)
-{
-    return global_config.getUInt16(section, key, default_val);
-}
-
-uint32 com_global_config_get_uint32(const char* section, const char* key, uint32 default_val)
-{
-    return global_config.getUInt32(section, key, default_val);
-}
-
-uint64 com_global_config_get_uint64(const char* section, const char* key, uint64 default_val)
-{
-    return global_config.getUInt64(section, key, default_val);
-}
-
-std::string com_global_config_get_string(const char* section, const char* key, std::string default_val)
-{
-    return global_config.getString(section, key, default_val);
 }
 

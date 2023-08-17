@@ -1,11 +1,15 @@
-#include <cctype>
+﻿#include <cctype>
 #include <algorithm>
+
 #if defined(_WIN32) || defined(_WIN64)
 #include <time.h>
+#include <direct.h>
 #else
-#include <fnmatch.h>
 #include <unistd.h> //usleep readlink
 #include <sys/time.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <stdio.h>
 #include <netdb.h> //gethostbyname
 #include <pwd.h>
 #include <locale>
@@ -16,6 +20,7 @@
 
 #if defined(__APPLE__)
 #include <libproc.h>
+#include <codecvt>
 #endif
 
 #include "CJsonObject.h"
@@ -24,12 +29,230 @@
 #include "com_file.h"
 #include "com_thread.h"
 #include "com_log.h"
+#include "com_serializer.h"
 
 static std::mutex mutex_app_path;
 
-bool com_run_shell(const char* fmt, ...)
+#define XFNM_PATHNAME    (1 << 0)        /* No wildcard can ever match `/'.  */
+#define XFNM_NOESCAPE    (1 << 1)        /* Backslashes don't quote special chars.  */
+#define XFNM_PERIOD      (1 << 2)        /* Leading `.' is matched only explicitly.  */
+#define XFNM_FILE_NAME   XFNM_PATHNAME   /* Preferred GNU name.  */
+#define XFNM_LEADING_DIR (1 << 3)        /* Ignore `/...' after a match.  */
+#define XFNM_CASEFOLD    (1 << 4)        /* Compare without regard to case.  */
+#define XFNM_EXTMATCH    (1 << 5)        /* Use ksh-like extended matching. */
+#define XFNM_NOMATCH     (1)
+
+#define XFOLD(c) ((flags & XFNM_CASEFOLD) ? std::tolower(c) : (c))
+#define XEOS '\0'
+
+static const uint8 UTF8_TABLE[] =
 {
-#if __linux__ == 1
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 00..1f
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 20..3f
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 40..5f
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 60..7f
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, // 80..9f
+    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, // a0..bf
+    8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // c0..df
+    0xa, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x4, 0x3, 0x3, // e0..ef
+    0xb, 0x6, 0x6, 0x6, 0x5, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, // f0..ff
+    0x0, 0x1, 0x2, 0x3, 0x5, 0x8, 0x7, 0x1, 0x1, 0x1, 0x4, 0x6, 0x1, 0x1, 0x1, 0x1, // s0..s0
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, // s1..s2
+    1, 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, // s3..s4
+    1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 3, 1, 1, 1, 1, 1, 1, // s5..s6
+    1, 3, 1, 1, 1, 1, 1, 3, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // s7..s8
+};
+
+static const char* xfnmatch_rangematch(const char* pattern, int test, int flags)
+{
+    char c = 0;
+    char c2 = 0;
+    int negate = 0;
+    int ok = 0;
+
+    negate = (*pattern == '!' || *pattern == '^');
+    if(negate)
+    {
+        pattern++;
+    }
+
+    for(ok = 0; (c = *pattern++) != ']';)
+    {
+        if(c == '\\' && !(flags & XFNM_NOESCAPE))
+        {
+            c = *pattern++;
+        }
+        if(c == XEOS)
+        {
+            return NULL;
+        }
+
+        if(*pattern == '-' && (c2 = *(pattern + 1)) != XEOS && c2 != ']')
+        {
+            pattern += 2;
+            if(c2 == '\\' && !(flags & XFNM_NOESCAPE))
+            {
+                c2 = *pattern++;
+            }
+            if(c2 == XEOS)
+            {
+                return NULL;
+            }
+            if(c <= test && test <= c2)
+            {
+                ok = 1;
+            }
+        }
+        else if(c == test)
+        {
+            ok = 1;
+        }
+    }
+
+    return ok == negate ? NULL : pattern;
+}
+
+int xfnmatch(const char* pattern, const char* string, int flags)
+{
+    if(pattern == NULL || pattern[0] == '\0')
+    {
+        return XFNM_NOMATCH;
+    }
+    if(string == NULL || string[0] == '\0')
+    {
+        return XFNM_NOMATCH;
+    }
+    const char* stringstart = string;
+    char c = 0;
+    char test = 0;
+
+    for(;;)
+    {
+        switch(c = *pattern++)
+        {
+            case XEOS:
+                return *string == XEOS ? 0 : XFNM_NOMATCH;
+
+            case '?':
+                if(*string == XEOS)
+                {
+                    return XFNM_NOMATCH;
+                }
+                if(*string == PATH_DELIM_CHAR && (flags & XFNM_PATHNAME))
+                {
+                    return XFNM_NOMATCH;
+                }
+
+                if(*string == '.' &&
+                        (flags & XFNM_PERIOD) &&
+                        (string == stringstart || ((flags & XFNM_PATHNAME) && *(string - 1) == PATH_DELIM_CHAR)))
+                {
+                    return XFNM_NOMATCH;
+                }
+
+                string++;
+                break;
+
+            case '*':
+                c = *pattern;
+                // Collapse multiple stars
+                while(c == '*')
+                {
+                    c = *++pattern;
+                }
+
+                if(*string == '.' &&
+                        (flags & XFNM_PERIOD) &&
+                        (string == stringstart || ((flags & XFNM_PATHNAME) && *(string - 1) == PATH_DELIM_CHAR)))
+                {
+                    return XFNM_NOMATCH;
+                }
+
+                // Optimize for pattern with * at end or before
+                if(c == XEOS)
+                {
+                    if(flags & XFNM_PATHNAME)
+                    {
+                        return strchr(string, PATH_DELIM_CHAR) == NULL ? 0 : XFNM_NOMATCH;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+                else if(c == PATH_DELIM_CHAR && flags & XFNM_PATHNAME)
+                {
+                    if((string = strchr(string, PATH_DELIM_CHAR)) == NULL)
+                    {
+                        return XFNM_NOMATCH;
+                    }
+                    break;
+                }
+
+                // General case, use recursion
+                while((test = *string) != XEOS)
+                {
+                    if(!xfnmatch(pattern, string, flags & ~XFNM_PERIOD))
+                    {
+                        return 0;
+                    }
+                    if(test == PATH_DELIM_CHAR && flags & XFNM_PATHNAME)
+                    {
+                        break;
+                    }
+                    string++;
+                }
+                return XFNM_NOMATCH;
+
+            case '[':
+                if(*string == XEOS)
+                {
+                    return XFNM_NOMATCH;
+                }
+                if(*string == PATH_DELIM_CHAR && flags & XFNM_PATHNAME)
+                {
+                    return XFNM_NOMATCH;
+                }
+                if((pattern = xfnmatch_rangematch(pattern, *string, flags)) == NULL)
+                {
+                    return XFNM_NOMATCH;
+                }
+                string++;
+                break;
+
+            case '\\':
+                if(!(flags & XFNM_NOESCAPE))
+                {
+                    if((c = *pattern++) == XEOS)
+                    {
+                        c = '\\';
+                        pattern--;
+                    }
+                }
+            // FALLTHROUGH
+
+            default:
+                if(c != *string++)
+                {
+                    return XFNM_NOMATCH;
+                }
+                break;
+        }
+    }
+}
+
+static void shell_cmd_thread(std::string cmd)
+{
+    std::string result = com_run_shell_with_output("%s", cmd.c_str());
+    LOG_D("cmd=%s,result=%s", cmd.c_str(), result.c_str());
+}
+
+int com_run_shell(const char* fmt, ...)
+{
+    if(fmt == NULL)
+    {
+        return -1;
+    }
     std::string cmd;
     va_list args;
     va_start(args, fmt);
@@ -37,7 +260,7 @@ bool com_run_shell(const char* fmt, ...)
     va_end(args);
     if(len <= 0)
     {
-        return false;
+        return -1;
     }
     len += 1;  //上面返回的长度不包含\0，这里加上
     std::vector<char> cmd_buf(len);
@@ -46,23 +269,45 @@ bool com_run_shell(const char* fmt, ...)
     va_end(args);
     if(len <= 0)
     {
-        return false;
+        return -1;
     }
     cmd.assign(cmd_buf.data(), len);
-    system(cmd.c_str());
-    return true;
+
+#if defined(_WIN32) || defined(_WIN64)
+    FILE* fp = _popen(cmd.c_str(), "r");
 #else
-    return false;
+    FILE* fp = popen(cmd.c_str(), "r");
+#endif
+    if(fp == NULL)
+    {
+        return -1;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    _pclose(fp);
+    return 0;
+#else
+    int ret = pclose(fp);
+    if(WIFEXITED(ret))
+    {
+        return WEXITSTATUS(ret);
+    }
+    else if(WIFSIGNALED(ret))
+    {
+        return WTERMSIG(ret);
+    }
+    else if(WCOREDUMP(ret))
+    {
+        return -2;
+    }
+    return ret;
 #endif
 }
 
 std::string com_run_shell_with_output(const char* fmt, ...)
 {
     std::string result;
-#if __linux__ == 1
     if(fmt == NULL)
     {
-        //LOG_E("failed");
         return result;
     }
     std::string cmd;
@@ -85,23 +330,54 @@ std::string com_run_shell_with_output(const char* fmt, ...)
     }
     cmd.assign(cmd_buf.data(), len);
 
+#if defined(_WIN32) || defined(_WIN64)
+    FILE* fp = _popen(cmd.c_str(), "r");
+#else
     FILE* fp = popen(cmd.c_str(), "r");
+#endif
     if(fp == NULL)
     {
-        //LOG_E("failed, cmd=%s", cmd.c_str());
         return result;
     }
     char buf[1024];
-    bzero(buf, sizeof(buf));
+    memset(buf, 0, sizeof(buf));
     while(fgets(buf, sizeof(buf), fp) != NULL)
     {
         result.append(buf);
-        bzero(buf, sizeof(buf));
+        memset(buf, 0, sizeof(buf));
     }
+#if defined(_WIN32) || defined(_WIN64)
+    _pclose(fp);
+#else
     pclose(fp);
-    //LOG_D("run shell succeed, cmd=%s", cmd.c_str());
 #endif
     return result;
+}
+
+bool com_run_shell_in_thread(const char* fmt, ...)
+{
+    std::string cmd;
+    va_list args;
+    va_start(args, fmt);
+    int len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+    if(len <= 0)
+    {
+        return false;
+    }
+    len += 1;  //上面返回的长度不包含\0，这里加上
+    std::vector<char> cmd_buf(len);
+    va_start(args, fmt);
+    len = vsnprintf(cmd_buf.data(), len, fmt, args);
+    va_end(args);
+    if(len <= 0)
+    {
+        return false;
+    }
+    cmd.assign(cmd_buf.data(), len);
+    std::thread t(shell_cmd_thread, cmd);
+    t.detach();
+    return true;
 }
 
 std::vector<std::string> com_string_split(const char* str, const char* delim)
@@ -110,7 +386,7 @@ std::vector<std::string> com_string_split(const char* str, const char* delim)
     if(str != NULL && delim != NULL)
     {
         std::string orgin = str;
-        int delim_len = strlen(delim);
+        int delim_len = (int)strlen(delim);
         std::string::size_type pos = 0;
         std::string::size_type pos_pre = 0;
         while(true)
@@ -118,10 +394,12 @@ std::vector<std::string> com_string_split(const char* str, const char* delim)
             pos = orgin.find_first_of(delim, pos_pre);
             if(pos == std::string::npos)
             {
-                vals.push_back(orgin.substr(pos_pre));
+                std::string val = orgin.substr(pos_pre);
+                vals.push_back(val);
                 break;
             }
-            vals.push_back(orgin.substr(pos_pre, pos - pos_pre));
+            std::string val = orgin.substr(pos_pre, pos - pos_pre);
+            vals.push_back(val);
             pos_pre = pos + delim_len;
         }
     }
@@ -232,7 +510,9 @@ char* com_string_trim_left(char* str)
     }
     char* p1 = str;
     char* p2 = str;
-    while(isspace(*p1))
+    while(*p1 == ' ' || *p1 == '\t'
+            || *p1 == '\n' || *p1 == '\r'
+            || *p1 == '\f' || *p1 == '\v')
     {
         p1++;
     }
@@ -252,11 +532,13 @@ char* com_string_trim_right(char* str)
     {
         return NULL;
     }
-    int len = strlen(str);
+    int len = (int)strlen(str);
     int i = 0;
     for(i = len - 1; i >= 0; i--)
     {
-        if(isspace(str[i]) == false)
+        if(str[i] != ' ' && str[i] != '\t'
+                && str[i] != '\n' && str[i] != '\r'
+                && str[i] != '\f' && str[i] != '\v')
         {
             break;
         }
@@ -382,78 +664,205 @@ std::string com_string_format(const char* fmt, ...)
     return str;
 }
 
-/* 匹配 * ？通配符 */
-bool com_string_match(const char* str, const char* pattern)
+std::wstring com_wstring_format(const wchar_t* fmt, ...)
 {
-#if __linux__ == 0
-    return com_string_equal(str, pattern);
-#else
-    return (fnmatch(pattern, str, 0) == 0);
-#endif
+    if(NULL == fmt)
+    {
+        return L"";
+    }
+    std::wstring str;
+    va_list args;
+    va_start(args, fmt);
+    int len = vswprintf(NULL, 0, fmt, args);
+    va_end(args);
+    if(len > 0)
+    {
+        len += 1;  //上面返回的长度不包含\0，这里加上
+        std::vector<wchar_t> buf(len);
+        va_start(args, fmt);
+        len = vswprintf(buf.data(), len, fmt, args);
+        va_end(args);
+        if(len > 0)
+        {
+            str.assign(buf.data(), len);
+        }
+    }
+    return str;
 }
 
-std::string com_string_from_wstring(const wchar_t* s)
+bool com_string_match(const char* str, const char* pattern, bool is_path)
 {
-    if(s == NULL)
-    {
-        return std::string();
-    }
-#if __GNUC__>4
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
-    return conv_.to_bytes(s);
-#else
-    int buf_size = wcslen(s);
-    if(buf_size <= 0)
-    {
-        return std::string();
-    }
-    std::vector<char> buf(buf_size);
-    int ret = std::wcstombs(buf.data(), s, buf_size);
-    if(ret <= 0)
-    {
-        return std::string();
-    }
-    std::string result;
-    result.assign(buf.data(), buf.size());
-    return result;
-#endif
+    return (xfnmatch(pattern, str, is_path ? XFNM_PATHNAME | XFNM_NOESCAPE : XFNM_NOESCAPE) == 0);
 }
 
-std::string com_string_from_wstring(const std::wstring& s)
+std::wstring com_wstring_from_ansi(const std::string& s)
 {
-    return com_string_from_wstring(s.c_str());
+    return com_wstring_from_ansi(s.c_str());
 }
-
-std::wstring com_string_to_wstring(const char* s)
+std::wstring com_wstring_from_ansi(const char* s)
 {
     if(s == NULL)
     {
         return std::wstring();
     }
-#if __GNUC__>4
+#if defined(_WIN32) || defined(_WIN64)
+    std::wstring str_utf16;
+    int size = MultiByteToWideChar(CP_ACP, 0, s, -1, 0, 0);
+    if(size)
+    {
+        str_utf16.resize(size);
+        MultiByteToWideChar(CP_ACP, 0, s, -1, &str_utf16[0], str_utf16.size());
+    }
+    return str_utf16;
+#else
     std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
     return conv_.from_bytes(s);
-#else
-    int buf_size = strlen(s);
-    if(buf_size <= 0)
-    {
-        return std::wstring();
-    }
-    std::vector<wchar_t> buf(buf_size);
-    int ret = std::mbstowcs(buf.data(), s, buf_size);
-    if(ret <= 0)
-    {
-        return std::wstring();
-    }
-    std::wstring result;
-    result.assign(buf.data(), buf.size());
-    return result;
 #endif
 }
 
-std::wstring com_string_to_wstring(const std::string& s)
+std::string com_wstring_to_ansi(const std::wstring& s)
 {
-    return com_string_to_wstring(s.c_str());
+    return com_wstring_to_ansi(s.c_str());
+}
+std::string com_wstring_to_ansi(const wchar_t* s)
+{
+    if(s == NULL)
+    {
+        return std::string();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    std::string str_ansi;
+    int size = WideCharToMultiByte(CP_ACP, 0, s, -1, 0, 0, 0, 0);
+    if(size > 0)
+    {
+        str_ansi.resize(size);
+        WideCharToMultiByte(CP_ACP, 0, s, -1, &str_ansi[0], str_ansi.size(), NULL, NULL);
+    }
+    return str_ansi;
+#else
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
+    return conv_.to_bytes(s);
+#endif
+}
+
+std::string com_wstring_to_utf8(const std::wstring& s)
+{
+    return com_wstring_to_utf8(s.c_str());
+}
+std::string com_wstring_to_utf8(const wchar_t* s)
+{
+    if(s == NULL)
+    {
+        return std::string();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    std::string str_utf8;
+    int size = WideCharToMultiByte(CP_UTF8, 0, s, -1, 0, 0, 0, 0);
+    if(size > 0)
+    {
+        str_utf8.resize(size);
+        WideCharToMultiByte(CP_UTF8, 0, s, -1, &str_utf8[0], str_utf8.size(), NULL, NULL);
+    }
+    return str_utf8;
+#else
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
+    return conv_.to_bytes(s);
+#endif
+}
+
+std::wstring com_wstring_from_utf8(const std::string& s)
+{
+    return com_wstring_from_utf8(s.c_str());
+}
+std::wstring com_wstring_from_utf8(const char* s)
+{
+    if(s == NULL)
+    {
+        return std::wstring();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    std::wstring wstr;
+    int size = MultiByteToWideChar(CP_UTF8, 0, s, -1, 0, 0);
+    if(size)
+    {
+        wstr.resize(size);
+        MultiByteToWideChar(CP_UTF8, 0, s, -1, &wstr[0], wstr.size());
+    }
+    return wstr;
+#else
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
+    return conv_.from_bytes(s);
+#endif
+}
+
+std::string com_string_ansi_to_utf8(const std::string& s)
+{
+    return com_string_ansi_to_utf8(s.c_str());
+}
+std::string com_string_ansi_to_utf8(const char* s)
+{
+    if(s == NULL)
+    {
+        return std::string();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    std::wstring wstr = com_wstring_from_ansi(s);
+    return com_wstring_to_utf8(wstr);
+#else
+    return s;
+#endif
+}
+
+std::string com_string_utf8_to_ansi(const std::string& s)
+{
+    return com_string_utf8_to_ansi(s.c_str());
+}
+std::string com_string_utf8_to_ansi(const char* s)
+{
+    if(s == NULL)
+    {
+        return std::string();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    std::wstring wstr = com_wstring_from_utf8(s);
+    return com_wstring_to_ansi(wstr);
+#else
+    return s;
+#endif
+}
+
+std::string com_string_utf8_to_local(const std::string& s)
+{
+    return com_string_utf8_to_local(s.c_str());
+}
+std::string com_string_utf8_to_local(const char* s)
+{
+    if(s == NULL)
+    {
+        return std::string();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    return com_string_utf8_to_ansi(s);
+#else
+    return s;
+#endif
+}
+
+std::string com_string_local_to_utf8(const std::string& s)
+{
+    return com_string_local_to_utf8(s.c_str());
+}
+std::string com_string_local_to_utf8(const char* s)
+{
+    if(s == NULL)
+    {
+        return std::string();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    return com_string_ansi_to_utf8(s);
+#else
+    return s;
+#endif
 }
 
 std::string com_bytes_to_hexstring(const uint8* data, uint16 size)
@@ -579,6 +988,11 @@ int com_string_size(const char* str)
     return com_string_len(str) + 1;
 }
 
+bool com_string_is_empty(const char* str)
+{
+    return (str == NULL || str[0] == '\0');
+}
+
 bool com_string_is_ip(const char* ip)
 {
     if(ip == NULL)
@@ -600,6 +1014,31 @@ bool com_string_is_ip(const char* ip)
     }
     return true;
 }
+
+bool com_string_is_utf8(const std::string& str)
+{
+    return com_string_is_utf8(str.c_str());
+}
+
+bool com_string_is_utf8(const char* str)
+{
+    if(str == NULL)
+    {
+        return false;
+    }
+
+    int type = 0;
+    int state = 0;
+    int index = 0;
+    while(str[index] != '\0')
+    {
+        type = UTF8_TABLE[(uint8)str[index]];
+        state = UTF8_TABLE[256 + state * 16 + type];
+        index++;
+    }
+    return (state == 0);
+}
+
 
 //返回值为已写入buf的长度，不包括末尾的\0
 int com_snprintf(char* buf, int buf_size, const char* fmt, ...)
@@ -683,7 +1122,7 @@ bool com_gettimeofday(struct timeval* tp)
 #endif
 }
 
-uint32 com_time_cpu_s()
+uint64 com_time_cpu_s()
 {
 #if defined(_WIN32) || defined(_WIN64)
     return GetTickCount() / 1000;
@@ -728,7 +1167,7 @@ uint64 com_time_cpu_ns()
 }
 
 //UTC seconds form 1970-1-1 0-0-0
-uint32 com_time_rtc_s()
+uint64 com_time_rtc_s()
 {
     struct timeval tv;
     com_gettimeofday(&tv);
@@ -762,12 +1201,12 @@ uint64 com_time_diff_ms(uint64 start, uint64 end)
 }
 
 //获取与utc时间的秒速差值
-int32 com_timezone_get_s()
+int64 com_timezone_get_s()
 {
     time_t t1, t2;
     time(&t1);
     t2 = t1;
-    int32 timezone_s = 0;
+    int64 timezone_s = 0;
     struct tm* tm_local = NULL;
     struct tm* tm_utc = NULL;
     tm_local = localtime(&t1);
@@ -778,7 +1217,7 @@ int32 com_timezone_get_s()
     return timezone_s;
 }
 
-int32 com_timezone_china_s()
+int64 com_timezone_china_s()
 {
     return 8 * 3600;
 }
@@ -821,12 +1260,12 @@ int32 com_timezone_china_s()
     %z，%Z 时区名称，如果不能得到时区名称则返回空字符
     %% 百分号
 */
-std::string com_time_to_string(uint32 time_s, const char* format)
+std::string com_time_to_string(uint64 time_s, const char* format)
 {
     std::string str;
     if(format == NULL)
     {
-        return str;
+        return std::string();
     }
     struct tm tm_val;
     memset(&tm_val, 0, sizeof(struct tm));
@@ -843,13 +1282,8 @@ std::string com_time_to_string(uint32 time_s, const char* format)
     return str;
 }
 
-std::string com_time_to_string(uint32 time_s)
-{
-    return com_time_to_string(time_s, "%Y-%m-%d %H:%M:%S");
-}
-
 //UTC
-bool com_time_to_tm(uint32 time_s,  struct tm* tm_val)
+bool com_time_to_tm(uint64 time_s,  struct tm* tm_val)
 {
     if(tm_val == NULL)
     {
@@ -868,7 +1302,7 @@ bool com_time_to_tm(uint32 time_s,  struct tm* tm_val)
 }
 
 //UTC
-uint32 com_time_from_tm(struct tm* tm_val)
+uint64 com_time_from_tm(struct tm* tm_val)
 {
     if(tm_val == NULL)
     {
@@ -880,11 +1314,10 @@ uint32 com_time_from_tm(struct tm* tm_val)
     tm_val->tm_zone = NULL;
 #endif
     //mktime默认会扣除当前系统配置的时区秒数,由于我们传入的参数默认为UTC时间，因此需要再加上时区秒数
-    return (uint32)(mktime(tm_val) + com_timezone_get_s());
+    return mktime(tm_val) + com_timezone_get_s();
 }
 
-/* UTC date_str格式为 yyyy-mm-dd HH:MM:SS */
-uint32 com_time_from_string(const char* date_str)
+uint64 com_time_from_string(const char* date_str, const char* format)
 {
     if(date_str == NULL)
     {
@@ -892,12 +1325,12 @@ uint32 com_time_from_string(const char* date_str)
     }
     struct tm tm_val;
     memset(&tm_val, 0, sizeof(struct tm));
-    int count = sscanf(date_str, "%d-%d-%d %d:%d:%d",
+    int count = sscanf(date_str, format,
                        &tm_val.tm_year, &tm_val.tm_mon, &tm_val.tm_mday,
                        &tm_val.tm_hour, &tm_val.tm_min, &tm_val.tm_sec);
-    if(count != 6)
+    if(count < 3)
     {
-        return false;
+        return 0;
     }
     tm_val.tm_year -= 1900;
     tm_val.tm_mon -= 1;
@@ -1024,6 +1457,7 @@ bool com_sem_post(Sem* sem)
         return false;
     }
     dispatch_semaphore_signal(sem->handle);
+    return true;
 #else
     return false;
 #endif
@@ -1575,7 +2009,8 @@ std::string com_get_bin_name()
         char buf[256];
         memset(buf, 0, sizeof(buf));
         int ret = proc_name(getpid(), buf, sizeof(buf));
-        if (ret > 0) {
+        if(ret > 0)
+        {
             name = buf;
         }
 #else
@@ -1619,8 +2054,18 @@ std::string com_get_bin_path()
         char buf[PROC_PIDPATHINFO_MAXSIZE];
         memset(buf, 0, sizeof(buf));
         int ret = proc_pidpath(getpid(), buf, sizeof(buf));
-        if (ret > 0) {
+        if(ret > 0)
+        {
+            buf[sizeof(buf) - 1] = '\0';
             path = buf;
+
+            std::string prefix = ".app/";
+            auto iter = path.find(prefix);
+            if(iter != std::string::npos)
+            {
+                path = path.substr(0, iter + prefix.size());
+            }
+            path = com_path_dir(path.c_str());
         }
 #else
         char buf[256];
@@ -1689,8 +2134,8 @@ void* com_number_to_ptr(const uint64 val)
 
 std::string com_uuid_generator()
 {
-    std::string val = com_string_format("%llu-%llu-%llu-%llu-%u",
-                                        com_thread_get_pid(),
+    std::string val = com_string_format("%d-%llu-%llu-%llu-%u",
+                                        com_process_get_pid(),
                                         com_thread_get_tid(),
                                         com_time_rtc_us(),
                                         com_time_cpu_us(),
@@ -1706,7 +2151,172 @@ int com_gcd(int x, int y)
     return y ? com_gcd(y, x % y) : x;
 }
 
-std::string com_get_login_user_display()
+int com_user_get_uid(const char* user)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return -1;
+#else
+    if(user == NULL || 0 == strlen(user))
+    {
+        return getuid();
+    }
+    struct passwd* pw = getpwnam(user);
+    if(pw == NULL)
+    {
+        return -1;
+    }
+
+    return pw->pw_uid;
+#endif
+}
+
+int com_user_get_gid(const char* user)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return -1;
+#else
+    if(user == NULL || 0 == strlen(user))
+    {
+        return getgid();
+    }
+    struct passwd* pw = getpwnam(user);
+    if(pw == NULL)
+    {
+        return -1;
+    }
+
+    return pw->pw_gid;
+#endif
+}
+
+std::string com_user_get_home(const char* user)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return std::string();
+#else
+    if(user == NULL || user[0] == '\0')
+    {
+        return std::string();
+    }
+
+    struct passwd* pw = getpwnam(user);
+    if(pw == NULL)
+    {
+        return std::string();
+    }
+
+    if(pw->pw_dir != NULL)
+    {
+        return pw->pw_dir;
+    }
+
+    struct passwd* p = getpwuid(pw->pw_uid);
+    if(p == NULL)
+    {
+        return std::string();
+    }
+
+    return p->pw_dir;
+#endif
+}
+
+std::string com_user_get_home(const std::string& user)
+{
+    return com_user_get_home(user.c_str());
+}
+
+int com_user_get_uid_logined()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return 0;
+#else
+    struct passwd pwd;
+    struct passwd* result = NULL;
+    char buf[1024];
+    memset(&pwd, 0, sizeof(pwd));
+    memset(buf, 0, sizeof(buf));
+    int ret = getpwuid_r(com_user_get_uid(com_user_get_name_logined().c_str()), &pwd, buf,
+                         sizeof(buf), &result);
+    if(ret != 0 || result == NULL)
+    {
+        return -1;
+    }
+    return result->pw_uid;
+#endif
+}
+
+int com_user_get_gid_logined()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return 0;
+#else
+    struct passwd pwd;
+    struct passwd* result = NULL;
+    char buf[1024];
+    memset(&pwd, 0, sizeof(pwd));
+    memset(buf, 0, sizeof(buf));
+    int ret = getpwuid_r(com_user_get_uid(com_user_get_name_logined().c_str()), &pwd, buf,
+                         sizeof(buf), &result);
+    if(ret != 0 || result == NULL)
+    {
+        return -1;
+    }
+    return result->pw_gid;
+#endif
+}
+
+std::string com_user_get_name_logined()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return std::string();
+#else
+    char buf[128] = {0};
+    int ret = getlogin_r(buf, sizeof(buf));
+    if(ret != 0 || buf[0] == '\0')
+    {
+        const char* user = getenv("USER");
+        if(user == NULL)
+        {
+            return std::string();
+        }
+        return user;
+    }
+    buf[sizeof(buf) - 1] = '\0';
+    return buf;
+#endif
+}
+
+std::string com_user_get_home_logined()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return std::string();
+#else
+    const char* snap_user_data = getenv("SNAP_USER_DATA");
+    if(snap_user_data != NULL)
+    {
+        return std::string(snap_user_data);
+    }
+
+    const char* home_dir = getenv("HOME");
+    if(home_dir != NULL)
+    {
+        return home_dir;
+    }
+    std::vector<char> buf(16384);
+
+    struct passwd pw;
+    struct passwd* result = NULL;
+    memset(&pw, 0, sizeof(struct passwd));
+    getpwuid_r(getuid(), &pw, &buf[0], buf.size(), &result);
+    if(result == NULL || result->pw_dir == NULL)
+    {
+        return std::string();
+    }
+    return result->pw_dir;
+#endif
+}
+
+std::string com_user_get_display_logined()
 {
 #if __linux__ == 1
     const char* display = getenv("DISPLAY");
@@ -1717,76 +2327,6 @@ std::string com_get_login_user_display()
     return display;
 #else
     return std::string();
-#endif
-}
-
-std::string com_get_login_user_name()
-{
-#if __linux__ == 1
-    char buf[128] = {0};
-    int ret = getlogin_r(buf, sizeof(buf));
-    if(ret != 0)
-    {
-        return std::string();
-    }
-    buf[sizeof(buf) - 1] = '\0';
-    return buf;
-#else
-    return std::string();
-#endif
-}
-
-int com_get_login_user_id()
-{
-#if __linux__ == 1
-    return getuid();
-#else
-    return -1;
-#endif
-}
-
-std::string com_get_login_user_home()
-{
-#if __linux__ == 1
-    const char* home_dir = getenv("HOME");
-    if(home_dir != NULL)
-    {
-        return home_dir;
-    }
-    char buf[16384] = {0};
-
-    struct passwd pw;
-    struct passwd* result = NULL;
-    memset(&pw, 0, sizeof(struct passwd));
-    getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result);
-    getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result);
-    if(result == NULL || result->pw_dir == NULL)
-    {
-        return std::string();
-    }
-    return result->pw_dir;
-#else
-    return std::string();
-#endif
-}
-
-int com_get_login_group_id()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    return 0;
-#else
-    struct passwd pwd;
-    struct passwd* result = NULL;
-    char buf[1024];
-    memset(&pwd, 0, sizeof(pwd));
-    memset(buf, 0, sizeof(buf));
-    int ret = getpwuid_r(com_get_login_user_id(), &pwd, buf,
-                         sizeof(buf), &result);
-    if(ret != 0 || result == NULL)
-    {
-        return 0;
-    }
-    return result->pw_gid;
 #endif
 }
 
@@ -1803,25 +2343,38 @@ CPPBytes::CPPBytes(int reserve_size)
     }
 }
 
+CPPBytes::CPPBytes(const CPPBytes& bytes)
+{
+    if(this == &bytes)
+    {
+        return;
+    }
+    buf = bytes.buf;
+}
+
+CPPBytes::CPPBytes(CPPBytes&& bytes)
+{
+    if(this == &bytes)
+    {
+        return;
+    }
+    buf.swap(bytes.buf);
+}
+
 CPPBytes::CPPBytes(const uint8* data, int data_size)
 {
     if(data_size > 0 && data != NULL)
     {
-        for(int i = 0; i < data_size; i++)
-        {
-            buf.push_back(data[i]);
-        }
+        buf.insert(buf.end(), data, data + data_size);
     }
 }
 
 CPPBytes::CPPBytes(const char* data)
 {
-    if(data != NULL)
+    int len = com_string_len(data);
+    if(len > 0)
     {
-        for(size_t i = 0; i < strlen(data); i++)
-        {
-            buf.push_back((uint8)data[i]);
-        }
+        buf.insert(buf.end(), data, data + len);
     }
 }
 
@@ -1829,16 +2382,33 @@ CPPBytes::CPPBytes(const char* data, int data_size)
 {
     if(data_size > 0 && data != NULL)
     {
-        for(int i = 0; i < data_size; i++)
-        {
-            buf.push_back((uint8)data[i]);
-        }
+        buf.insert(buf.end(), data, data + data_size);
     }
 }
 
 CPPBytes::~CPPBytes()
 {
     buf.clear();
+}
+
+CPPBytes& CPPBytes::operator=(const CPPBytes& bytes)
+{
+    if(this == &bytes)
+    {
+        return *this;
+    }
+    buf = bytes.buf;
+    return *this;
+}
+
+CPPBytes& CPPBytes::operator=(CPPBytes&& bytes)
+{
+    if(this == &bytes)
+    {
+        return *this;
+    }
+    buf.swap(bytes.buf);
+    return *this;
 }
 
 CPPBytes& CPPBytes::operator+(uint8 val)
@@ -1907,12 +2477,21 @@ uint8* CPPBytes::getData()
     return &buf[0];
 }
 
-int CPPBytes::getDataSize()
+const uint8* CPPBytes::getData() const
+{
+    if(empty())
+    {
+        return NULL;
+    }
+    return &buf[0];
+}
+
+int CPPBytes::getDataSize() const
 {
     return buf.size();
 }
 
-bool CPPBytes::empty()
+bool CPPBytes::empty() const
 {
     return (buf.size() <= 0);
 }
@@ -1927,47 +2506,81 @@ CPPBytes& CPPBytes::append(const uint8* data, int data_size)
 {
     if(data_size > 0 && data != NULL)
     {
-        for(int i = 0; i < data_size; i++)
-        {
-            buf.push_back(data[i]);
-        }
+        buf.insert(buf.end(), data, data + data_size);
     }
     return *this;
 }
 
 CPPBytes& CPPBytes::append(const char* data)
 {
-    if(data != NULL)
+    int len = com_string_len(data);
+    if(len > 0)
     {
-        for(size_t i = 0; i < strlen(data); i++)
-        {
-            buf.push_back(data[i]);
-        }
+        buf.insert(buf.end(), data, data + len);
     }
     return *this;
 }
 
-CPPBytes& CPPBytes::append(CPPBytes& bytes)
+CPPBytes& CPPBytes::append(const CPPBytes& bytes)
 {
     if(this == &bytes)
     {
         CPPBytes tmp = bytes;
-        for(int i = 0; i < tmp.getDataSize(); i++)
-        {
-            buf.push_back(tmp.getData()[i]);
-        }
+        buf.insert(buf.end(), tmp.getData(), tmp.getData() + tmp.getDataSize());
     }
     else
     {
-        for(int i = 0; i < bytes.getDataSize(); i++)
-        {
-            buf.push_back(bytes.getData()[i]);
-        }
+        buf.insert(buf.end(), bytes.getData(), bytes.getData() + bytes.getDataSize());
     }
     return *this;
 }
 
-uint8 CPPBytes::getAt(int pos)
+CPPBytes& CPPBytes::insert(int pos, uint8 val)
+{
+    if(pos < 0 || pos >= (int)buf.size())
+    {
+        return *this;
+    }
+    buf.insert(buf.begin() + pos, val);
+    return *this;
+}
+
+CPPBytes& CPPBytes::insert(int pos, const uint8* data, int data_size)
+{
+    if(pos < 0 || pos >= (int)buf.size() || data == NULL || data_size <= 0)
+    {
+        return *this;
+    }
+    buf.insert(buf.begin() + pos, data, data + data_size);
+    return *this;
+}
+
+CPPBytes& CPPBytes::insert(int pos, const char* data)
+{
+    if(pos < 0 || pos >= (int)buf.size())
+    {
+        return *this;
+    }
+    int len = com_string_len(data);
+    if(len <= 0)
+    {
+        return *this;
+    }
+    buf.insert(buf.begin() + pos, data, data + len);
+    return *this;
+}
+
+CPPBytes& CPPBytes::insert(int pos, CPPBytes& bytes)
+{
+    if(pos < 0 || pos >= (int)buf.size() || this == &bytes)
+    {
+        return *this;
+    }
+    buf.insert(buf.begin() + pos, bytes.buf.begin(), bytes.buf.end());
+    return *this;
+}
+
+uint8 CPPBytes::getAt(int pos) const
 {
     if(pos < 0 || pos >= (int)buf.size())
     {
@@ -2011,22 +2624,43 @@ void CPPBytes::removeTail(int count)
     }
 }
 
-std::string CPPBytes::toString()
+bool CPPBytes::toFile(const char* file)
+{
+    if(buf.size() <= 0)
+    {
+        return false;
+    }
+    FILE* f = com_file_open(file, "w+");
+    if(f == NULL)
+    {
+        return false;
+    }
+    int ret = com_file_write(f, getData(), getDataSize());
+    com_file_flush(f);
+    com_file_close(f);
+    return (ret == (int)buf.size());
+}
+
+std::string CPPBytes::toString() const
 {
     std::string str;
-    if(getDataSize() > 0)
+    if(buf.size() > 0)
     {
-        str.append((char*)getData(), getDataSize());
+        str.append((char*)&buf[0], buf.size());
     }
     return str;
 }
 
-std::string CPPBytes::toHexString(bool upper)
+std::string CPPBytes::toHexString(bool upper) const
 {
-    std::string str = com_bytes_to_hexstring(getData(), getDataSize());
-    if(upper)
+    std::string str;
+    if(buf.size() > 0)
     {
-        com_string_to_upper(str);
+        str = com_bytes_to_hexstring(&buf[0], buf.size());
+        if(upper)
+        {
+            com_string_to_upper(str);
+        }
     }
     return str;
 }
@@ -2218,9 +2852,49 @@ Message::Message(uint32 id)
     this->id = id;
 }
 
+Message::Message(const Message& msg)
+{
+    if(this == &msg)
+    {
+        return;
+    }
+    this->id = msg.id;
+    this->datas = msg.datas;
+}
+
+Message::Message(Message&& msg)
+{
+    if(this == &msg)
+    {
+        return;
+    }
+    this->id = msg.id;
+    this->datas.swap(msg.datas);
+}
+
 Message::~Message()
 {
     datas.clear();
+}
+
+Message& Message::operator=(const Message& msg)
+{
+    if(this != &msg)
+    {
+        this->id = msg.id;
+        this->datas = msg.datas;
+    }
+    return *this;
+}
+
+Message& Message::operator=(Message&& msg)
+{
+    if(this != &msg)
+    {
+        this->id = msg.id;
+        this->datas.swap(msg.datas);
+    }
+    return *this;
 }
 
 void Message::reset()
@@ -2229,7 +2903,7 @@ void Message::reset()
     datas.clear();
 }
 
-uint32 Message::getID()
+uint32 Message::getID() const
 {
     return id;
 }
@@ -2240,7 +2914,7 @@ Message& Message::setID(uint32 id)
     return *this;
 }
 
-bool Message::isKeyExist(const char* key)
+bool Message::isKeyExist(const char* key) const
 {
     if(key == NULL || datas.count(key) == 0)
     {
@@ -2249,7 +2923,7 @@ bool Message::isKeyExist(const char* key)
     return true;
 }
 
-bool Message::isEmpty()
+bool Message::isEmpty() const
 {
     return datas.empty();
 }
@@ -2283,7 +2957,7 @@ Message& Message::set(const char* key, const uint8* val, int val_size)
     return *this;
 }
 
-Message& Message::set(const char* key, CPPBytes bytes)
+Message& Message::set(const char* key, const CPPBytes& bytes)
 {
     if(key != NULL && bytes.empty() == false)
     {
@@ -2291,6 +2965,40 @@ Message& Message::set(const char* key, CPPBytes bytes)
         data.assign((char*)bytes.getData(), bytes.getDataSize());
         datas[key] = data;
     }
+    return *this;
+}
+
+Message& Message::set(const char* key, const std::vector<std::string>& array)
+{
+    if(key != NULL && array.empty() == false)
+    {
+        std::string data;
+        data.reserve(array.size() * 64);
+        for(size_t i = 0; i < array.size(); i++)
+        {
+            data += com_bytes_to_hexstring((uint8*)array[i].c_str(), array[i].length()) + ";";
+        }
+        if(data.back() == ';')
+        {
+            data.pop_back();
+        }
+        datas[key] = data;
+    }
+    return *this;
+}
+
+Message& Message::set(const char* key, const Message& msg)
+{
+    if(key != NULL)
+    {
+        datas[key] = msg.toJSON();
+    }
+    return *this;
+}
+
+Message& Message::setPtr(const char* key, const void* ptr)
+{
+    set(key, (uint64)ptr);
     return *this;
 }
 
@@ -2312,23 +3020,35 @@ void Message::removeAll()
     datas.clear();
 }
 
-bool Message::getBool(const char* key, bool default_val)
+bool Message::getBool(const char* key, bool default_val) const
 {
     if(isKeyExist(key) == false)
     {
         return default_val;
     }
-    std::string val = datas[key];
-    return (strtol(val.c_str(), NULL, 10) == 1);
+    std::string val = datas.at(key);
+    com_string_to_lower(val);
+    if(val == "true")
+    {
+        return true;
+    }
+    else if(val == "false")
+    {
+        return false;
+    }
+    else
+    {
+        return (strtol(val.c_str(), NULL, 10) == 1);
+    }
 }
 
-char Message::getChar(const char* key, char default_val)
+char Message::getChar(const char* key, char default_val) const
 {
     if(isKeyExist(key) == false)
     {
         return default_val;
     }
-    std::string val = datas[key];
+    std::string val = datas.at(key);
     if(val.empty())
     {
         return default_val;
@@ -2336,102 +3056,145 @@ char Message::getChar(const char* key, char default_val)
     return val[0];
 }
 
-float Message::getFloat(const char* key, float default_val)
+float Message::getFloat(const char* key, float default_val) const
 {
     if(isKeyExist(key) == false)
     {
         return default_val;
     }
-    std::string val = datas[key];
+    std::string val = datas.at(key);
     return strtof(val.c_str(), NULL);
 }
 
-double Message::getDouble(const char* key, double default_val)
+double Message::getDouble(const char* key, double default_val) const
 {
     if(isKeyExist(key) == false)
     {
         return default_val;
     }
-    std::string val = datas[key];
+    std::string val = datas.at(key);
     return strtod(val.c_str(), NULL);
 }
 
-int8 Message::getInt8(const char* key, int8 default_val)
+int8 Message::getInt8(const char* key, int8 default_val) const
 {
     return (int8)getInt64(key, default_val);
 }
 
-int16 Message::getInt16(const char* key, int16 default_val)
+int16 Message::getInt16(const char* key, int16 default_val) const
 {
     return (int16)getInt64(key, default_val);
 }
 
-int32 Message::getInt32(const char* key, int32 default_val)
+int32 Message::getInt32(const char* key, int32 default_val) const
 {
     return (int32)getInt64(key, default_val);
 }
 
-int64 Message::getInt64(const char* key, int64 default_val)
+int64 Message::getInt64(const char* key, int64 default_val) const
 {
     if(isKeyExist(key) == false)
     {
         return default_val;
     }
-    std::string val = datas[key];
+    std::string val = datas.at(key);
     return strtoll(val.c_str(), NULL, 10);
 }
 
-uint8 Message::getUInt8(const char* key, uint8 default_val)
+uint8 Message::getUInt8(const char* key, uint8 default_val) const
 {
     return (uint8)getUInt64(key, default_val);
 }
 
-uint16 Message::getUInt16(const char* key, uint16 default_val)
+uint16 Message::getUInt16(const char* key, uint16 default_val) const
 {
     return (uint16)getUInt64(key, default_val);
 }
 
-uint32 Message::getUInt32(const char* key, uint32 default_val)
+uint32 Message::getUInt32(const char* key, uint32 default_val) const
 {
     return (uint32)getUInt64(key, default_val);
 }
 
-uint64 Message::getUInt64(const char* key, uint64 default_val)
+uint64 Message::getUInt64(const char* key, uint64 default_val) const
 {
     if(isKeyExist(key) == false)
     {
         return default_val;
     }
-    std::string val = datas[key];
+    const std::string& val = datas.at(key);
     return strtoull(val.c_str(), NULL, 10);
 }
 
-std::string Message::getString(const char* key, std::string default_val)
+std::string Message::getString(const char* key, std::string default_val) const
 {
     if(isKeyExist(key) == false)
     {
         return default_val;
     }
-    return datas[key];
+    return datas.at(key);
 }
 
-CPPBytes Message::getBytes(const char* key)
+CPPBytes Message::getBytes(const char* key) const
 {
     CPPBytes bytes;
     if(isKeyExist(key) == false)
     {
         return bytes;
     }
-    std::string val = datas[key];
+    const std::string& val = datas.at(key);
     return CPPBytes((uint8*)val.data(), val.length());
 }
 
-std::string Message::toJSON(bool pretty_style)
+uint8* Message::getBytes(const char* key, int& size)
+{
+    if(isKeyExist(key) == false)
+    {
+        return NULL;
+    }
+    const std::string& val = datas.at(key);
+    size = val.size();
+    return (uint8*)val.data();
+}
+
+void* Message::getPtr(const char* key, void* default_val) const
+{
+    if(isKeyExist(key) == false)
+    {
+        return default_val;
+    }
+    return (void*)getUInt64(key);
+}
+
+std::vector<std::string> Message::getStringArray(const char* key) const
+{
+    if(isKeyExist(key) == false)
+    {
+        return std::vector<std::string>();
+    }
+    std::vector<std::string> vals = com_string_split(datas.at(key).c_str(), ";");
+    std::vector<std::string> array;
+    for(size_t i = 0; i < vals.size(); i++)
+    {
+        array.push_back(com_hexstring_to_bytes(vals[i].c_str()).toString());
+    }
+    return array;
+}
+
+Message Message::getMessage(const char* key) const
+{
+    if(isKeyExist(key) == false)
+    {
+        return Message();
+    }
+    return Message::FromJSON(datas.at(key).c_str());
+}
+
+std::string Message::toJSON(bool pretty_style) const
 {
     CJsonObject cjson;
-
-    std::map<std::string, std::string>::iterator it;
-    for(it = datas.begin(); it != datas.end(); it++)
+    cjson.Add("__JSON_FIELD_MESSAGE_ID__", id);
+    for(auto it = datas.cbegin(); it != datas.cend(); it++)
     {
         cjson.Add(it->first, it->second);
     }
@@ -2445,8 +3208,12 @@ std::string Message::toJSON(bool pretty_style)
     }
 }
 
-Message Message::FromJSON(std::string json)
+Message Message::FromJSON(const char* json)
 {
+    if(json == NULL)
+    {
+        return Message();
+    }
     CJsonObject cjson(json);
     Message msg;
     std::string key;
@@ -2455,218 +3222,315 @@ Message Message::FromJSON(std::string json)
     {
         if(cjson.Get(key, value))
         {
-            msg.set(key.c_str(), value);
+            if(key == "__JSON_FIELD_MESSAGE_ID__")
+            {
+                msg.id = strtoul(value.c_str(), NULL, 10);
+            }
+            else
+            {
+                msg.set(key.c_str(), value);
+            }
         }
     }
     return msg;
 }
 
-xstring::xstring() : std::string()
+Message Message::FromJSON(const std::string& json)
 {
+    return FromJSON(json.c_str());
 }
 
-xstring::xstring(const char* str) : std::string(str == NULL ? "" : str)
+ByteStreamReader::ByteStreamReader(FILE* fp)
 {
+    this->fp = fp;
 }
 
-xstring::xstring(const std::string& str) : std::string(str)
+ByteStreamReader::ByteStreamReader(const char* file, bool is_file)
 {
-
+    this->fp = com_file_open(file, "rb");
+    fp_internal = true;
 }
 
-xstring::xstring(const xstring& str) : std::string(str.c_str())
+ByteStreamReader::ByteStreamReader(const char* buffer)
 {
-
+    this->buffer.append(buffer);
 }
 
-xstring::~xstring()
+ByteStreamReader::ByteStreamReader(const std::string& buffer)
 {
+    this->buffer.append(buffer.c_str());
 }
 
-void xstring::toupper()
+ByteStreamReader::ByteStreamReader(const uint8* buffer, int buffer_size)
 {
-    std::transform(begin(), end(), begin(), ::toupper);
+    this->buffer.append(buffer, buffer_size);
 }
 
-void xstring::tolower()
+ByteStreamReader::ByteStreamReader(const CPPBytes& buffer)
 {
-    std::transform(begin(), end(), begin(), ::tolower);
+    this->buffer.append(buffer);
 }
 
-bool xstring::starts_with(const char* str)
+ByteStreamReader::~ByteStreamReader()
 {
-    if(str == NULL)
+    if(fp_internal)
     {
-        return false;
+        com_file_close(fp);
+        fp = NULL;
     }
-    return (strncmp(c_str(), str, strlen(str)) == 0);
 }
 
-bool xstring::starts_with(const xstring& str)
+int64 ByteStreamReader::find(const char* key, int offset)
 {
-    return (strncmp(c_str(), str.c_str(), str.length()) == 0);
+    return find((const uint8*)key, com_string_len(key), offset);
 }
 
-bool xstring::ends_with(const char* str)
+int64 ByteStreamReader::find(const uint8* key, int key_size, int offset)
 {
-    if(str == NULL)
+    if(key == NULL || key_size <= 0)
     {
-        return false;
+        return -1;
     }
-    size_t str_len = strlen(str);
-    if(length() < str_len)
+    if(fp != NULL)
     {
-        return false;
-    }
-    return (strncmp(c_str() + (length() - str_len), str, str_len) == 0);
-}
-
-bool xstring::ends_with(const xstring& str)
-{
-    if(length() < str.length())
-    {
-        return false;
-    }
-    return (strncmp(c_str() + (length() - str.length()), str.c_str(), str.length()) == 0);
-}
-
-bool xstring::contains(const char* str)
-{
-    if(str == NULL)
-    {
-        return false;
-    }
-    return (find(str) != std::string::npos);
-}
-
-bool xstring::contains(const xstring& str)
-{
-    return (find(str) != std::string::npos);
-}
-
-void xstring::replace(const char* from, const char* to)
-{
-    if(from == NULL || to == NULL)
-    {
-        return;
-    }
-
-    std::string::size_type pos = 0;
-    int from_len = com_string_len(from);
-    int to_len = com_string_len(to);
-    while((pos = find(from, pos)) != std::string::npos)
-    {
-        std::string::replace(pos, from_len, to);
-        pos += to_len;
-    }
-    return;
-}
-
-void xstring::replace(const xstring& from, const xstring& to)
-{
-    replace(from.c_str(), to.c_str());
-}
-
-std::vector<xstring> xstring::split(const char* delim)
-{
-    std::vector<xstring> vals;
-    if(delim == NULL)
-    {
-        return vals;
-    }
-    std::string::size_type pos = 0;
-    std::string::size_type pos_pre = 0;
-    int delim_len = strlen(delim);
-    while(true)
-    {
-        pos = find_first_of(delim, pos_pre);
-        if(pos == std::string::npos)
+        if(offset > 0)
         {
-            vals.push_back(substr(pos_pre));
+            com_file_seek_set(fp, offset);
+        }
+        return com_file_find(fp, key, key_size);
+    }
+    if(offset > 0)
+    {
+        buffer_pos = offset;
+    }
+    int match_count = 0;
+    while(buffer_pos >= 0 && buffer_pos < buffer.getDataSize())
+    {
+        uint8 val = buffer.getAt(buffer_pos++);
+        if(val != key[match_count])
+        {
+            match_count = 0;
+            continue;
+        }
+        match_count++;
+        if(match_count == key_size)
+        {
+            buffer_pos -= key_size;
+            return buffer_pos;
+        }
+    }
+    return -3;
+}
+
+int64 ByteStreamReader::rfind(const char* key, int offset)
+{
+    return rfind((const uint8*)key, com_string_len(key), offset);
+}
+
+int64 ByteStreamReader::rfind(const uint8* key, int key_size, int offset)
+{
+    if(key == NULL || key_size <= 0)
+    {
+        return -1;
+    }
+    if(fp != NULL)
+    {
+        if(offset < 0)
+        {
+            com_file_seek_set(fp, offset);
+        }
+        return com_file_rfind(fp, key, key_size);
+    }
+    if(offset < 0)
+    {
+        buffer_pos = buffer.getDataSize() - offset;
+    }
+    int match_count = 0;
+    while(buffer_pos >= 0 && buffer_pos < buffer.getDataSize())
+    {
+        uint8 val = buffer.getAt(buffer_pos--);
+        if(val != key[match_count])
+        {
+            match_count = 0;
+            continue;
+        }
+        match_count++;
+        if(match_count == key_size)
+        {
+            buffer_pos += key_size;
+            return buffer_pos;
+        }
+    }
+    return -3;
+}
+
+std::string ByteStreamReader::readLine()
+{
+    if(fp != NULL)
+    {
+        return com_file_readline(fp);
+    }
+    std::string line;
+    for(int64 i = buffer_pos; i < buffer.getDataSize(); i++)
+    {
+        uint8 val = buffer.getAt(i);
+        if(val == '\n')
+        {
+            buffer_pos = i;
+            return line;
+        }
+        else if(val == '\r')
+        {
+        }
+        else
+        {
+            line.push_back(val);
+        }
+    }
+    return std::string();
+}
+
+CPPBytes ByteStreamReader::read(int size)
+{
+    if(fp != NULL)
+    {
+        return com_file_read(fp, size);
+    }
+
+    if(size <= 0 || buffer_pos < 0 || buffer_pos >= buffer.getDataSize())
+    {
+        return CPPBytes();
+    }
+    if(buffer_pos + size > buffer.getDataSize())
+    {
+        size = buffer.getDataSize() - buffer_pos;
+    }
+    CPPBytes result;
+    result.append(buffer.getData() + buffer_pos, size);
+    buffer_pos += size;
+    return std::move(result);
+}
+
+int ByteStreamReader::read(uint8* buf, int buf_size)
+{
+    if(fp != NULL)
+    {
+        return com_file_read(fp, buf, buf_size);
+    }
+
+    if(buf == NULL || buf_size <= 0 || buffer_pos < 0 || buffer_pos >= buffer.getDataSize())
+    {
+        return -1;
+    }
+    if(buffer_pos + buf_size > buffer.getDataSize())
+    {
+        buf_size = buffer.getDataSize() - buffer_pos;
+    }
+    memcpy(buf, buffer.getData() + buffer_pos, buf_size);
+    buffer_pos += buf_size;
+    return buf_size;
+}
+
+CPPBytes ByteStreamReader::readUntil(const char* key)
+{
+    return readUntil((const uint8*)key, com_string_len(key));
+}
+
+CPPBytes ByteStreamReader::readUntil(const uint8* key, int key_size)
+{
+    if(key == NULL || key_size <= 0)
+    {
+        return CPPBytes();
+    }
+    if(fp != NULL)
+    {
+        return com_file_read_until(fp, key, key_size);
+    }
+    CPPBytes result;
+    int match_count = 0;
+    while(buffer_pos >= 0 && buffer_pos < buffer.getDataSize())
+    {
+        uint8 val = buffer.getAt(buffer_pos++);
+        if(val != key[match_count])
+        {
+            match_count = 0;
+            continue;
+        }
+        result.append(val);
+        match_count++;
+        if(match_count == key_size)
+        {
+            result.removeTail(key_size);
+            buffer_pos -= key_size;
             break;
         }
-        vals.push_back(substr(pos_pre, pos - pos_pre));
-        pos_pre = pos + delim_len;
     }
-    return vals;
+    return result;
 }
 
-std::vector<xstring> xstring::split(const xstring& delim)
+CPPBytes ByteStreamReader::readUntil(std::function<bool(uint8)> func)
 {
-    std::vector<xstring> vals;
-    std::string::size_type pos = 0;
-    std::string::size_type pos_pre = 0;
-    while(true)
+    if(func == NULL)
     {
-        pos = find_first_of(delim, pos_pre);
-        if(pos == std::string::npos)
+        return CPPBytes();
+    }
+    if(fp != NULL)
+    {
+        return com_file_read_until(fp, func);
+    }
+    CPPBytes result;
+    while(buffer_pos >= 0 && buffer_pos < buffer.getDataSize())
+    {
+        uint8 val = buffer.getAt(buffer_pos++);
+        if(func(val))
         {
-            vals.push_back(substr(pos_pre));
+            buffer_pos--;
             break;
         }
-        vals.push_back(substr(pos_pre, pos - pos_pre));
-        pos_pre = pos + delim.length();
-    }
-    return vals;
-}
-
-int xstring::to_int()
-{
-    return strtol(c_str(), NULL, 10);
-}
-
-long long xstring::to_long()
-{
-    return strtoll(c_str(), NULL, 10);
-}
-
-double xstring::to_double()
-{
-    return strtod(c_str(), NULL);
-}
-
-void xstring::trim(const char* t)
-{
-    trim_right(t);
-    trim_left(t);
-}
-
-void xstring::trim_left(const char* t)
-{
-    if(t == NULL)
-    {
-        t = " \t\n\r\f\v";
-    }
-    erase(0, find_first_not_of(t));
-}
-
-void xstring::trim_right(const char* t)
-{
-    if(t == NULL)
-    {
-        t = " \t\n\r\f\v";
-    }
-    erase(find_last_not_of(t) + 1);
-}
-
-xstring xstring::format(const char* fmt, ...)
-{
-    xstring str;
-    va_list args;
-    va_start(args, fmt);
-    int len = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-    if(len > 0)
-    {
-        len += 1;  //上面返回的长度不包含\0，这里加上
-        std::vector<char> buf(len);
-        va_start(args, fmt);
-        len = vsnprintf(buf.data(), len, fmt, args);
-        va_end(args);
-        if(len > 0)
+        else
         {
-            str.assign(buf.data(), len);
+            result.append(val);
         }
     }
-    return str;
+    return result;
 }
+
+int64 ByteStreamReader::getPos()
+{
+    if(fp != NULL)
+    {
+        return com_file_seek_get(fp);
+    }
+    return buffer_pos;
+}
+
+void ByteStreamReader::setPos(int64 pos)
+{
+    if(fp != NULL)
+    {
+        com_file_seek_set(fp, pos);
+    }
+    else if(pos >= 0 && pos < buffer.getDataSize())
+    {
+        buffer_pos = pos;
+    }
+}
+
+void ByteStreamReader::stepPos(int count)
+{
+    if(fp != NULL)
+    {
+        com_file_seek_step(fp, count);
+    }
+    else if(buffer_pos + count >= 0 && buffer_pos + count < buffer.getDataSize())
+    {
+        buffer_pos += count;
+    }
+}
+
+void ByteStreamReader::reset()
+{
+    com_file_seek_head(fp);
+    buffer_pos = 0;
+}
+

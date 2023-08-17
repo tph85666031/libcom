@@ -1,17 +1,49 @@
-#include "com.h"
+#include "com_mem.h"
+#include "com_log.h"
+#include "com_task.h"
+#include "com_file.h"
+#include "com_test.h"
 
-static const char* mem_db_opt_type[] = {"remove all", "remove", "update", "add", "add all"};
+static const char* mem_db_opt_type[] = {"clear", "remove", "update", "add", "reload"};
 
-static void mem_cb_test(std::string key, int flag)
+static void mem_cb_test(const std::string& key, int flag, void* ctx)
 {
     LOG_W("%s detected,flag=%s", key.c_str(), mem_db_opt_type[flag + 2]);
 }
 
+class MyMemTestTask : public Task
+{
+public:
+    MyMemTestTask(std::string name, Message msg) : Task(name, msg)
+    {
+    };
+    void onStart()
+    {
+        LOG_I("called");
+        addListener(0xFFFF);
+        addListener(0xFFFE);
+    }
+
+    void onStop()
+    {
+        LOG_I("called");
+    }
+
+    void onMessage(Message& msg)
+    {
+        LOG_I("id=%d,key=%s,flag=%d", msg.getID(), msg.getString("key").c_str(), msg.getInt32("flag"));
+    }
+};
+
 void com_mem_unit_test_suit(void** state)
 {
+    GetTaskManager().createTask<MyMemTestTask>("mem task");
+
     com_mem_add_notify("age", mem_cb_test);
     com_mem_add_notify("name", mem_cb_test);
     com_mem_add_notify("money", mem_cb_test);
+
+    com_mem_add_notify("name", "mem task");
     com_mem_set("name", "test");
     com_mem_set("name", "test");
     com_mem_remove("name");
@@ -34,7 +66,7 @@ void com_mem_unit_test_suit(void** state)
     com_file_close(file);
 
     ASSERT_TRUE(com_file_type("./1.json") == FILE_TYPE_FILE);
-    com_mem_remove_all();
+    com_mem_clear();
 
     ASSERT_FALSE(com_mem_is_key_exist("country"));
     com_mem_from_file("./1.json");

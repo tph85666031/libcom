@@ -1,5 +1,10 @@
 #include <iostream>
-#include "com.h"
+#include "com_base.h"
+#include "com_log.h"
+#include "com_test.h"
+#include "com_stack.h"
+#include "com_file.h"
+#include "CJsonObject.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -58,67 +63,10 @@ static void thread_condition_test(void* arg)
     return;
 }
 
-void com_base_xstring_unit_test(void** state)
-{
-    xstring x;
-    ASSERT_TRUE(x.empty());
-    x = "123";
-    ASSERT_STR_EQUAL(x.c_str(), "123");
-    x = " 1234";
-    x.trim(" 4");
-    ASSERT_STR_EQUAL(x.c_str(), "123");
-
-    x = " 1234";
-    x.trim_left(" 4");
-    ASSERT_STR_EQUAL(x.c_str(), "1234");
-
-    x = " 1234";
-    x.trim_right(" 4");
-    ASSERT_STR_EQUAL(x.c_str(), " 123");
-
-    x = " 1234";
-    x.replace("4", "6");
-    ASSERT_STR_EQUAL(x.c_str(), " 1236");
-
-    ASSERT_TRUE(x.ends_with("6"));
-    ASSERT_TRUE(x.starts_with(" 1"));
-    ASSERT_TRUE(x.contains("23"));
-
-    x = "123hgt6";
-    x.toupper();
-    ASSERT_STR_EQUAL(x.c_str(), "123HGT6");
-    x.tolower();
-    ASSERT_STR_EQUAL(x.c_str(), "123hgt6");
-
-    x = "12;3;4;5;6;7;8";
-    std::vector<xstring> items = x.split(";");
-    ASSERT_INT_EQUAL(items.size(), 7);
-    ASSERT_STR_EQUAL(items[0].c_str(), "12");
-    ASSERT_STR_EQUAL(items[6].c_str(), "8");
-
-    x = "12;3;4;5;6;7;8;";
-    items = x.split(";");
-    ASSERT_INT_EQUAL(items.size(), 8);
-    ASSERT_STR_EQUAL(items[0].c_str(), "12");
-    ASSERT_STR_EQUAL(items[7].c_str(), "");
-
-    x = "12h";
-    ASSERT_INT_EQUAL(x.to_int(), 12);
-
-    x = "1216024209126trqry0h";
-    ASSERT_INT_EQUAL(x.to_long(), 1216024209126LL);
-
-    x = "12.6h";
-    ASSERT_FLOAT_EQUAL(x.to_double(), 12.6);
-
-    xstring y = x;
-    xstring z(y);
-}
-
 void com_base_string_split_unit_test_suit(void** state)
 {
     std::vector<std::string> ret_split = com_string_split("123,456,7", ",");
-   ASSERT_TRUE(ret_split.size() > 0);
+    ASSERT_TRUE(ret_split.size() > 0);
     ASSERT_INT_EQUAL(ret_split.size(), 3);
     ASSERT_STR_EQUAL(ret_split[0].c_str(), "123");
     ASSERT_STR_EQUAL(ret_split[1].c_str(), "456");
@@ -243,6 +191,19 @@ void com_base_string_unit_test_suit(void** state)
     com_string_trim_left(NULL);
     com_string_trim_right(NULL);
     com_string_trim(NULL);
+
+    com_strncpy(buf, " 123\t ", sizeof(buf));
+    com_string_trim(buf);
+    ASSERT_STR_EQUAL(buf, "123");
+
+    com_strncpy(buf, " \v123\t ", sizeof(buf));
+    com_string_trim(buf);
+    ASSERT_STR_EQUAL(buf, "123");
+
+    com_strncpy(buf, " \t\v123\t\f\n\r ", sizeof(buf));
+    com_string_trim(buf);
+    ASSERT_STR_EQUAL(buf, "123");
+
     com_strncpy(buf, "abcfglldf fdljgoiwjrg", sizeof(buf));
     ASSERT_TRUE(com_string_start_with(buf, "abc"));
     ASSERT_TRUE(com_string_end_with(buf, "jrg"));
@@ -287,6 +248,8 @@ void com_base_string_unit_test_suit(void** state)
     fmt_str = com_string_format(NULL);
     ASSERT_STR_EQUAL(fmt_str.c_str(), "");
 
+    std::wstring fmt_wstr = com_wstring_format(L"str=%s", L"abc");
+
     LOG_D("uuid=%s", com_uuid_generator().c_str());
     LOG_D("uuid=%s", com_uuid_generator().c_str());
     LOG_D("uuid=%s", com_uuid_generator().c_str());
@@ -309,6 +272,43 @@ void com_base_string_unit_test_suit(void** state)
     com_string_replace(x, "kk", "IF");
     com_string_replace(x, "below", "");
     ASSERT_STR_EQUAL(x.c_str(), "IF U already have files U can push them using command line instructions ");
+
+    std::string str_utf8 = com_wstring_to_utf8(L"测试");
+    ASSERT_STR_EQUAL(com_string_utf8_to_local(str_utf8).c_str(), "测试");
+
+    ASSERT_TRUE(com_string_match("123456", "123?56"));
+    ASSERT_TRUE(com_string_match("123456", "123*56"));
+    ASSERT_TRUE(com_string_match("123456", "*"));
+    ASSERT_TRUE(com_string_match("123456", "?*"));
+    ASSERT_TRUE(com_string_match("123456", "*?"));
+    ASSERT_TRUE(com_string_match("123456", "**"));
+    ASSERT_TRUE(com_string_match("123456", "?*?"));
+    ASSERT_TRUE(com_string_match("123456", "*?*"));
+    ASSERT_FALSE(com_string_match("123456", "?"));
+    ASSERT_FALSE(com_string_match("123456", "??"));
+    ASSERT_FALSE(com_string_match("123456", "???"));
+    ASSERT_FALSE(com_string_match("123456", "????"));
+    ASSERT_FALSE(com_string_match("123456", "?????"));
+    ASSERT_TRUE(com_string_match("123456", "??????"));
+
+    ASSERT_TRUE(com_string_match("123456", "123[3-4]56"));
+    ASSERT_TRUE(com_string_match("123456", "123[34]56"));
+    ASSERT_FALSE(com_string_match("123456", "123[23]56"));
+    ASSERT_TRUE(com_string_match("123456", "123[!1-3]56"));
+    ASSERT_FALSE(com_string_match("123456", "123[!1-4]56"));
+    ASSERT_FALSE(com_string_match("123456", "123[!64]56"));
+    ASSERT_FALSE(com_string_match("123456", "123[2-3]56"));
+
+    ASSERT_TRUE(com_string_match("1/2/3/4/5/6/a.txt", "1/?/3/4/5/6/a.txt"));
+    ASSERT_TRUE(com_string_match("1/2/3/4/5/6/a.txt", "1/?/3/4/5/6/a.*"));
+    ASSERT_TRUE(com_string_match("1/2/3/4/5/6/a.txt", "1/?/3/4/5/6/*.txt"));
+    ASSERT_FALSE(com_string_match(PATH_TO_LOCAL("/1/2/3/4.txt").c_str(), PATH_TO_LOCAL("/1/2/*.txt").c_str(), true));
+    ASSERT_TRUE(com_string_match(PATH_TO_LOCAL("/1/2/3/4.txt").c_str(), PATH_TO_LOCAL("/1/2/*.txt").c_str(), false));
+
+    ASSERT_TRUE(com_string_is_utf8("abcd"));
+    ASSERT_TRUE(com_string_is_utf8("UTF8中文"));
+    ASSERT_FALSE(com_string_is_utf8("\x41\x4e\x53\x49\xd6\xd0\xce\xc4"));//ANSI中文
+    ASSERT_FALSE(com_string_is_utf8(NULL));
 }
 
 void com_base_time_unit_test_suit(void** state)
@@ -375,66 +375,34 @@ XT& getXT()
 
 void com_base_unit_test_suit(void** state)
 {
+    com_stack_init();
+
     TIME_COST();
     Mutex* mutex = com_mutex_create("mutex_ut");
     ASSERT_NOT_NULL(mutex);
     ASSERT_TRUE(com_mutex_lock(mutex));
     com_mutex_destroy(mutex);
-    CJsonObject oJson("{\"refresh_interval\":60,"
-                      "\"timeout\":12.5,"
-                      "\"dynamic_loading\":["
-                      "{"
-                      "\"so_path\":\"plugins/User.so\", \"load\":false, \"version\":1,"
-                      "\"cmd\":["
-                      "{\"cmd\":2001, \"class\":\"neb::CmdUserLogin\"},"
-                      "{\"cmd\":2003, \"class\":\"neb::CmdUserLogout\"}"
-                      "],"
-                      "\"module\":["
-                      "{\"path\":\"im/user/login\", \"class\":\"neb::ModuleLogin\"},"
-                      "{\"path\":\"im/user/logout\", \"class\":\"neb::ModuleLogout\"}"
-                      "]"
-                      "},"
-                      "{"
-                      "\"so_path\":\"plugins/ChatMsg.so\", \"load\":false, \"version\":1,"
-                      "\"cmd\":["
-                      "{\"cmd\":2001, \"class\":\"neb::CmdChat\"}"
-                      "],"
-                      "\"module\":[]"
-                      "}"
-                      "]"
-                      "}");
-    //printf("ojson=%s\n", oJson.ToString().c_str());
-    float timeout = 0;
-    oJson.Get("timeout", timeout);
-    ASSERT_FLOAT_EQUAL(timeout, 12.5f);
-    int version = 0;
-    oJson["dynamic_loading"][0].Get("version", version);
-    ASSERT_INT_EQUAL(version, 1);
-    std::string so_path;
-    oJson["dynamic_loading"][0].Get("so_path", so_path);
-    ASSERT_STR_EQUAL(so_path.c_str(), "plugins/User.so");
-    oJson["dynamic_loading"].Delete(0);
-    //printf("ojson=%s\n", oJson.ToString().c_str());
-    CJsonObject xjson;
-    xjson.Add("name", "myname");
-    xjson.Add("age", 18);
-    xjson.AddEmptySubArray("data");
-    CJsonObject params;
-    ASSERT_TRUE(params.Add("addr", "address1"));
-    ASSERT_TRUE(xjson["data"].Add(params));
-    ASSERT_TRUE(params.Replace("addr", "address2"));
-    ASSERT_TRUE(xjson["data"].Add(params));
-    ASSERT_TRUE(params.Replace("addr", "address3"));
-    ASSERT_TRUE(xjson["data"].Add(params));
-    std::string address1;
-    std::string address2;
-    std::string address3;
-    ASSERT_TRUE(xjson["data"][0].Get("addr", address1));
-    ASSERT_TRUE(xjson["data"][1].Get("addr", address2));
-    ASSERT_TRUE(xjson["data"][2].Get("addr", address3));
-    ASSERT_STR_EQUAL(address1.c_str(), "address1");
-    ASSERT_STR_EQUAL(address2.c_str(), "address2");
-    ASSERT_STR_EQUAL(address3.c_str(), "address3");
+
+    std::vector<int> array_a;
+    array_a.push_back(1);
+    array_a.push_back(2);
+    array_a.push_back(3);
+
+    CJsonObject json_a;
+    json_a.Add("a", "123");
+    json_a.Add("array", array_a);
+    LOG_I("%s", json_a.ToString().c_str());
+
+    std::map<std::string, int> array_m;
+    array_m["a"] = 1;
+    array_m["b"] = 2;
+    array_m["c"] = 3;
+
+    CJsonObject json_m;
+    json_m.Add("a", "123");
+    json_m.Add("map", array_m);
+    LOG_I("%s", json_m.ToString().c_str());
+
     CPPCondition condition;
     std::thread thread_test(thread_condition_test, &condition);
     LOG_D("condition start wait");
@@ -505,7 +473,42 @@ void com_base_unit_test_suit(void** state)
         ASSERT_STR_EQUAL("test exception", e.what());
     }
 
-    ASSERT_STR_EQUAL(com_get_bin_name(), "com");
+#if defined(_WIN32) || defined(_WIN64)
+    ASSERT_STR_EQUAL(com_get_bin_name().c_str(), "com.exe");
+#else
+    ASSERT_STR_EQUAL(com_get_bin_name().c_str(), "com");
+#endif
+
+    TIME_COST_SHOW();
+    Message msg;
+    CPPBytes b1(10 * 1014 * 1024);
+    for(int i = 0; i < 1024 * 1024; i++)
+    {
+        b1.append((uint8*)"0123456789", 10);
+        msg.set(std::to_string(i).c_str(), "0123456789");
+    }
+
+    TIME_COST_SHOW();
+    CPPBytes b2 = b1;
+    TIME_COST_SHOW();
+    CPPBytes b3 = std::move(b1);
+    TIME_COST_SHOW();
+    CPPBytes b4(std::move(b2));
+    TIME_COST_SHOW();
+
+    Message msg2 = msg;
+    TIME_COST_SHOW();
+    Message msg3(msg);
+    TIME_COST_SHOW();
+    Message msg4 = std::move(msg);
+    TIME_COST_SHOW();
+    Message msg5(std::move(msg2));
+    TIME_COST_SHOW();
+
+    SingleInstanceProcess s("sss");
+    com_run_shell("D:\\1.bat");
+    std::string result = com_run_shell_with_output("dir");
+    LOG_I("reault=%s", result.c_str());
 }
 
 void com_base_bytearray_unit_test_suit(void** state)
@@ -551,6 +554,80 @@ void com_base_message_unit_test_suit(void** state)
     msg.reset();
     CPPBytes bytes;
     msg.set("bytes", bytes);
+}
+
+void com_base_json_unit_test_suit(void** state)
+{
+    std::map<std::string, std::string> m;
+    m["a"] = "value_a";
+    m["b"] = "value_b";
+    m["c"] = "value_c";
+    CJsonObject json;
+    json.Add("isUpgrade", true ? "true" : "false");
+    json.Add("isProtected", true ? "true" : "false");
+    json.AddEmptySubObject("plugin");
+    for(auto it = m.begin(); it != m.end(); it++)
+    {
+        json["plugin"].Add(it->first, it->second);
+    }
+    std::string str = json.ToFormattedString();
+    //printf("str=%s\n", str.c_str());
+
+    CJsonObject oJson("{\"refresh_interval\":60,"
+                      "\"timeout\":12.5,"
+                      "\"dynamic_loading\":["
+                      "{"
+                      "\"so_path\":\"plugins/User.so\", \"load\":false, \"version\":1,"
+                      "\"cmd\":["
+                      "{\"cmd\":2001, \"class\":\"neb::CmdUserLogin\"},"
+                      "{\"cmd\":2003, \"class\":\"neb::CmdUserLogout\"}"
+                      "],"
+                      "\"module\":["
+                      "{\"path\":\"im/user/login\", \"class\":\"neb::ModuleLogin\"},"
+                      "{\"path\":\"im/user/logout\", \"class\":\"neb::ModuleLogout\"}"
+                      "]"
+                      "},"
+                      "{"
+                      "\"so_path\":\"plugins/ChatMsg.so\", \"load\":false, \"version\":1,"
+                      "\"cmd\":["
+                      "{\"cmd\":2001, \"class\":\"neb::CmdChat\"}"
+                      "],"
+                      "\"module\":[]"
+                      "}"
+                      "]"
+                      "}");
+    //printf("ojson=%s\n", oJson.ToString().c_str());
+    float timeout = 0;
+    oJson.Get("timeout", timeout);
+    ASSERT_FLOAT_EQUAL(timeout, 12.5f);
+    int version = 0;
+    oJson["dynamic_loading"][0].Get("version", version);
+    ASSERT_INT_EQUAL(version, 1);
+    std::string so_path;
+    oJson["dynamic_loading"][0].Get("so_path", so_path);
+    ASSERT_STR_EQUAL(so_path.c_str(), "plugins/User.so");
+    oJson["dynamic_loading"].Delete(0);
+    //printf("ojson=%s\n", oJson.ToString().c_str());
+    CJsonObject xjson;
+    xjson.Add("name", "myname");
+    xjson.Add("age", 18);
+    xjson.AddEmptySubArray("data");
+    CJsonObject params;
+    ASSERT_TRUE(params.Add("addr", "address1"));
+    ASSERT_TRUE(xjson["data"].Add(params));
+    ASSERT_TRUE(params.Replace("addr", "address2"));
+    ASSERT_TRUE(xjson["data"].Add(params));
+    ASSERT_TRUE(params.Replace("addr", "address3"));
+    ASSERT_TRUE(xjson["data"].Add(params));
+    std::string address1;
+    std::string address2;
+    std::string address3;
+    ASSERT_TRUE(xjson["data"][0].Get("addr", address1));
+    ASSERT_TRUE(xjson["data"][1].Get("addr", address2));
+    ASSERT_TRUE(xjson["data"][2].Get("addr", address3));
+    ASSERT_STR_EQUAL(address1.c_str(), "address1");
+    ASSERT_STR_EQUAL(address2.c_str(), "address2");
+    ASSERT_STR_EQUAL(address3.c_str(), "address3");
 }
 
 #ifdef __GNUC__

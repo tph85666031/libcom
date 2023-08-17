@@ -1,13 +1,25 @@
 #include "com_mem.h"
 #include "com_file.h"
 #include "com_thread.h"
+#include "com_task.h"
 #include "com_log.h"
 
 class MemDataSyncItem final
 {
 public:
     std::string key;
-    int flag;
+    int flag = 0;
+};
+
+class MemDataCallbackItem final
+{
+public:
+    cb_mem_data_change cb = NULL;
+    void* ctx = NULL;
+    bool operator<(const MemDataCallbackItem& item) const
+    {
+        return (item.cb != cb);
+    };
 };
 
 class MemDataSyncManager final
@@ -23,6 +35,11 @@ public:
         stopMemDataSyncManager();
     };
 
+    void setMessageID(uint32 id)
+    {
+        this->message_id = id;
+    };
+
     void startMemDataSyncManager()
     {
         LOG_I("called");
@@ -34,65 +51,121 @@ public:
     void stopMemDataSyncManager()
     {
         LOG_I("called");
-        mutex.lock();
+        mutex_keys.lock();
         sem_keys.post();
-        mutex.unlock();
+        mutex_keys.unlock();
         running = false;
-        if (thread_runner.joinable())
+        if(thread_runner.joinable())
         {
             thread_runner.join();
         }
     };
-    
+
     void notify(const char* key, int flag)
     {
-        if (key == NULL)
+        if(key == NULL)
         {
             return;
         }
-        mutex.lock();
+        mutex_keys.lock();
         MemDataSyncItem item;
         item.key = key;
         item.flag = flag;
         keys.push(item);
+        mutex_keys.unlock();
         sem_keys.post();
-        mutex.unlock();
     };
-    void add(const char* key, cb_mem_data_change cb)
+    void addListener(const char* key, cb_mem_data_change cb, void* ctx)
     {
-        if (key == NULL || cb == NULL)
+        if(key == NULL || cb == NULL)
         {
             return;
         }
-        mutex.lock();
-        std::map<std::string, std::vector<cb_mem_data_change>>::iterator it;
-        it = hooks.find(key);
-        if (it != hooks.end())
+        MemDataCallbackItem item;
+        item.cb = cb;
+        item.ctx = ctx;
+
+        mutex_hooks.lock();
+        auto it = hooks_cb.find(key);
+        if(it != hooks_cb.end())
         {
-            it->second.push_back(cb);
+            it->second.insert(item);
         }
         else
         {
-            std::vector<cb_mem_data_change> cbs;
-            cbs.push_back(cb);
-            hooks[key] = cbs;
+            std::set<MemDataCallbackItem> cbs;
+            cbs.insert(item);
+            hooks_cb[key] = cbs;
         }
-        mutex.unlock();
+        mutex_hooks.unlock();
     }
-    void remove(const char* key, cb_mem_data_change cb)
+    void addListener(const char* key, const char* task_name)
     {
-        if (key == NULL || cb == NULL)
+        if(key == NULL || task_name == NULL)
         {
             return;
         }
-        mutex.lock();
-        std::map<std::string, std::vector<cb_mem_data_change>>::iterator it;
-        it = hooks.find(key);
-        if (it != hooks.end())
+        mutex_hooks.lock();
+        auto it = hooks_task.find(key);
+        if(it != hooks_task.end())
         {
-            hooks.erase(it);
+            it->second.insert(task_name);
         }
-        mutex.unlock();
+        else
+        {
+            std::set<std::string> tasks;
+            tasks.insert(task_name);
+            hooks_task[key] = tasks;
+        }
+        mutex_hooks.unlock();
+    }
+    void removeListener(const char* key, cb_mem_data_change cb = NULL)
+    {
+        if(key == NULL)
+        {
+            return;
+        }
+        mutex_hooks.lock();
+        auto it = hooks_cb.find(key);
+        if(it == hooks_cb.end())
+        {
+            mutex_hooks.unlock();
+            return;
+        }
+        if(cb == NULL)
+        {
+            hooks_cb.erase(it);
+        }
+        else
+        {
+            MemDataCallbackItem item;
+            item.cb = NULL;
+            it->second.erase(item);
+        }
+        mutex_hooks.unlock();
+    }
+    void removeListener(const char* key, const char* task_name = NULL)
+    {
+        if(key == NULL)
+        {
+            return;
+        }
+        mutex_hooks.lock();
+        auto it = hooks_task.find(key);
+        if(it == hooks_task.end())
+        {
+            mutex_hooks.unlock();
+            return;
+        }
+        if(task_name == NULL)
+        {
+            hooks_task.erase(it);
+        }
+        else
+        {
+            it->second.erase(task_name);
+        }
+        mutex_hooks.unlock();
     }
 private:
     static void ThreadRunner(MemDataSyncManager* ctx)
@@ -100,44 +173,73 @@ private:
         TIME_COST();
         com_thread_set_name("T-MemSync");
         LOG_I("running...");
-        while (ctx->running)
+        while(ctx->running)
         {
-            if (ctx->sem_keys.wait(5000) == false)
+            if(ctx->sem_keys.wait(5000) == false)
             {
                 continue;
             }
-            if (ctx->running == false)
+            if(ctx->running == false)
             {
                 break;
             }
-            ctx->mutex.lock();
-            if (ctx->keys.empty() == false)
+            ctx->mutex_keys.lock();
+            if(ctx->keys.empty())
             {
-                MemDataSyncItem item = ctx->keys.front();
-                ctx->keys.pop();
-                if (ctx->hooks.count(item.key) != 0)
+                //没有数据增删改事件
+                ctx->mutex_keys.unlock();
+                continue;
+            }
+
+            MemDataSyncItem item = ctx->keys.front();
+            ctx->keys.pop();
+            ctx->mutex_keys.unlock();
+
+            std::set<MemDataCallbackItem> cbs;
+            std::set<std::string> tasks;
+            ctx->mutex_hooks.lock();
+            if(ctx->hooks_cb.count(item.key) > 0)
+            {
+                cbs = ctx->hooks_cb[item.key];
+            }
+            if(ctx->hooks_task.count(item.key) > 0)
+            {
+                tasks = ctx->hooks_task[item.key];
+            }
+            ctx->mutex_hooks.unlock();
+
+            for(auto it = tasks.begin(); it != tasks.end(); it++)
+            {
+                Message msg(ctx->message_id);
+                msg.set("key", item.key);
+                msg.set("flag", item.flag);
+                GetTaskManager().sendMessage(it->c_str(), msg);
+            }
+
+            for(auto it = cbs.begin(); it != cbs.end(); it++)
+            {
+                const MemDataCallbackItem& val = *it;
+                if(val.cb != NULL)
                 {
-                    std::vector<cb_mem_data_change> cbs = ctx->hooks[item.key];
-                    for (size_t i = 0; i < cbs.size(); i++)
-                    {
-                        if (cbs[i] != NULL)
-                        {
-                            cbs[i](item.key, item.flag);
-                        }
-                    }
+                    val.cb(item.key, item.flag, val.ctx);
                 }
             }
-            ctx->mutex.unlock();
         }
         LOG_I("quit...");
     }
 private:
     std::thread thread_runner;
     std::atomic<bool> running = {false};
-    std::map<std::string, std::vector<cb_mem_data_change>> hooks;
-    CPPMutex mutex;
+
+    CPPMutex mutex_hooks;
+    std::map<std::string, std::set<MemDataCallbackItem>> hooks_cb;
+    std::map<std::string, std::set<std::string>> hooks_task;
+
+    CPPMutex mutex_keys;
     CPPSem sem_keys = {"sem_mem"};
     std::queue<MemDataSyncItem> keys;
+
+    std::atomic<uint32> message_id = {0xFFFFFFFE};
 };
 
 static std::mutex mutex_share_mem;
@@ -161,7 +263,7 @@ void com_mem_set(const char* key, const bool val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const char val)
@@ -170,7 +272,7 @@ void com_mem_set(const char* key, const char val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const double val)
@@ -179,7 +281,7 @@ void com_mem_set(const char* key, const double val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const int8 val)
@@ -188,7 +290,7 @@ void com_mem_set(const char* key, const int8 val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const int16 val)
@@ -197,7 +299,7 @@ void com_mem_set(const char* key, const int16 val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const int32 val)
@@ -206,7 +308,7 @@ void com_mem_set(const char* key, const int32 val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const int64 val)
@@ -215,7 +317,7 @@ void com_mem_set(const char* key, const int64 val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const uint8 val)
@@ -224,7 +326,7 @@ void com_mem_set(const char* key, const uint8 val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const uint16 val)
@@ -233,7 +335,7 @@ void com_mem_set(const char* key, const uint16 val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const uint32 val)
@@ -242,7 +344,7 @@ void com_mem_set(const char* key, const uint32 val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const uint64 val)
@@ -251,7 +353,7 @@ void com_mem_set(const char* key, const uint64 val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const std::string& val)
@@ -260,7 +362,7 @@ void com_mem_set(const char* key, const std::string& val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const char* val)
@@ -269,7 +371,7 @@ void com_mem_set(const char* key, const char* val)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, const uint8* val, int val_size)
@@ -278,7 +380,7 @@ void com_mem_set(const char* key, const uint8* val, int val_size)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, val, val_size);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_set(const char* key, CPPBytes& bytes)
@@ -287,7 +389,7 @@ void com_mem_set(const char* key, CPPBytes& bytes)
     bool exist = mem_msg.isKeyExist(key);
     mem_msg.set(key, bytes);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key,  exist ? 0 : 1);
+    GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
 void com_mem_remove(const char* key)
@@ -295,15 +397,15 @@ void com_mem_remove(const char* key)
     mutex_share_mem.lock();
     mem_msg.remove(key);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify(key, -1);
+    GetMemDataSyncManager().notify(key, DATA_SYNC_REMOVED);
 }
 
-void com_mem_remove_all()
+void com_mem_clear()
 {
     mutex_share_mem.lock();
     mem_msg.removeAll();
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify("", -2);
+    GetMemDataSyncManager().notify("", DATA_SYNC_CLEARED);
 }
 
 bool com_mem_get_bool(const char* key, bool default_val)
@@ -395,13 +497,13 @@ void com_mem_from_json(std::string json)
     mutex_share_mem.lock();
     mem_msg = Message::FromJSON(json);
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify("", 2);
+    GetMemDataSyncManager().notify("", DATA_SYNC_RELOAD);
 }
 
 bool com_mem_to_file(std::string file)
 {
     FILE* file_fd = com_file_open(file.c_str(), "w+");
-    if (file_fd == NULL)
+    if(file_fd == NULL)
     {
         return false;
     }
@@ -428,16 +530,26 @@ void com_mem_from_message(Message msg)
     mutex_share_mem.lock();
     mem_msg = msg;
     mutex_share_mem.unlock();
-    GetMemDataSyncManager().notify("", 2);
+    GetMemDataSyncManager().notify("", DATA_SYNC_RELOAD);
 }
 
-void com_mem_add_notify(const char* key, cb_mem_data_change cb)
+void com_mem_add_notify(const char* key, cb_mem_data_change cb, void* ctx)
 {
-    GetMemDataSyncManager().add(key, cb);
+    GetMemDataSyncManager().addListener(key, cb, ctx);
 }
 
 void com_mem_remove_notify(const char* key, cb_mem_data_change cb)
 {
-    GetMemDataSyncManager().remove(key, cb);
+    GetMemDataSyncManager().removeListener(key, cb);
+}
+
+void com_mem_add_notify(const char* key, const char* task_name)
+{
+    GetMemDataSyncManager().addListener(key, task_name);
+}
+
+void com_mem_remove_notify(const char* key, const char* task_name)
+{
+    GetMemDataSyncManager().removeListener(key, task_name);
 }
 

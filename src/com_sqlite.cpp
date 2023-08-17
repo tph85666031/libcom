@@ -1,10 +1,41 @@
-#include <thread>
+﻿#include <thread>
 #include <atomic>
 #include "sqlite3.h"
 #include "com_sqlite.h"
 #include "com_base.h"
 #include "com_file.h"
 #include "com_log.h"
+
+static std::atomic<int> sqlite_retry_count = {10};
+static std::atomic<int> sqlite_retry_interval_ms = {100};
+
+std::string com_sqlite_escape(const char* str)
+{
+    if(str == NULL)
+    {
+        return std::string();
+    }
+    std::string val = str;
+    com_string_replace(val, "'", "''");
+    return val;
+}
+
+std::string com_sqlite_escape(const std::string& str)
+{
+    std::string val = str;
+    com_string_replace(val, "'", "''");
+    return val;
+}
+
+void com_sqlite_set_retry_count(int count)
+{
+    sqlite_retry_count = count;
+}
+
+void com_sqlite_set_retry_interval(int interval_ms)
+{
+    sqlite_retry_interval_ms = interval_ms;
+}
 
 /********************************************************
     com_sqlite_run_sql
@@ -15,71 +46,42 @@
  ********************************************************/
 int com_sqlite_run_sql(void* fd, const char* sql)
 {
-    if(fd == NULL || sql == NULL)
+    if(fd == NULL || sql == NULL || sql[0] == '\0')
     {
-        LOG_W("arg incorrect");
-        return COM_SQL_ERR_FAILED;
+        //LOG_W("arg incorrect");
+        return -1;
     }
-    int retry_count = 0;
-    while(retry_count++ < 5)
+    int retry_count = sqlite_retry_count;
+    int ret = 0;
+    while(retry_count--)
     {
-        char* err_msg = NULL;
-        int ret = sqlite3_exec((sqlite3*)fd, sql, NULL, NULL, &err_msg);
-        if(ret == SQLITE_BUSY)
+        ret = sqlite3_exec((sqlite3*)fd, sql, NULL, NULL, NULL);
+        if(ret != SQLITE_BUSY)
         {
-            if(err_msg != NULL)
-            {
-                sqlite3_free(err_msg);
-            }
-            LOG_W("db %s is busy, retry %d", sqlite3_db_filename((sqlite3*)fd, NULL), retry_count);
-            com_sleep_ms(retry_count * 100);
-            continue;
+            break;
         }
-        else if(ret == SQLITE_OK)
-        {
-            if(err_msg != NULL)
-            {
-                sqlite3_free(err_msg);
-            }
-            return COM_SQL_ERR_OK;
-        }
-        else
-        {
-            LOG_E("failed, ret=%d, err=%s, sql=%s, file=%s, file_exist=%s",
-                  ret, err_msg, sql,
-                  sqlite3_db_filename((sqlite3*)fd, NULL),
-                  com_file_type(sqlite3_db_filename((sqlite3*)fd, NULL)) == FILE_TYPE_FILE ? "true" : "false");
-            if(err_msg != NULL)
-            {
-                sqlite3_free(err_msg);
-            }
-            if(ret == SQLITE_READONLY || ret == SQLITE_IOERR)
-            {
-                LOG_E("file may not exist");
-            }
-
-            return COM_SQL_ERR_FAILED;
-        }
+        com_sleep_ms(sqlite_retry_interval_ms);
     }
-    return COM_SQL_ERR_BUSY;
+    return (-1 * ret);
 }
 
-void* com_sqlite_open(const char* file)
+void* com_sqlite_open(const char* file, bool read_only)
 {
-    if(file == NULL || strlen(file) == 0)
+    if(file == NULL || file[0] == '\0')
     {
         return NULL;
     }
     sqlite3* fd = NULL;
-#if 0
-    if(com_file_type(file) == FILE_TYPE_NOT_EXIST)
+    int flags = SQLITE_OPEN_FULLMUTEX;
+    if(read_only)
     {
-        LOG_I("db file not exist, system will auto create this missing db file: %s", file);
+        flags |= SQLITE_OPEN_READONLY;
     }
-#endif
-    int ret = sqlite3_open_v2(file, &fd,
-                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
-                              NULL);
+    else
+    {
+        flags |= SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE;
+    }
+    int ret = sqlite3_open_v2(file, &fd, flags, NULL);
     if(ret != SQLITE_OK)
     {
         LOG_E("failed:%s", sqlite3_errmsg(fd));
@@ -99,13 +101,14 @@ void* com_sqlite_open(const char* file)
  ********************************************************/
 void com_sqlite_close(void* fd)
 {
-    if(fd)
+    if(fd == NULL)
     {
-        int ret = sqlite3_close_v2((sqlite3*)fd);
-        if(ret != SQLITE_OK)
-        {
-            LOG_E("failed, ret=%d, err=%s", ret, sqlite3_errmsg((sqlite3*)fd));
-        }
+        return;
+    }
+    int ret = sqlite3_close_v2((sqlite3*)fd);
+    if(ret != SQLITE_OK)
+    {
+        LOG_E("failed, ret=%d, err=%s", ret, sqlite3_errmsg((sqlite3*)fd));
     }
 }
 
@@ -137,25 +140,19 @@ void com_sqlite_query_free(char** result)
 
     返回值：查询结果集，格式为result[row_count][column_count]
  ********************************************************/
-char** com_sqlite_query_F(void* fd, const char* sql,
-                          int* row_count, int* column_count)
+char** com_sqlite_query_F(void* fd, const char* sql, int* row_count, int* column_count)
 {
     if(fd == NULL || sql == NULL || row_count == NULL || column_count == NULL)
     {
-        LOG_E("failed, arg incorrect");
         return NULL;
     }
     *row_count = 0;
     *column_count = 0;
     char** result = NULL;
-    char* err_msg = NULL;
     int ret = sqlite3_get_table((sqlite3*)fd, sql, &result,
-                                row_count, column_count,
-                                &err_msg);
+                                row_count, column_count, NULL);
     if(ret != SQLITE_OK)
     {
-        LOG_E("failed,sql=[%s],err=%s", sql, err_msg);
-        sqlite3_free(err_msg);
         com_sqlite_query_free(result);
         return NULL;
     }
@@ -170,27 +167,26 @@ char** com_sqlite_query_F(void* fd, const char* sql,
 
     返回值：查询匹配的数据个数
  ********************************************************/
+static int sqlite_query_count_callback(void* arg, int argc, char** argv, char** azColName)
+{
+    int* row_count = (int*)arg;
+    *row_count = *row_count + 1;
+    return 0;
+}
+
 int com_sqlite_query_count(void* fd, const char* sql)
 {
     if(fd == NULL || sql == NULL)
     {
-        return 0;
+        return -1;
     }
-    char** result = NULL;
-    char* err_msg = NULL;
-    int row_count = 0;
-    int column_count = 0;
-    int ret = sqlite3_get_table((sqlite3*)fd, sql, &result,
-                                &row_count, &column_count,
-                                &err_msg);
-    com_sqlite_query_free(result);
+    int count = 0;
+    int ret = sqlite3_exec((sqlite3*)fd, sql, sqlite_query_count_callback, &count, NULL);
     if(ret != SQLITE_OK)
     {
-        LOG_E("failed, ret=%d, err=%s", ret, err_msg);
-        sqlite3_free(err_msg);
-        return 0;
+        return (-1 * ret);
     }
-    return row_count;
+    return count;
 }
 
 /********************************************************
@@ -207,16 +203,11 @@ int com_sqlite_insert(void* fd, const char* sql)
         return 0;
     }
     int ret = com_sqlite_run_sql(fd, sql);
-    if(ret != COM_SQL_ERR_OK)
+    if(ret != 0)
     {
         return ret;
     }
-    ret = sqlite3_changes((sqlite3*)fd);
-    if(ret <= 0)
-    {
-        ret = 0;
-    }
-    return ret;
+    return sqlite3_changes((sqlite3*)fd);
 }
 
 /********************************************************
@@ -233,16 +224,11 @@ int com_sqlite_delete(void* fd, const char* sql)
         return 0;
     }
     int ret = com_sqlite_run_sql(fd, sql);
-    if(ret != COM_SQL_ERR_OK)
+    if(ret != 0)
     {
         return ret;
     }
-    ret = sqlite3_changes((sqlite3*)fd);
-    if(ret <= 0)
-    {
-        ret = 0;
-    }
-    return ret;
+    return sqlite3_changes((sqlite3*)fd);
 }
 
 /********************************************************
@@ -259,16 +245,11 @@ int com_sqlite_update(void* fd, const char* sql)
         return 0;
     }
     int ret = com_sqlite_run_sql(fd, sql);
-    if(ret != COM_SQL_ERR_OK)
+    if(ret != 0)
     {
         return ret;
     }
-    ret = sqlite3_changes((sqlite3*)fd);
-    if(ret <= 0)
-    {
-        ret = 0;
-    }
-    return ret;
+    return sqlite3_changes((sqlite3*)fd);
 }
 
 /********************************************************
@@ -287,7 +268,7 @@ bool com_sqlite_is_table_exist(void* fd, const char* table_name)
     char sql[256];
     snprintf(sql, sizeof(sql),
              "SELECT * FROM sqlite_master WHERE type='table' AND name='%s';",
-             table_name);
+             com_sqlite_escape(table_name).c_str());
     int count = com_sqlite_query_count(fd, sql);
     return count > 0  ? true : false;
 }
@@ -299,6 +280,15 @@ bool com_sqlite_is_table_exist(void* fd, const char* table_name)
 
     返回值：数据表行数
  ********************************************************/
+static int sqlite_table_row_count_callback(void* arg, int argc, char** argv, char** azColName)
+{
+    int* row_count = (int*)arg;
+    if(argc > 0 && argv[0] != NULL)
+    {
+        *row_count = strtol(argv[0], NULL, 10);
+    }
+    return 0;
+}
 int com_sqlite_table_row_count(void* fd, const char* table_name)
 {
     if(fd == NULL || table_name == NULL)
@@ -306,18 +296,13 @@ int com_sqlite_table_row_count(void* fd, const char* table_name)
         return 0;
     }
     char sql[256];
-    snprintf(sql, sizeof(sql), "SELECT COUNT(*) FROM \"%s\";", table_name);
-    int row_count;
-    int col_count;
-    char** result = com_sqlite_query_F(fd, sql, &row_count, &col_count);
-    if(result == NULL)
+    snprintf(sql, sizeof(sql), "SELECT COUNT(*) FROM \"%s\";", com_sqlite_escape(table_name).c_str());
+    int count = 0;
+    int ret = sqlite3_exec((sqlite3*)fd, sql, sqlite_table_row_count_callback, &count, NULL);
+    if(ret != SQLITE_OK)
     {
-        LOG_E("failed");
-        return 0;
+        return (-1 * ret);
     }
-    int count = strtoul(result[1 * col_count], NULL, 10);
-
-    com_sqlite_query_free(result);
     return count;
 }
 
@@ -332,14 +317,13 @@ bool com_sqlite_table_clean(void* fd, const char* table_name)
 {
     if(fd == NULL || table_name == NULL)
     {
-        LOG_E("arg incorrect");
         return false;
     }
     char sql[256];
     snprintf(sql, sizeof(sql),
              "DELETE FROM \"%s\";UPDATE sqlite_sequence SET seq = 0 WHERE name = '%s';",
-             table_name, table_name);
-    return (com_sqlite_run_sql(fd, sql) == COM_SQL_ERR_OK);
+             table_name, com_sqlite_escape(table_name).c_str());
+    return (com_sqlite_run_sql(fd, sql) == 0);
 }
 
 /********************************************************
@@ -353,17 +337,15 @@ bool com_sqlite_table_remove(void* fd, const char* table_name)
 {
     if(fd == NULL || table_name == NULL)
     {
-        LOG_E("arg incorrect");
         return false;
     }
     if(com_sqlite_table_clean(fd, table_name) == false)
     {
-        LOG_E("failed");
         return false;
     }
     char sql[256];
-    snprintf(sql, sizeof(sql), "DROP TABLE \"%s\";", table_name);
-    return (com_sqlite_run_sql(fd, sql) == COM_SQL_ERR_OK);
+    snprintf(sql, sizeof(sql), "DROP TABLE \"%s\";", com_sqlite_escape(table_name).c_str());
+    return (com_sqlite_run_sql(fd, sql) == 0);
 }
 
 /********************************************************
@@ -375,7 +357,7 @@ bool com_sqlite_table_remove(void* fd, const char* table_name)
  ********************************************************/
 bool com_sqlite_begin_transaction(void* fd)
 {
-    return (com_sqlite_run_sql(fd, "BEGIN TRANSACTION;") == COM_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, "BEGIN TRANSACTION;") == 0);
 }
 
 /********************************************************
@@ -387,7 +369,7 @@ bool com_sqlite_begin_transaction(void* fd)
  ********************************************************/
 bool com_sqlite_commit_transaction(void* fd)
 {
-    return (com_sqlite_run_sql(fd, "COMMIT TRANSACTION;") == COM_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, "COMMIT TRANSACTION;") == 0);
 }
 
 /********************************************************
@@ -399,35 +381,284 @@ bool com_sqlite_commit_transaction(void* fd)
  ********************************************************/
 bool com_sqlite_rollback_transaction(void* fd)
 {
-    return (com_sqlite_run_sql(fd, "ROLLBACK TRANSACTION;") == COM_SQL_ERR_OK);
+    return (com_sqlite_run_sql(fd, "ROLLBACK TRANSACTION;") == 0);
+}
+
+void* com_sqlite_prepare(void* fd, const char* sql)
+{
+    if(fd == NULL || sql == NULL)
+    {
+        return NULL;
+    }
+    sqlite3_stmt* stmt = NULL;
+    int ret = sqlite3_prepare_v2((sqlite3*)fd, sql, -1, &stmt, NULL);
+    if(ret != SQLITE_OK)
+    {
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+    return stmt;
+}
+
+int com_sqlite_bind(void* stmt, int pos, bool val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int((sqlite3_stmt*)stmt, pos, val ? 1 : 0);
+}
+
+int com_sqlite_bind(void* stmt, int pos, int8 val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int((sqlite3_stmt*)stmt, pos, (int)val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, uint8 val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int((sqlite3_stmt*)stmt, pos, (int)val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, int16 val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int((sqlite3_stmt*)stmt, pos, (int)val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, uint16 val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int((sqlite3_stmt*)stmt, pos, (int)val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, int32 val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int((sqlite3_stmt*)stmt, pos, (int)val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, uint32 val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int((sqlite3_stmt*)stmt, pos, (int)val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, int64 val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int64((sqlite3_stmt*)stmt, pos, val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, uint64 val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_int64((sqlite3_stmt*)stmt, pos, (int64)val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, double val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_double((sqlite3_stmt*)stmt, pos, val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, float val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_double((sqlite3_stmt*)stmt, pos, (double)val);
+}
+
+int com_sqlite_bind(void* stmt, int pos, const char* val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_text((sqlite3_stmt*)stmt, pos, val, -1, SQLITE_TRANSIENT);
+}
+
+int com_sqlite_bind(void* stmt, int pos, const std::string& val)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_text((sqlite3_stmt*)stmt, pos, val.c_str(), -1, SQLITE_TRANSIENT);
+}
+
+int com_sqlite_bind(void* stmt, int pos, const uint8* data, int data_size)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_blob((sqlite3_stmt*)stmt, pos, data, data_size, SQLITE_STATIC);
+}
+
+int com_sqlite_bind(void* stmt, int pos, CPPBytes& bytes)
+{
+    if(stmt == NULL || pos < 0)
+    {
+        return -1;
+    }
+    return sqlite3_bind_blob((sqlite3_stmt*)stmt, pos, bytes.getData(), bytes.getDataSize(), SQLITE_STATIC);
+}
+
+int com_sqlite_step(void* stmt)
+{
+    if(stmt == NULL)
+    {
+        return -1;
+    }
+    int retry_count = sqlite_retry_count;
+    int ret = 0;
+    while(retry_count--)
+    {
+        ret = sqlite3_step((sqlite3_stmt*)stmt);
+        if(ret != SQLITE_BUSY)
+        {
+            break;
+        }
+        com_sleep_ms(sqlite_retry_interval_ms);
+    }
+    return (-1 * ret);
+}
+
+int com_sqlite_reset(void* stmt)
+{
+    if(stmt == NULL)
+    {
+        return -1;
+    }
+    return sqlite3_reset((sqlite3_stmt*)stmt);
+}
+
+int com_sqlite_finalize(void* stmt)
+{
+    if(stmt == NULL)
+    {
+        return -1;
+    }
+    return sqlite3_finalize((sqlite3_stmt*)stmt);
+}
+
+std::string com_sqlite_column_string(void* stmt, int pos)
+{
+    const unsigned char* val = sqlite3_column_text((sqlite3_stmt*)stmt, pos);
+    if(val == NULL)
+    {
+        return std::string();
+    }
+    return (char*)val;
+}
+
+bool com_sqlite_column_bool(void* stmt, int pos)
+{
+    return (sqlite3_column_int((sqlite3_stmt*)stmt, pos) == 1);
+}
+
+int8 com_sqlite_column_int8(void* stmt, int pos)
+{
+    return (int8)sqlite3_column_int((sqlite3_stmt*)stmt, pos);
+}
+
+uint8 com_sqlite_column_uint8(void* stmt, int pos)
+{
+    return (uint8)sqlite3_column_int((sqlite3_stmt*)stmt, pos);
+}
+
+int16 com_sqlite_column_int16(void* stmt, int pos)
+{
+    return (int16)sqlite3_column_int((sqlite3_stmt*)stmt, pos);
+}
+
+uint16 com_sqlite_column_uint16(void* stmt, int pos)
+{
+    return (uint16)sqlite3_column_int((sqlite3_stmt*)stmt, pos);
+}
+
+int32 com_sqlite_column_int32(void* stmt, int pos)
+{
+    return sqlite3_column_int((sqlite3_stmt*)stmt, pos);
+}
+
+uint32 com_sqlite_column_uint32(void* stmt, int pos)
+{
+    return (uint32)sqlite3_column_int((sqlite3_stmt*)stmt, pos);
+}
+
+int64 com_sqlite_column_int64(void* stmt, int pos)
+{
+    return sqlite3_column_int64((sqlite3_stmt*)stmt, pos);
+}
+
+uint64 com_sqlite_column_uint64(void* stmt, int pos)
+{
+    return (uint64)sqlite3_column_int64((sqlite3_stmt*)stmt, pos);
+}
+
+float com_sqlite_column_float(void* stmt, int pos)
+{
+    return (float)sqlite3_column_double((sqlite3_stmt*)stmt, pos);
+}
+
+double com_sqlite_column_double(void* stmt, int pos)
+{
+    return sqlite3_column_double((sqlite3_stmt*)stmt, pos);
+}
+
+CPPBytes com_sqlite_column_bytes(void* stmt, int pos)
+{
+    int size = sqlite3_column_bytes((sqlite3_stmt*)stmt, pos);
+    if(size <= 0)
+    {
+        return CPPBytes();
+    }
+    const void* val = sqlite3_column_blob((sqlite3_stmt*)stmt, pos);
+    if(val == NULL)
+    {
+        return CPPBytes();
+    }
+
+    return CPPBytes((const uint8*)val, size);
 }
 
 DBQuery::DBQuery(const void* sqlite_fd, const char* sql)
 {
     if(sqlite_fd != NULL && sql != NULL)
     {
-        int row_count = 0;
-        int column_count = 0;
-        char** data = com_sqlite_query_F((void*)sqlite_fd, sql, &row_count, &column_count);
-        if(data == NULL)
-        {
-            row_count = 0;
-            column_count = 0;
-            return;
-        }
-        row_count++;//包括列头
-        list = std::vector<std::vector<std::string>>(row_count, std::vector<std::string>(column_count));
-        for(int i = 0; i < row_count; i++)
-        {
-            for(int j = 0; j < column_count; j++)
-            {
-                if(data[i * column_count + j] != NULL)
-                {
-                    list[i][j] = data[i * column_count + j];
-                }
-            }
-        }
-        com_sqlite_query_free(data);
+        sqlite3_exec((sqlite3*)sqlite_fd, sql, QueryCallback, this, NULL);
     }
 }
 
@@ -435,33 +666,118 @@ DBQuery::~DBQuery()
 {
 }
 
-int DBQuery::getRowCount()
+int DBQuery::getCount()
 {
-    return (int)list.size() - 1;//排除列头
+    return (int)results.size();
 }
 
-int DBQuery::getColumnCount()
+std::string DBQuery::getItem(int row, const char* col_name, const char* default_val)
 {
-    if(list.empty())
+    if(row < 0 || row >= (int)results.size() || col_name == NULL)
+    {
+        return default_val == NULL ? "" : default_val;
+    }
+
+    std::map<std::string, std::string>& item = results[row];
+    return item[col_name];
+}
+
+double DBQuery::getItemAsDouble(int row, const char* col_name, double default_val)
+{
+    if(row < 0 || row >= (int)results.size() || col_name == NULL)
+    {
+        return default_val;
+    }
+
+    std::map<std::string, std::string>& item = results[row];
+    return strtold(item[col_name].c_str(), NULL);
+}
+
+int64 DBQuery::getItemAsNumber(int row, const char* col_name, int64 default_val)
+{
+    if(row < 0 || row >= (int)results.size() || col_name == NULL)
+    {
+        return default_val;
+    }
+
+    std::map<std::string, std::string>& item = results[row];
+    return strtoll(item[col_name].c_str(), NULL, 10);
+}
+
+bool DBQuery::getItemAsBool(int row, const char* col_name, bool default_val)
+{
+    std::string val = getItem(row, col_name);
+    if(val.empty())
+    {
+        return default_val;
+    }
+    com_string_to_lower(val);
+    if(val == "true" || val == "yes")
+    {
+        return true;
+    }
+    else if(val == "false" || val == "no")
+    {
+        return false;
+    }
+    else
+    {
+        return (val[0] == 1);
+    }
+}
+
+int DBQuery::QueryCallback(void* arg, int argc, char** argv, char** col_name)
+{
+    if(arg == NULL)
     {
         return 0;
     }
-    return (int)list[0].size();
+    DBQuery* ctx = (DBQuery*)arg;
+
+    std::map<std::string, std::string> row;
+    for(int i = 0; i < argc; i++)
+    {
+        if(col_name[i] == NULL || argv[i] == NULL)
+        {
+            continue;
+        }
+        row[col_name[i]] = argv[i];
+    }
+    ctx->results.push_back(row);
+    return 0;
 }
 
-const char* DBQuery::getItem(int row, int column)
+DBConnnection::DBConnnection(const char* file_db, bool read_only)
 {
-    if(row < 0 || column < 0 || list.empty())
-    {
-        return NULL;
-    }
+    fd = com_sqlite_open(file_db, read_only);
+}
 
-    row++;//排除列头
-    if(row >= (int)this->list.size() || column >= (int)this->list[0].size())
-    {
-        return NULL;
-    }
+DBConnnection::DBConnnection(const std::string& file_db, bool read_only)
+{
+    fd = com_sqlite_open(file_db.c_str(), read_only);
+}
 
-    return list[row][column].c_str();//排除列头
+DBConnnection::~DBConnnection()
+{
+    com_sqlite_close(fd);
+    fd = NULL;
+}
+
+bool DBConnnection::isConnected()
+{
+    return fd != NULL;
+}
+
+void* DBConnnection::getHandle()
+{
+    return fd;
+}
+
+DBStatement::DBStatement()
+{
+}
+
+DBStatement::~DBStatement()
+{
 }
 

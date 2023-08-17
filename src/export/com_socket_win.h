@@ -1,11 +1,11 @@
-#ifndef __COM_SOCKET_LINUX_H__
-#define __COM_SOCKET_LINUX_H__
+#ifndef __COM_SOCKET_WIN_H__
+#define __COM_SOCKET_WIN_H__
 
 #if defined(_WIN32) || defined(_WIN64)
 #include "com_base.h"
 #include "com_log.h"
 
-class SocketTcpServer
+class COM_EXPORT SocketTcpServer
 {
 public:
     SocketTcpServer();
@@ -17,15 +17,35 @@ public:
     void closeClient(int fd);
     int send(int clientfd, const void* data, int data_size);
     int send(const char* host, uint16 port, const void* data, int data_size);
+    virtual void broadcast(const void* data, int data_size);
 protected:
-    virtual void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected) {};
-    virtual void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size) {};
+    virtual void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
+    virtual void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
+private:
+    int acceptClient();
+    int recvData(int clientfd);
+    static void ThreadSocketServerReceiver(SocketTcpServer* ctx);
+    static void ThreadSocketServerListener(SocketTcpServer* ctx);
 private:
     uint16 server_port;
+    int server_fd;
+    int max_fd;
+    std::mutex mutex_select_fd;
+    fd_set select_fd;
+    std::atomic<bool> receiver_running;
+    std::atomic<bool> listener_running;
+    int select_timeout_ms;
+    std::thread thread_listener;
+    std::thread thread_receiver;
+    std::mutex mutex_clients;
+    std::map<int, SOCKET_CLIENT_DES> clients;
+    std::mutex mutexfds;
+    CPPSem semfds;
+    std::deque<SOCKET_CLIENT_DES> ready_fds;
 };
 
 //以下留空即可，win不支持
-class UnixDomainTcpServer
+class COM_EXPORT UnixDomainTcpServer
 {
 public:
     UnixDomainTcpServer(const char* server_file_name)
@@ -84,5 +104,5 @@ private:
 
 #endif
 
-#endif /* __COM_SOCKET_LINUX_H__ */
+#endif /* __COM_SOCKET_WIN_H__ */
 

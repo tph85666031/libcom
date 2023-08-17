@@ -1,4 +1,5 @@
-#include "com.h"
+#include "com_base64.h"
+#include "com_test.h"
 
 void com_base64_unit_test_suit(void** state)
 {

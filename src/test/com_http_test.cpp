@@ -1,4 +1,7 @@
-#include "com.h"
+#include "httplib.h"
+#include "com_base.h"
+#include "com_log.h"
+#include "com_test.h"
 
 using namespace httplib;
 

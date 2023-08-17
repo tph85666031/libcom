@@ -7,7 +7,7 @@
 
 #define TIMER_INTERVAL_MIN_MS 100
 
-static CPPTimerManager& GetTimerManager()
+CPPTimerManager& GetTimerManager()
 {
     static CPPTimerManager timer_manager;
     return timer_manager;
@@ -48,11 +48,11 @@ void CPPTimerManager::stopTimerManager()
 void CPPTimerManager::threadPoolRunner(Message& msg)
 {
     uint8 id  = msg.getUInt8("id", 0);
-    fc_timer fc = (fc_timer)com_number_to_ptr(msg.getUInt64("fc"));
-    void* arg = com_number_to_ptr(msg.getUInt64("arg"));
+    fc_timer fc = (fc_timer)msg.getPtr("fc");
+    void* ctx = msg.getPtr("ctx");
     if(fc)
     {
-        fc(id, arg);
+        fc(id, ctx);
     }
 }
 
@@ -93,8 +93,8 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
                 Message msg;
                 msg.setID(manager->message_id);
                 msg.set("id", timer.id);
-                msg.set("fc", com_ptr_to_number((const void*)timer.fc));
-                msg.set("arg", com_ptr_to_number(timer.user_arg));
+                msg.setPtr("fc", (const void*)timer.fc);
+                msg.setPtr("ctx", timer.ctx);
                 timeout_msgs.push_back(msg);
             }
 
@@ -113,14 +113,15 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
         for(size_t i = 0; i < timeout_msgs.size(); i++)
         {
             std::string task_name = timeout_msgs[i].getString("task");
-            uint64 fc = timeout_msgs[i].getUInt64("fc");
+            void* fc = timeout_msgs[i].getPtr("fc");
             if(task_name.empty() == false)
             {
                 GetTaskManager().sendMessage(task_name.c_str(), timeout_msgs[i]);
             }
-            if(fc > 0)
+            
+            if(fc != NULL)
             {
-                manager->pushMessage(timeout_msgs[i]);
+                manager->pushPoolMessage(timeout_msgs[i]);
             }
         }
         int64 remain_sleep = TIMER_INTERVAL_MIN_MS - (com_time_cpu_ms() - time_start);
@@ -183,6 +184,11 @@ void CPPTimerManager::setMessageID(uint32 id)
     this->message_id = id;
 }
 
+uint32 CPPTimerManager::getMessageID()
+{
+    return message_id;
+}
+
 CPPTimer::CPPTimer()
 {
     uuid = com_uuid_generator();
@@ -206,11 +212,11 @@ CPPTimer::CPPTimer(uint8 id, const char* task_name)
     uuid = com_uuid_generator();
 }
 
-CPPTimer::CPPTimer(uint8 id, fc_timer fc, void* user_arg)
+CPPTimer::CPPTimer(uint8 id, fc_timer fc, void* ctx)
 {
     this->id = id;
     this->fc = fc;
-    this->user_arg = user_arg;
+    this->ctx = ctx;
     uuid = com_uuid_generator();
 }
 
@@ -245,10 +251,10 @@ CPPTimer& CPPTimer::setType(const char* task_name)
     return *this;
 }
 
-CPPTimer& CPPTimer::setType(fc_timer fc, void* user_arg)
+CPPTimer& CPPTimer::setType(fc_timer fc, void* ctx)
 {
     this->fc = fc;
-    this->user_arg = user_arg;
+    this->ctx = ctx;
     uuid = com_uuid_generator();
     return *this;
 }
@@ -281,7 +287,7 @@ bool CPPTimer::start()
     }
     if(task_name.empty() && fc == NULL)
     {
-        LOG_E("task OR ipc OR fc is not set");
+        LOG_E("task OR fc is not set");
         return false;
     }
     GetTimerManager().updateTimer(*this);

@@ -1,4 +1,6 @@
-#include "com.h"
+#include "com_socket.h"
+#include "com_log.h"
+#include "com_test.h"
 
 class MySocketTcpClient : public SocketTcpClient
 {
@@ -86,7 +88,7 @@ public:
 
 void com_socket_unit_test_suit(void** state)
 {
-    uint8 mac[LENGTH_MAC]={0};
+    uint8 mac[LENGTH_MAC] = {0};
     std::vector<std::string> ifs = com_net_get_interface_all();
     ASSERT_FALSE(ifs.empty());
     ASSERT_TRUE(com_net_get_mac(ifs[0].c_str(), mac));
@@ -111,7 +113,7 @@ void com_socket_unit_test_suit(void** state)
     com_sleep_s(1);
     int count = 0;
     int data_size_client = 0;
-    while (count < 1000)
+    while(count < 1000)
     {
         std::string v = std::to_string(count);
         v.append(" ");
@@ -131,6 +133,8 @@ void com_socket_unit_test_suit(void** state)
 
 void com_unix_domain_unit_test_suit(void** state)
 {
+#if defined(_WIN32) || defined(_WIN64)
+#else
     MyUnixDomainTcpServer ud_server("un_server_test");
     MyUnixDomainTcpClient ud_client1("un_server_test", "un_client1_test");
 
@@ -139,7 +143,7 @@ void com_unix_domain_unit_test_suit(void** state)
     ud_client1.startClient();
     int count = 0;
     int data_size = 0;
-    while (count < 1000)
+    while(count < 1000)
     {
         std::string v = std::to_string(count);
         v.append(" ");
@@ -150,4 +154,101 @@ void com_unix_domain_unit_test_suit(void** state)
     }
     com_sleep_s(1);
     ASSERT_INT_EQUAL(ud_server.data_size, data_size);
+#endif
 }
+
+void com_socket_multicast_unit_test_suit(void** state)
+{
+    MulticastNodeString a;
+    a.setHost("224.0.0.88");
+    a.setPort(8888);
+
+    a.startNode();
+
+    MulticastNodeString b;
+    b.setHost("224.0.0.88");
+    b.setPort(8888);
+
+    b.startNode();
+
+    MulticastNodeString c;
+    c.setHost("224.0.0.88");
+    c.setPort(8888);
+
+    c.startNode();
+
+    //const char* x = "123\0456\0789\0";
+    const char x[12] = {'1', '2', '3', '\0', '4', '5', '6', '\0', '7', '8', '9', '\0'};
+    a.send(x, 12);
+
+    com_sleep_s(1);
+    ASSERT_INT_EQUAL(a.getCount(), 3);
+    ASSERT_INT_EQUAL(b.getCount(), 3);
+    ASSERT_INT_EQUAL(c.getCount(), 3);
+}
+
+class MyStringIPCClient : public StringIPCClient
+{
+public:
+    MyStringIPCClient() {};
+    virtual ~MyStringIPCClient() {};
+
+    void onConnectionChanged(bool connected)
+    {
+        if(connected)
+        {
+            sendString("server", com_string_format("hello from %s", getName().c_str()).c_str());
+        }
+    }
+
+    void onMessage(const std::string& name, const std::string& message)
+    {
+        LOG_I("from name=%s,message=%s", name.c_str(), message.c_str());
+        counts[name]++;
+    }
+
+    std::map<std::string, int> counts;
+};
+
+class MyStringIPCServer : public StringIPCServer
+{
+public:
+    MyStringIPCServer() {};
+    virtual ~MyStringIPCServer() {};
+
+    void onMessage(const std::string& name, const std::string& message)
+    {
+        //LOG_I("from name=%s,message=%s", name.c_str(), message.c_str());
+        counts[name]++;
+    }
+
+    std::map<std::string, int> counts;
+};
+
+void com_socket_stringipc_unit_test_suit(void** state)
+{
+    MyStringIPCServer s;
+    MyStringIPCClient c1;
+    MyStringIPCClient c2;
+
+    int test_count = 10000;
+    s.startIPC("server", 1234);
+    c1.startIPC("client1", "127.0.0.1", 1234);
+    c2.startIPC("client2", "127.0.0.1", 1234);
+    com_sleep_s(1);
+    for(int i = 0; i < test_count; i++)
+    {
+        c1.sendString("server", std::to_string(i).c_str());
+        c1.sendString("client2", std::to_string(i).c_str());
+
+        c2.sendString("server", std::to_string(i).c_str());
+        c2.sendString("client1", std::to_string(i).c_str());
+    }
+
+    com_sleep_s(4);
+    ASSERT_INT_EQUAL(c1.counts["client2"], test_count);
+    ASSERT_INT_EQUAL(c2.counts["client1"], test_count);
+    ASSERT_INT_EQUAL(s.counts["client1"], test_count + 1);
+    ASSERT_INT_EQUAL(s.counts["client2"], test_count + 1);
+}
+

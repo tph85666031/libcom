@@ -1,12 +1,14 @@
 #if __linux__ == 1
 #include <sys/epoll.h>
 #include <sys/un.h>
+#include <unistd.h>
 
 #include "com_socket.h"
 #include "com_serializer.h"
 #include "com_thread.h"
 #include "com_file.h"
 #include "com_log.h"
+#include <errno.h>
 
 SocketTcpServer::SocketTcpServer()
 {
@@ -39,49 +41,55 @@ SocketTcpServer& SocketTcpServer::setPort(uint16 port)
     return *this;
 }
 
-void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* socket_server)
+void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* ctx)
 {
     uint8 buf[4096];
-    while(socket_server->receiver_running)
+    while(ctx->receiver_running)
     {
-        socket_server->semfds.wait(1000);
-        socket_server->mutexfds.lock();
-        if(socket_server->ready_fds.size() <= 0)
+        ctx->semfds.wait(1000);
+        ctx->mutexfds.lock();
+        if(ctx->ready_fds.size() <= 0)
         {
-            socket_server->mutexfds.unlock();
+            ctx->mutexfds.unlock();
             continue;
         }
-        SOCKET_CLIENT_DES des = socket_server->ready_fds.front();
-        socket_server->ready_fds.pop();
-        socket_server->mutexfds.unlock();
+        SOCKET_CLIENT_DES des = ctx->ready_fds.front();
+        ctx->ready_fds.pop_front();
+        ctx->mutexfds.unlock();
         while(true)
         {
             memset(buf, 0, sizeof(buf));
             int ret = recv(des.clientfd, buf, sizeof(buf), MSG_DONTWAIT);
-            if(ret <= 0)
+            if(ret == 0)
             {
                 break;
             }
-            socket_server->onRecv(des.host, des.port, des.clientfd, buf, ret);
+            else if (ret < 0){
+                int err_code = errno;
+                if (err_code != EAGAIN && err_code != EWOULDBLOCK && err_code != EINTR) {
+                    ctx->closeClient(des.clientfd);
+                }
+                break;
+            }
+            ctx->onRecv(des.host, des.port, des.clientfd, buf, ret);
         }
     }
     return;
 }
 
-void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* socket_server)
+void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
 {
-    if(socket_server == NULL)
+    if(ctx == NULL)
     {
         LOG_E("arg incorrect");
         return;
     }
-    struct epoll_event eventList[SOCKET_SERVER_MAX_CLIENTS];
-    while(socket_server->listener_running)
+    struct epoll_event event_list[SOCKET_SERVER_MAX_CLIENTS];
+    while(ctx->listener_running)
     {
-        socket_server->epoll_timeout_ms = 1000;
+        ctx->epoll_timeout_ms = 1000;
         //epoll_wait
-        int count = epoll_wait(socket_server->epollfd, eventList,
-                               SOCKET_SERVER_MAX_CLIENTS, socket_server->epoll_timeout_ms);
+        int count = epoll_wait(ctx->epollfd, event_list, SOCKET_SERVER_MAX_CLIENTS, ctx->epoll_timeout_ms);
         if(count < 0)
         {
             LOG_E("epoll error,errno=%d:%s", errno, strerror(errno));
@@ -92,48 +100,56 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* socket_server)
             //LOG_D("epoll timeout");
             continue;
         }
-        if(socket_server->listener_running == false)
+        if(ctx->listener_running == false)
         {
             break;
         }
         //直接获取了事件数量,给出了活动的流,这里是和poll区别的关键
         for(int i = 0; i < count; i++)
         {
-            if((eventList[i].events & EPOLLERR) ||
-                    (eventList[i].events & EPOLLHUP) ||
-                    (eventList[i].events & EPOLLRDHUP) ||//远端close
-                    !(eventList[i].events & EPOLLIN))
+            if((event_list[i].events & EPOLLERR) ||
+                    (event_list[i].events & EPOLLHUP) ||
+                    (event_list[i].events & EPOLLRDHUP) ||//远端close
+                    !(event_list[i].events & EPOLLIN))
             {
-                LOG_D("epoll client quit, fd=%d, event=0x%X", eventList[i].data.fd, eventList[i].events);
-                socket_server->closeClient(eventList[i].data.fd);
+                LOG_D("epoll client quit, fd=%d, event=0x%X", event_list[i].data.fd, event_list[i].events);
+                ctx->closeClient(event_list[i].data.fd);
                 break;
             }
-            if(eventList[i].data.fd == socket_server->server_fd)
+            if(event_list[i].data.fd == ctx->server_fd)
             {
-                socket_server->acceptClient();
+                ctx->acceptClient();
             }
             else
             {
-                socket_server->recvData(eventList[i].data.fd);
+                ctx->recvData(event_list[i].data.fd);
             }
         }
     }
-    LOG_I("socket server quit, server_port=%d", socket_server->server_port);
+    LOG_I("socket server quit, server_port=%d", ctx->server_port);
     return;
 }
 
-int SocketTcpServer::recvData(int socketfd)//ThreadSocketServerRunner线程
+int SocketTcpServer::recvData(int clientfd)//ThreadSocketServerRunner线程
 {
     mutex_clients.lock();
-    if(clients.count(socketfd) == 0)
+    if(clients.count(clientfd) == 0)
     {
         mutex_clients.unlock();
         return -1;
     }
-    SOCKET_CLIENT_DES des = clients[socketfd];
+    SOCKET_CLIENT_DES des = clients[clientfd];
     mutex_clients.unlock();
     mutexfds.lock();
-    ready_fds.push(des);
+    for(size_t i = 0; i < ready_fds.size(); i++)
+    {
+        if(ready_fds[i].clientfd == clientfd)
+        {
+            mutexfds.unlock();
+            return 0;
+        }
+    }
+    ready_fds.push_back(des);
     semfds.post();
     mutexfds.unlock();
     return 0;
@@ -256,7 +272,7 @@ void SocketTcpServer::stopServer()
     }
     com_socket_close(server_fd);
     server_fd = -1;
-    com_socket_close(epollfd);
+    close(epollfd);
     epollfd = -1;
     mutex_clients.lock();
     for(size_t i = 0; i < clients.size(); i++)
@@ -267,9 +283,9 @@ void SocketTcpServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int SocketTcpServer::send(const char* host, uint16 port, const void* data, int dataSize)
+int SocketTcpServer::send(const char* host, uint16 port, const void* data, int data_size)
 {
-    if(host == NULL || data == NULL || dataSize <= 0)
+    if(host == NULL || data == NULL || data_size <= 0)
     {
         return 0;
     }
@@ -290,7 +306,7 @@ int SocketTcpServer::send(const char* host, uint16 port, const void* data, int d
     {
         return -1;
     }
-    int ret = com_socket_tcp_send(clientfd, data, dataSize);
+    int ret = com_socket_tcp_send(clientfd, data, data_size);
     if(ret == -1)
     {
         closeClient(clientfd);
@@ -298,13 +314,13 @@ int SocketTcpServer::send(const char* host, uint16 port, const void* data, int d
     return ret;
 }
 
-int SocketTcpServer::send(int clientfd, const void* data, int dataSize)
+int SocketTcpServer::send(int clientfd, const void* data, int data_size)
 {
-    if(data == NULL || dataSize <= 0)
+    if(data == NULL || data_size <= 0)
     {
         return 0;
     }
-    int ret = com_socket_tcp_send(clientfd, data, dataSize);
+    int ret = com_socket_tcp_send(clientfd, data, data_size);
     if(ret == -1)
     {
         closeClient(clientfd);
@@ -316,8 +332,26 @@ void SocketTcpServer::onConnectionChanged(std::string& host, uint16 port, int so
 {
 }
 
-void SocketTcpServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int dataSize)
+void SocketTcpServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
 {
+}
+
+void SocketTcpServer::broadcast(const void* data, int data_size)
+{
+    mutex_clients.lock();
+    for(auto iter : clients)
+    {
+        int ret = com_socket_tcp_send(iter.first, data, data_size);
+        if(ret < 0)
+        {
+            LOG_E("send data_size=%d to fd=%d, failed!", data_size, iter.first);
+        }
+        else
+        {
+            LOG_T("send data_size=%d to fd=%d, success!", data_size, iter.first);
+        }
+    }
+    mutex_clients.unlock();
 }
 
 UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
@@ -339,22 +373,22 @@ UnixDomainTcpServer::~UnixDomainTcpServer()
     com_file_remove(getServerFileName().c_str());
 }
 
-void UnixDomainTcpServer::ThreadUnixDomainServerReceiver(UnixDomainTcpServer* socket_server)
+void UnixDomainTcpServer::ThreadUnixDomainServerReceiver(UnixDomainTcpServer* ctx)
 {
     uint8 buf[4096];
-    while(socket_server->receiver_running)
+    while(ctx->receiver_running)
     {
-        socket_server->semfds.wait(1000);
-        socket_server->mutexfds.lock();
-        if(socket_server->fds.size() <= 0)
+        ctx->semfds.wait(1000);
+        ctx->mutexfds.lock();
+        if(ctx->fds.size() <= 0)
         {
-            socket_server->mutexfds.unlock();
+            ctx->mutexfds.unlock();
             continue;
         }
 
-        SOCKET_CLIENT_DES des = socket_server->fds.front();
-        socket_server->fds.pop();
-        socket_server->mutexfds.unlock();
+        SOCKET_CLIENT_DES des = ctx->fds.front();
+        ctx->fds.pop();
+        ctx->mutexfds.unlock();
         while(true)
         {
             memset(buf, 0, sizeof(buf));
@@ -363,26 +397,25 @@ void UnixDomainTcpServer::ThreadUnixDomainServerReceiver(UnixDomainTcpServer* so
             {
                 break;
             }
-            socket_server->onRecv(des.host, des.clientfd, buf, ret);
+            ctx->onRecv(des.host, des.clientfd, buf, ret);
         }
     }
     return;
 }
 
-void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* socket_server)
+void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* ctx)
 {
-    if(socket_server == NULL)
+    if(ctx == NULL)
     {
         LOG_E("arg incorrect");
         return;
     }
     struct epoll_event event_list[SOCKET_SERVER_MAX_CLIENTS];
-    while(socket_server->listener_running)
+    while(ctx->listener_running)
     {
-        socket_server->epoll_timeout_ms = 1000;
+        ctx->epoll_timeout_ms = 1000;
         //epoll_wait
-        int count = epoll_wait(socket_server->epollfd, event_list,
-                               SOCKET_SERVER_MAX_CLIENTS, socket_server->epoll_timeout_ms);
+        int count = epoll_wait(ctx->epollfd, event_list, SOCKET_SERVER_MAX_CLIENTS, ctx->epoll_timeout_ms);
         if(count < 0)
         {
             LOG_E("epoll error");
@@ -393,7 +426,7 @@ void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* so
             //LOG_D("epoll timeout");
             continue;
         }
-        if(socket_server->listener_running == false)
+        if(ctx->listener_running == false)
         {
             break;
         }
@@ -406,20 +439,20 @@ void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* so
                     !(event_list[i].events & EPOLLIN))
             {
                 LOG_D("epoll client quit, fd=%d, event=0x%X", event_list[i].data.fd, event_list[i].events);
-                socket_server->closeClient(event_list[i].data.fd);
+                ctx->closeClient(event_list[i].data.fd);
                 break;
             }
-            if(event_list[i].data.fd == socket_server->server_fd)
+            if(event_list[i].data.fd == ctx->server_fd)
             {
-                socket_server->acceptClient();
+                ctx->acceptClient();
             }
             else
             {
-                socket_server->recvData(event_list[i].data.fd);
+                ctx->recvData(event_list[i].data.fd);
             }
         }
     }
-    LOG_I("socket server quit, file_path=%s", socket_server->server_file_name.c_str());
+    LOG_I("socket server quit, file_path=%s", ctx->server_file_name.c_str());
     return;
 }
 
@@ -627,6 +660,24 @@ void UnixDomainTcpServer::onConnectionChanged(std::string& client_file_name, int
 
 void UnixDomainTcpServer::onRecv(std::string& client_file_name, int socketfd, uint8* data, int data_size)
 {
+}
+
+void UnixDomainTcpServer::broadcast(const void* data, int data_size)
+{
+    mutex_clients.lock();
+    for(auto iter : clients)
+    {
+        int ret = com_socket_tcp_send(iter.first, data, data_size);
+        if(ret < 0)
+        {
+            LOG_E("send data_size=%d to fd=%d, failed!", data_size, iter.first);
+        }
+        else
+        {
+            LOG_T("send data_size=%d to fd=%d, success!", data_size, iter.first);
+        }
+    }
+    mutex_clients.unlock();
 }
 
 #endif

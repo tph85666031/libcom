@@ -7,7 +7,7 @@ Serializer::Serializer()
     this->pos_detach = 0;
 }
 
-Serializer::Serializer(uint8* data, int dataSize)
+Serializer::Serializer(const uint8* data, int dataSize)
 {
     this->pos_detach = 0;
     if(data != NULL && dataSize > 0)
@@ -152,7 +152,7 @@ Serializer& Serializer::append(const std::string val, int val_size)
     {
         val_size = (int)val.length();
     }
-    append(val.data(), (int)val.length());
+    append(val.c_str(), (int)val.length());
     return *this;
 }
 

@@ -46,10 +46,10 @@ typedef struct
 } TEST_GROUP_DES;
 #pragma pack(pop)
 
-#ifdef MODULE_IS_LIB
-#define UNIT_TEST_LOAD(test_cases) \
+#define UNIT_TEST_LIB(test_cases) \
 int main(void) \
 {\
+    com_log_init();\
     TEST_GROUP_DES cmocka_group = \
     { \
         "unit_test_",\
@@ -62,38 +62,28 @@ int main(void) \
                                       NULL, NULL);\
     exit(ret);\
 }
-#else /* MODULE_IS_LIB */
-#define UNIT_TEST_LOAD(test_cases) \
-__attribute__((constructor(1000))) void __load_ut_if_required__(void)\
-{\
-    TEST_GROUP_DES cmocka_group = \
-    {\
-        "unit_test_", \
-        sizeof(test_cases) / sizeof(test_cases[0]), \
-        test_cases\
-    };\
-    int ret = _cmocka_run_group_tests(cmocka_group.name, \
-                                      cmocka_group.cases, \
-                                      cmocka_group.case_count, \
-                                      NULL, NULL);\
-    exit(ret);\
-}
-#endif /* MODULE_IS_LIB */
 
-#define UNIT_TEST_LIB(test_cases) UNIT_TEST_LOAD(test_cases)
+//为兼容Win，不采用GNU独有的constructor方式,因此单元测试不能涉及全局变量
 #define UNIT_TEST_APP(test_cases) \
-do{\
-TEST_GROUP_DES cmocka_group = \
-{ \
-    "unit_test_",\
-    sizeof(test_cases) / sizeof(test_cases[0]),\
-    test_cases\
+class __COM_LOAD_UT__ final\
+{\
+public:\
+    __COM_LOAD_UT__()\
+    {\
+        com_log_init();\
+        TEST_GROUP_DES cmocka_group = \
+        {\
+            "unit_test_", \
+            sizeof(test_cases) / sizeof(test_cases[0]), \
+            test_cases\
+        };\
+        int ret = _cmocka_run_group_tests(cmocka_group.name, \
+                                          cmocka_group.cases, \
+                                          cmocka_group.case_count, \
+                                          NULL, NULL);\
+        exit(ret);\
+    }\
 };\
-int ret = _cmocka_run_group_tests(cmocka_group.name,\
-                                  cmocka_group.cases,\
-                                  cmocka_group.case_count,\
-                                  NULL, NULL);\
-exit(ret);\
-}while(0)
+static __COM_LOAD_UT__ __com_load_ut__;
 
 #endif /* __COM_TEST_H__ */

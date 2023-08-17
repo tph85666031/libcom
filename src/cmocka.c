@@ -1191,8 +1191,8 @@ static int values_equal_display_error(const LargestIntegralType left,
                                       const LargestIntegralType right) {
     const int equal = left == right;
     if (!equal) {
-        cm_print_error(LargestIntegralTypePrintfFormat " != "
-                       LargestIntegralTypePrintfFormat "\n", left, right);
+        cm_print_error(LargestIntegralTypePrintfFormatDecimal " != "
+                       LargestIntegralTypePrintfFormatDecimal "\n", left, right);
     }
     return equal;
 }
@@ -1204,8 +1204,8 @@ static int values_not_equal_display_error(const LargestIntegralType left,
                                           const LargestIntegralType right) {
     const int not_equal = left != right;
     if (!not_equal) {
-        cm_print_error(LargestIntegralTypePrintfFormat " == "
-                       LargestIntegralTypePrintfFormat "\n", left, right);
+        cm_print_error(LargestIntegralTypePrintfFormatDecimal " == "
+                       LargestIntegralTypePrintfFormatDecimal "\n", left, right);
     }
     return not_equal;
 }

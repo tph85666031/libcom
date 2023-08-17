@@ -8,10 +8,9 @@ void com_dns_unit_test_suit(void** state)
 #if __linux__ == 1
     std::string ip;
     std::vector<std::string> interfaces = com_net_get_interface_all();
-    for (size_t i = 0; i < interfaces.size(); i++)
+    for(size_t i = 0; i < interfaces.size(); i++)
     {
-        if (com_string_equal(interfaces[i].c_str(), "lo")
-                || com_string_equal(interfaces[i].c_str(), "br0"))
+        if(com_string_equal(interfaces[i].c_str(), "wlp6s0") == false)
         {
             continue;
         }

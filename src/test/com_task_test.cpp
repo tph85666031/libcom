@@ -1,33 +1,34 @@
-#include "com.h"
+#include "com_task.h"
+#include "com_test.h"
 
 class TestTask : public Task
 {
 public:
-    TestTask(std::string name, Message init_msg) : Task(name, init_msg)
+    TestTask(std::string name, Message msg) : Task(name, msg)
     {
-        tid = 0;
+        pid = 0;
         count = 0;
         addListener(1);
         addListener(4, 5, 6, 7, 8, 9, 10);
-        ASSERT_STR_EQUAL(init_msg.getString("host").c_str(), "127.0.0.1");
-        if (name == "task1")
+        ASSERT_STR_EQUAL(msg.getString("host").c_str(), "127.0.0.1");
+        if(name == "task1")
         {
-            ASSERT_INT_EQUAL(init_msg.getUInt16("port"), 0);
+            ASSERT_INT_EQUAL(msg.getUInt16("port"), 0);
         }
-        else if (name == "task2")
+        else if(name == "task2")
         {
-            ASSERT_INT_EQUAL(init_msg.getUInt16("port"), 3610);
+            ASSERT_INT_EQUAL(msg.getUInt16("port"), 3610);
         }
-        else if (name == "task3")
+        else if(name == "task3")
         {
-            ASSERT_INT_EQUAL(init_msg.getUInt16("port"), 3610);
+            ASSERT_INT_EQUAL(msg.getUInt16("port"), 3610);
         }
     };
     ~TestTask()
     {
         removeListener(4, 5, 6);
         LOG_I("%s quit,flag=%x", getName().c_str(), flag);
-        if (flag != 0x07)
+        if(flag != 0x07)
         {
             LOG_E("ut failed, flag must be 7");
         }
@@ -36,45 +37,46 @@ public:
 private:
     void onMessage(Message& msg)
     {
-        if (tid == 0)
+        if(pid == 0)
         {
-            tid = com_thread_get_pid();
+            pid = com_process_get_pid();
         }
-        ASSERT_INT_EQUAL(tid, com_thread_get_pid());
+        ASSERT_INT_EQUAL(pid, com_process_get_pid());
         //LOG_D("%s got message,id=%u,val=%s", getName().c_str(), msg.getID(), msg.getString("data").c_str());
         count++;
         flag |= 0x02;
+        GetTaskManager().sendAck(msg, "this is reply", sizeof("this is reply"));
     }
     void onStart()
     {
-        if (tid == 0)
+        if(pid == 0)
         {
-            tid = com_thread_get_pid();
+            pid = com_process_get_pid();
         }
-        ASSERT_INT_EQUAL(tid, com_thread_get_pid());
+        ASSERT_INT_EQUAL(pid, com_process_get_pid());
         LOG_I("task %s start", getName().c_str());
         flag |= 0x01;
     }
     void onStop()
     {
-        if (tid == 0)
+        if(pid == 0)
         {
-            tid = com_thread_get_pid();
+            pid = com_process_get_pid();
         }
-        ASSERT_INT_EQUAL(tid, com_thread_get_pid());
+        ASSERT_INT_EQUAL(pid, com_process_get_pid());
         LOG_I("task %s stop", getName().c_str());
         flag |= 0x04;
     }
 private:
     std::atomic<int> count = {0};
-    std::atomic<uint64> tid = {0};
+    std::atomic<uint64> pid = {0};
     uint32 flag = 0;
 };
 
 static void test_thread(std::string name, int count)
 {
     Message msg;
-    for (int i = 0; i < count; i++)
+    for(int i = 0; i < count; i++)
     {
         msg.setID(1);
         msg.set("data", std::to_string(i));
@@ -110,18 +112,23 @@ void com_task_unit_test_suit(void** state)
 
     com_sleep_s(1);
 
-    if (t1.joinable())
+    if(t1.joinable())
     {
         t1.join();
     }
-    if (t2.joinable())
+    if(t2.joinable())
     {
         t2.join();
     }
-    if (t3.joinable())
+    if(t3.joinable())
     {
         t3.join();
     }
+
+
+    CPPBytes reply = GetTaskManager().sendMessageAndWait("task1", msg, 1000);
+    LOG_I("reply=%s", reply.toString().c_str());
+
     GetTaskManager().destroyTask("task1");
 
     ASSERT_FALSE(GetTaskManager().isTaskExist("task1"));

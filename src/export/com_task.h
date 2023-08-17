@@ -9,13 +9,15 @@
 #include "com_thread.h"
 #include <iostream>
 
-class Task
+class COM_EXPORT Task
 {
     friend class TaskManager;
 public:
-    Task(std::string name, Message init_msg = Message());
+    Task(std::string name, Message msg = Message());
     virtual ~Task();
+protected:
     std::string getName();
+    void setProtectMode(bool enable);
     bool isListenerExist(uint32 id);
     template <class... T>
     void addListener(T... ids)
@@ -37,7 +39,7 @@ public:
         for(uint32 id : {ids...})
         // *INDENT-ON*
         {
-            if (listeners.count(id) > 0)
+            if(listeners.count(id) > 0)
             {
                 listeners.erase(id);
             }
@@ -49,7 +51,7 @@ protected:
     virtual void onStop();
     virtual void onMessage(Message& msg);
 private:
-    void pushMessage(Message& msg);
+    void pushTaskMessage(const Message& msg);
     void startTask();
     void stopTask();
     static void TaskRunner(Task* task);
@@ -62,30 +64,63 @@ private:
     CPPMutex mutex_listeners = {"TASK:mutex_listeners"};
     std::map<uint32, uint32> listeners;
     CPPCondition condition = {"TASK:condition"};
+    std::atomic<bool> protect_mode = {false};
 };
 
-class TaskManager
+class COM_EXPORT TaskManager
 {
 public:
     TaskManager();
     virtual ~TaskManager();
-    bool isTaskExist(std::string task_name);
-    void destroyTask(std::string task_name);
+    bool isTaskExist(const char* task_name);
+    bool isTaskExist(const std::string& task_name);
+    void destroyTask(const char* task_name_wildcard);
+    void destroyTask(const std::string& task_name_wildcard);
     void destroyTaskAll();
-    void sendMessage(std::string task_name_wildcard, Message& msg);
-    void sendBroadcastMessage(Message& msg);
+    CPPBytes sendMessageAndWait(const char* task_name, Message& msg, int timeout_ms = 1000);
+    CPPBytes sendMessageAndWait(const std::string& task_name, Message& msg, int timeout_ms = 1000);
+    void sendMessage(const char* task_name_wildcard, const Message& msg);
+    void sendMessage(const std::string& task_name_wildcard, const Message& msg);
+    void sendBroadcastMessage(const Message& msg);
+    void sendAck(uint64 uuid, const void* data, int data_size);
+    void sendAck(const Message& msg_received, const void* data, int data_size);
     template<class T>
-    T* createTask(std::string task_name, Message init_msg = Message())
+    T* createTask(const char* task_name, Message msg = Message())
     {
+        if(task_name == NULL || task_name[0] == '\0')
+        {
+            return NULL;
+        }
         mutex_tasks.lock();
         size_t count = tasks.count(task_name);
-        if (count > 0)
+        if(count > 0)
+        {
+            mutex_tasks.unlock();
+            LOG_W("task %s already exist", task_name);
+            return NULL;
+        }
+        T* task = new T(task_name, msg);
+        task->startTask();
+        tasks[task_name] = task;
+        mutex_tasks.unlock();
+        return task;
+    };
+    template<class T>
+    T* createTask(const std::string& task_name, Message msg = Message())
+    {
+        if(task_name.empty())
+        {
+            return NULL;
+        }
+        mutex_tasks.lock();
+        size_t count = tasks.count(task_name);
+        if(count > 0)
         {
             mutex_tasks.unlock();
             LOG_W("task %s already exist", task_name.c_str());
             return NULL;
         }
-        T* task = new T(task_name, init_msg);
+        T* task = new T(task_name, msg);
         task->startTask();
         tasks[task_name] = task;
         mutex_tasks.unlock();
@@ -96,33 +131,7 @@ private:
     std::map<std::string, Task*> tasks;
 };
 
-TaskManager& GetTaskManager();
-
-inline bool com_task_exist(std::string task_name)
-{
-    return GetTaskManager().isTaskExist(task_name);
-}
-
-inline void com_task_destroy(std::string task_name)
-{
-    GetTaskManager().destroyTask(task_name);
-}
-
-inline void com_task_send_message(std::string task_name_wildcard, Message& msg)
-{
-    GetTaskManager().sendMessage(task_name_wildcard, msg);
-}
-
-inline void com_task_send_broadcast_message(Message& msg)
-{
-    GetTaskManager().sendBroadcastMessage(msg);
-}
-
-template<class T>
-T* com_task_create(std::string task_name, Message init_msg = Message())
-{
-    return GetTaskManager().createTask<T>(task_name, init_msg);
-}
+COM_EXPORT TaskManager& GetTaskManager();
 
 #endif /* __COM_TASK_H__ */
 

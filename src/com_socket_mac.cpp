@@ -1,29 +1,11 @@
 #ifdef __APPLE__
 #include <sys/event.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <netinet/tcp_fsm.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <netinet/tcp.h>
-#include <netdb.h>
 #include <sys/un.h>
-#include <stddef.h>
-#include <fnmatch.h>
+#include <com_socket_mac.h>
 
 #include "com_socket.h"
-#include "com_serializer.h"
-#include "com_thread.h"
-#include "com_file.h"
-#include "com_log.h"
-
-#define iom_event_fd(x)         (int)(intptr_t)((x).udata)
-#define iom_event_events(x)     (x).filter
-#define iom_error_events(x)     (!((x) & EVFILT_READ))
 
 TCPServer::TCPServer()
 {
@@ -62,17 +44,25 @@ void TCPServer::IOMAddMonitor(int clientfd)
     EV_SET(&ev[0], clientfd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, (void*)(intptr_t)clientfd);
     if(kevent(epollfd, ev, 1, NULL, 0, NULL) < 0)
     {
-        LOG_E("kqueue add accept fd failed : clientfd = %d", clientfd);
+        LOG_E("kqueue add io monitor failed! clientfd=%d", clientfd);
+    }
+    else
+    {
+        LOG_I("kqueue add io monitor success! clientfd=%d", clientfd);
     }
 }
 
 void TCPServer::IOMRemoveMonitor(int fd)
 {
     struct kevent ev[1];
-    EV_SET(&ev[0], fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void*)(intptr_t)fd);
+    EV_SET(&ev[0], fd, EVFILT_READ, EV_DELETE, 0, 0, (void*)(intptr_t)fd);
     if(kevent(epollfd, ev, 1, NULL, 0, NULL) < 0)
     {
         LOG_E("kqueue close failed : fd = %d", fd);
+    }
+    else
+    {
+        LOG_I("kqueue close success : fd = %d", fd);
     }
 }
 
@@ -95,34 +85,35 @@ int TCPServer::startServer()
     }
     if(listen(server_fd, 5) < 0)
     {
-        LOG_E("socket listen failed : socketfd = %d", server_fd);
+        LOG_E("socket listen failed! socketfd: %d, error: %s", server_fd, strerror(errno));
         com_socket_close(server_fd);
         return -3;
     }
     if(! IOMCreate())
     {
-        LOG_E("IO multiplex create failed : fd = %d", server_fd);
+        LOG_E("IO multiplex create failed! socketfd: %d", server_fd);
         return -4;
     }
     listener_running = true;
     thread_listener = std::thread(ThreadTCPServerListener, this);
     receiver_running = true;
     thread_receiver = std::thread(ThreadTCPServerReceiver, this);
+    LOG_I("TCPServer started");
     return 0;
 }
 
 void TCPServer::closeClient(int fd)
 {
+    LOG_I("start close client fd: %d", fd);
     this->IOMRemoveMonitor(fd);
-    SOCKET_CLIENT_DES des;
-    des.clientfd = fd;
     mutex_clients.lock();
     if(clients.count(fd) == 0)
     {
+        LOG_E("cannot find SOCKET_CLIENT_DES for fd: %d", fd);
         mutex_clients.unlock();
         return;
     }
-    des = clients[fd];
+    SOCKET_CLIENT_DES des = clients[fd];
     mutex_clients.unlock();
     onConnectionChanged(des.host, des.port, des.clientfd, false);
     com_socket_close(fd);
@@ -131,11 +122,19 @@ void TCPServer::closeClient(int fd)
     {
         clients.erase(fd);
     }
+    LOG_D("remain clients count: %ld", clients.size());
     mutex_clients.unlock();
 }
 
 void TCPServer::stopServer()
 {
+    // 1. stop receiving connection
+    com_socket_close(server_fd);
+    server_fd = -1;
+    com_socket_close(epollfd);
+    epollfd = -1;
+
+    // 2. stop handler threads
     listener_running = false;
     if(thread_listener.joinable())
     {
@@ -146,10 +145,8 @@ void TCPServer::stopServer()
     {
         thread_receiver.join();
     }
-    com_socket_close(server_fd);
-    server_fd = -1;
-    com_socket_close(epollfd);
-    epollfd = -1;
+    
+    // 3. close clients' sockets
     mutex_clients.lock();
     for(int i = 0; i < clients.size(); i++)
     {
@@ -171,6 +168,24 @@ int TCPServer::send(int clientfd, const void* data, int dataSize)
         closeClient(clientfd);
     }
     return ret;
+}
+
+void TCPServer::broadcast(const void* data, int data_size)
+{
+    mutex_clients.lock();
+    for(auto iter : clients)
+    {
+        int ret = com_socket_tcp_send(iter.first, data, data_size);
+        if(ret < 0)
+        {
+            LOG_E("send data_size=%d to fd=%d, failed!", data_size, iter.first);
+        }
+        else
+        {
+            LOG_T("send data_size=%d to fd=%d, success!", data_size, iter.first);
+        }
+    }
+    mutex_clients.unlock();
 }
 
 int TCPServer::recvData(int socketfd)
@@ -200,39 +215,38 @@ void TCPServer::ThreadTCPServerListener(TCPServer* socket_server)
     while(socket_server->listener_running)
     {
         socket_server->epoll_timeout_ms = 1000;
-        //epoll_wait
-        struct kevent eventList[SOCKET_SERVER_MAX_CLIENTS];
-        int count = socket_server->IOMWaitFor(eventList, SOCKET_SERVER_MAX_CLIENTS);
-        if(count < 0)
+        struct kevent events[SOCKET_SERVER_MAX_CLIENTS];
+        int count = socket_server->IOMWaitFor(events, SOCKET_SERVER_MAX_CLIENTS);
+        if(count <= 0)
         {
-            LOG_E("iom_event error,errno=%d:%s", errno, strerror(errno));
-            break;
-        }
-        else if(count == 0)
-        {
-            LOG_D("iom_event timeout");
+            if(count < 0)
+            {
+                LOG_E("iom_event error, errno=%d:%s", errno, strerror(errno));
+                sleep(3);
+            }
             continue;
         }
         if(socket_server->listener_running == false)
         {
             break;
         }
-        //直接获取了事件数量,给出了活动的流,这里是和poll区别的关键
         for(int i = 0; i < count; i++)
         {
-            int fd = iom_event_fd(eventList[i]);
-            int events = iom_event_events(eventList[i]);
-            if(iom_error_events(events))
+            int fd = (int)events[i].ident;
+            int16_t filter = events[i].filter;
+            uint16_t flags = events[i].flags;
+            // When the client disconnects an EOF is sent. By closing the file
+            // descriptor the event is automatically removed from the kqueue.
+            if(flags & EV_EOF)
             {
-                LOG_D("iom_event client quit, fd=%d, event=0x%X", fd, events);
+                LOG_D("Client has disconnected, fd: %d", fd);
                 socket_server->closeClient(fd);
-                break;
             }
-            if(fd == socket_server->server_fd)
+            else if(fd == socket_server->server_fd)
             {
                 socket_server->acceptClient();
             }
-            else
+            else if(filter & EVFILT_READ)
             {
                 socket_server->recvData(fd);
             }
@@ -314,10 +328,11 @@ bool SocketTcpServer::initListen()
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &resuse_flag, sizeof(int));
     if(bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
     {
-        LOG_E("socket bind failed : fd = %d", server_fd);
+        LOG_E("socket bind failed! fd: %d, error: %s", server_fd, strerror(errno));
         com_socket_close(server_fd);
         return false;
     }
+    LOG_I("SocketTcpServer init listen, server_fd: %d, server port: %d", server_fd, server_port);
     return true;
 }
 
@@ -332,7 +347,7 @@ int SocketTcpServer::acceptClient()
         LOG_E("bad accept client, errno=%d:%s", errno, strerror(errno));
         return -1;
     }
-    LOG_D("Accept Connection, fd=%d, addr=%s,server_port=%u",
+    LOG_D("accept new connection, fd=%d, client=%s:%u",
           clientfd, com_ip_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
     SOCKET_CLIENT_DES des;
     des.clientfd = clientfd;
@@ -346,6 +361,20 @@ int SocketTcpServer::acceptClient()
     IOMAddMonitor(clientfd);
     onConnectionChanged(des.host, des.port, des.clientfd, true);
     return 0;
+}
+
+int SocketTcpServer::send(int clientfd, const void* data, int data_size)
+{
+    if(data == NULL || data_size <= 0)
+    {
+        return 0;
+    }
+    int ret = com_socket_tcp_send(clientfd, data, data_size);
+    if(ret == -1)
+    {
+        closeClient(clientfd);
+    }
+    return ret;
 }
 
 int SocketTcpServer::send(const char* host, uint16 port, const void* data, int dataSize)
@@ -379,6 +408,10 @@ int SocketTcpServer::send(const char* host, uint16 port, const void* data, int d
     return ret;
 }
 
+void SocketTcpServer::broadcast(const void *data, int data_size) {
+    TCPServer::broadcast(data, data_size);
+}
+
 
 // UnixDomainTcpServer
 UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
@@ -407,13 +440,13 @@ bool UnixDomainTcpServer::initListen()
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, this->server_file_name.c_str());
-    long len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
-    if(bind(server_fd, (struct sockaddr*)(&server_addr), (int)len) < 0)
+    if(bind(server_fd, (struct sockaddr*)(&server_addr), sizeof(server_addr)) < 0)
     {
-        LOG_E("socket bind failed : socketfd = %d", server_fd);
+        LOG_E("socket bind failed! fd: %d, error: %s", server_fd, strerror(errno));
         com_socket_close(server_fd);
         return false;
     }
+    LOG_I("UnixDomainTcpServer init listen, server_fd: %d, unix domain file: %s", server_fd, this->server_file_name.c_str());
     return true;
 }
 
@@ -440,6 +473,15 @@ int UnixDomainTcpServer::acceptClient()
     IOMAddMonitor(clientfd);
     onConnectionChanged(des.host, des.port, des.clientfd, true);
     return 0;
+}
+
+int UnixDomainTcpServer::send(int clientfd, const void* data, int data_size)
+{
+    if(data == NULL || data_size <= 0)
+    {
+        return 0;
+    }
+    return com_socket_tcp_send(clientfd, data, data_size);
 }
 
 int UnixDomainTcpServer::send(const char* client_file_name_wildcard, const void* data, int data_size)
@@ -480,6 +522,10 @@ int UnixDomainTcpServer::send(const char* client_file_name_wildcard, const void*
         ret = com_socket_tcp_send(matched[i], data, data_size);
     }
     return ret;
+}
+
+void UnixDomainTcpServer::broadcast(const void *data, int data_size) {
+    TCPServer::broadcast(data, data_size);
 }
 
 #endif

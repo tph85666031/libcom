@@ -22,7 +22,7 @@ Cache::Cache()
 
 Cache::Cache(const char* uuid)
 {
-    if (uuid != NULL)
+    if(uuid != NULL)
     {
         this->uuid = uuid;
     }
@@ -35,7 +35,7 @@ Cache::Cache(const std::string& uuid)
 
 Cache::Cache(const char* uuid, uint8* data, int data_size)
 {
-    if (uuid != NULL)
+    if(uuid != NULL)
     {
         this->uuid = uuid;
     }
@@ -85,11 +85,11 @@ int Cache::getUserFlag()
 bool Cache::expired()
 {
     uint64 time = com_time_rtc_ms();
-    if (time <= 1577808000000)//2020-01-01 00:00:00
+    if(time <= 1577808000000) //2020-01-01 00:00:00
     {
         return false;
     }
-    if (flag.expiretime_ms > 0 && com_time_rtc_ms() > (uint64)flag.expiretime_ms)
+    if(flag.expiretime_ms > 0 && com_time_rtc_ms() > (uint64)flag.expiretime_ms)
     {
         return true;
     }
@@ -137,7 +137,7 @@ Cache& Cache::setData(const char* data, int data_size)
 
 Cache& Cache::setUUID(const char* uuid)
 {
-    if (uuid != NULL)
+    if(uuid != NULL)
     {
         this->uuid = uuid;
     }
@@ -170,18 +170,18 @@ Cache& Cache::setUserFlag(int user_flag)
 
 void CacheManager::ThreadFlushRunner(CacheManager* manager)
 {
-    if (manager == NULL)
+    if(manager == NULL)
     {
         return;
     }
     int interval = 0;
     bool need_flush = false;
-    while (manager->thread_flush_running)
+    while(manager->thread_flush_running)
     {
         need_flush = false;
-        if (manager->flush_interval_s > 0)
+        if(manager->flush_interval_s > 0)
         {
-            if (interval >= manager->flush_interval_s * 1000)
+            if(interval >= manager->flush_interval_s * 1000)
             {
                 need_flush = true;
                 interval  = 0;
@@ -189,17 +189,17 @@ void CacheManager::ThreadFlushRunner(CacheManager* manager)
             }
             interval += CACHEMANAGER_FLUSH_CHECKINTERVAL_MS;
         }
-        if (manager->flush_count > 0)
+        if(manager->flush_count > 0)
         {
             manager->mutex_list.lock();
-            if ((int)manager->list.size() >= manager->flush_count)
+            if((int)manager->list.size() >= manager->flush_count)
             {
                 need_flush = true;
                 LOG_D("count matched, flush to disk");
             }
             manager->mutex_list.unlock();
         }
-        if (need_flush)
+        if(need_flush)
         {
             manager->flushToDisk();
             manager->removeExpired();
@@ -221,7 +221,7 @@ CacheManager::~CacheManager()
 
 bool CacheManager::startManager(const char* db_file)
 {
-    if (db_file == NULL)
+    if(db_file == NULL)
     {
         return false;
     }
@@ -234,7 +234,7 @@ bool CacheManager::startManager(const char* db_file)
 void CacheManager::stopManager()
 {
     thread_flush_running = false;
-    if (thread_flush.joinable())
+    if(thread_flush.joinable())
     {
         thread_flush.join();
     }
@@ -248,21 +248,21 @@ void CacheManager::stopManager()
 bool CacheManager::initDB()
 {
     AutoMutex a(mutex_sqlite_fd);
-    if (com_file_type(db_file.c_str()) != FILE_TYPE_FILE)
+    if(com_file_type(db_file.c_str()) != FILE_TYPE_FILE)
     {
         com_sqlite_close(sqlite_fd);
         sqlite_fd = NULL;
     }
-    if (sqlite_fd != NULL)
+    if(sqlite_fd != NULL)
     {
         return true;
     }
     sqlite_fd = com_sqlite_open(db_file.c_str());
-    if (sqlite_fd == NULL)
+    if(sqlite_fd == NULL)
     {
         return false;
     }
-    if (com_sqlite_is_table_exist(sqlite_fd, CACHE_MANAGER_TABLE_NAME) == false)
+    if(com_sqlite_is_table_exist(sqlite_fd, CACHE_MANAGER_TABLE_NAME) == false)
     {
         std::string sql = com_string_format("CREATE TABLE \"%s\" ( \
                                         \"%s\"  INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
@@ -278,7 +278,7 @@ bool CacheManager::initDB()
                                             CACHE_MANAGER_TABLE_EXPIRE,
                                             CACHE_MANAGER_TABLE_FLAG,
                                             CACHE_MANAGER_TABLE_DATA);
-        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) != COM_SQL_ERR_OK)
+        if(com_sqlite_run_sql(sqlite_fd, sql.c_str()) != 0)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -304,7 +304,7 @@ void CacheManager::insertHead(Cache& cache)
 {
     bool need_flush = false;
     mutex_list.lock();
-    if (mem_cache_count_max == 0) //禁用内存缓存,直接写入磁盘
+    if(mem_cache_count_max == 0)  //禁用内存缓存,直接写入磁盘
     {
         std::string sql = com_string_format("REPLACE INTO \"%s\" (%s,%s,%s,%s,%s) VALUES ('%s',%d,%lld,%d,'%s');",
                                             CACHE_MANAGER_TABLE_NAME,
@@ -321,7 +321,7 @@ void CacheManager::insertHead(Cache& cache)
 
         initDB();
         mutex_sqlite_fd.lock();
-        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+        if(com_sqlite_run_sql(sqlite_fd, sql.c_str()) == -1)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -331,14 +331,14 @@ void CacheManager::insertHead(Cache& cache)
     else
     {
         list.insert(list.begin(), cache);
-        if ((int)list.size() > mem_cache_count_max)
+        if((int)list.size() > mem_cache_count_max)
         {
             need_flush = true;
         }
     }
     sem_list.post();
     mutex_list.unlock();
-    if (need_flush)
+    if(need_flush)
     {
         flushToDisk();
     }
@@ -360,7 +360,7 @@ void CacheManager::insertTail(Cache& cache)
 {
     bool need_flush = false;
     mutex_list.lock();
-    if (mem_cache_count_max == 0) //禁用内存缓存,直接写入磁盘
+    if(mem_cache_count_max == 0)  //禁用内存缓存,直接写入磁盘
     {
         std::string sql = com_string_format("REPLACE INTO \"%s\" (%s,%s,%s,%s,%s) VALUES ('%s',%d,%lld,%d,'%s');",
                                             CACHE_MANAGER_TABLE_NAME,
@@ -378,9 +378,9 @@ void CacheManager::insertTail(Cache& cache)
         initDB();
         mutex_sqlite_fd.lock();
         int ret = com_sqlite_run_sql(sqlite_fd, sql.c_str());
-        if (ret != COM_SQL_ERR_OK)
+        if(ret != 0)
         {
-            if (ret == COM_SQL_ERR_FAILED)
+            if(ret == -1)
             {
                 com_sqlite_close(sqlite_fd);
                 sqlite_fd = NULL;
@@ -392,14 +392,14 @@ void CacheManager::insertTail(Cache& cache)
     else
     {
         list.push_back(cache);
-        if ((int)list.size() > mem_cache_count_max)
+        if((int)list.size() > mem_cache_count_max)
         {
             need_flush = true;
         }
     }
     sem_list.post();
     mutex_list.unlock();
-    if (need_flush)
+    if(need_flush)
     {
         flushToDisk();
     }
@@ -422,7 +422,7 @@ void CacheManager::append(Cache& cache)
 
 void CacheManager::removeByUUID(const char* uuid)
 {
-    if (uuid == NULL)
+    if(uuid == NULL)
     {
         return;
     }
@@ -433,9 +433,9 @@ void CacheManager::removeByUUID(const std::string& uuid)
 {
     mutex_list.lock();
     vector<Cache>::iterator it;
-    for (it = list.begin(); it != list.end(); it++)
+    for(it = list.begin(); it != list.end(); it++)
     {
-        if (it->getUUID() == uuid)
+        if(it->getUUID() == uuid)
         {
             list.erase(it);
             break;
@@ -449,7 +449,7 @@ void CacheManager::removeByUUID(const std::string& uuid)
 
     initDB();
     mutex_sqlite_fd.lock();
-    if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+    if(com_sqlite_delete(sqlite_fd, sql.c_str()) == -1)
     {
         com_sqlite_close(sqlite_fd);
         sqlite_fd = NULL;
@@ -462,28 +462,28 @@ void CacheManager::removeFirst(int count)
     initDB();
     mutex_sqlite_fd.lock();
     int count_disk = com_sqlite_table_row_count(sqlite_fd, CACHE_MANAGER_TABLE_NAME);
-    if (count_disk > count)
+    if(count_disk > count)
     {
         count_disk = count;
     }
     int count_mem = count - count_disk;
-    if (count_disk > 0)
+    if(count_disk > 0)
     {
         std::string sql = com_string_format("DELETE FROM \"%s\" WHERE \"%s\" IN(SELECT \"%s\" FROM \"%s\" ORDER BY \"%s\" LIMIT %d)",
                                             CACHE_MANAGER_TABLE_NAME, CACHE_MANAGER_TABLE_ID,
                                             CACHE_MANAGER_TABLE_ID, CACHE_MANAGER_TABLE_NAME,
                                             CACHE_MANAGER_TABLE_ID, count);
-        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+        if(com_sqlite_delete(sqlite_fd, sql.c_str()) == -1)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
         }
     }
     mutex_sqlite_fd.unlock();
-    if (count_mem > 0)
+    if(count_mem > 0)
     {
         mutex_list.lock();
-        if (count_mem > (int)list.size())
+        if(count_mem > (int)list.size())
         {
             count_mem = list.size();
         }
@@ -496,18 +496,18 @@ void CacheManager::removeLast(int count)
 {
     mutex_list.lock();
     int count_mem = list.size();
-    if (count_mem > count)
+    if(count_mem > count)
     {
         count_mem = count;
     }
-    if (count_mem > 0)
+    if(count_mem > 0)
     {
         list.erase(list.end() - count_mem, list.end());
     }
     mutex_list.unlock();
 
     int count_disk = count - count_mem;
-    if (count_disk > 0)
+    if(count_disk > 0)
     {
         std::string sql = com_string_format("DELETE FROM \"%s\" WHERE \"%s\" IN(SELECT \"%s\" FROM \"%s\" ORDER BY \"%s\" DESC LIMIT %d)",
                                             CACHE_MANAGER_TABLE_NAME, CACHE_MANAGER_TABLE_ID,
@@ -515,7 +515,7 @@ void CacheManager::removeLast(int count)
                                             CACHE_MANAGER_TABLE_ID, count);
         initDB();
         mutex_sqlite_fd.lock();
-        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+        if(com_sqlite_delete(sqlite_fd, sql.c_str()) == -1)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -527,14 +527,14 @@ void CacheManager::removeLast(int count)
 void CacheManager::removeExpired()
 {
     uint64 time = com_time_rtc_ms();
-    if (time > 1577808000000)//2020-01-01 00:00:00
+    if(time > 1577808000000) //2020-01-01 00:00:00
     {
         std::string sql = com_string_format("DELETE FROM \"%s\" WHERE \"%s\">0 AND \"%s\"<%lld",
                                             CACHE_MANAGER_TABLE_NAME, CACHE_MANAGER_TABLE_EXPIRE,
                                             CACHE_MANAGER_TABLE_EXPIRE, com_time_rtc_ms());
         initDB();
         mutex_sqlite_fd.lock();
-        if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+        if(com_sqlite_delete(sqlite_fd, sql.c_str()) == -1)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;
@@ -549,7 +549,7 @@ void CacheManager::removeRetryFinished()
                                         CACHE_MANAGER_TABLE_NAME, CACHE_MANAGER_TABLE_RETRY);
     initDB();
     mutex_sqlite_fd.lock();
-    if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+    if(com_sqlite_delete(sqlite_fd, sql.c_str()) == -1)
     {
         com_sqlite_close(sqlite_fd);
         sqlite_fd = NULL;
@@ -564,15 +564,15 @@ void CacheManager::setRetryCount(const std::string& uuid, int count)
 
 void CacheManager::setRetryCount(const char* uuid, int count)
 {
-    if(uuid==NULL)
+    if(uuid == NULL)
     {
         return;
     }
     mutex_list.lock();
     vector<Cache>::iterator it;
-    for (it = list.begin(); it != list.end(); it++)
+    for(it = list.begin(); it != list.end(); it++)
     {
-        if (com_string_equal(it->getUUID().c_str(), uuid))
+        if(com_string_equal(it->getUUID().c_str(), uuid))
         {
             it->setRetryCount(count);
             mutex_list.unlock();
@@ -586,7 +586,7 @@ void CacheManager::setRetryCount(const char* uuid, int count)
                                         CACHE_MANAGER_TABLE_UUID, uuid);
     initDB();
     mutex_sqlite_fd.lock();
-    if (com_sqlite_update(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+    if(com_sqlite_update(sqlite_fd, sql.c_str()) == -1)
     {
         com_sqlite_close(sqlite_fd);
         sqlite_fd = NULL;
@@ -602,7 +602,7 @@ void CacheManager::increaseRetryCount(const std::string& uuid, int count)
 void CacheManager::increaseRetryCount(const char* uuid, int count)
 {
     Cache cache = getByUUID(uuid);
-    if (cache.empty() || cache.getRetryCount() < 0)
+    if(cache.empty() || cache.getRetryCount() < 0)
     {
         return;
     }
@@ -617,12 +617,12 @@ void CacheManager::decreaseRetryCount(const std::string& uuid, int count)
 void CacheManager::decreaseRetryCount(const char* uuid, int count)
 {
     Cache cache = getByUUID(uuid);
-    if (cache.empty() || cache.getRetryCount() < 0)
+    if(cache.empty() || cache.getRetryCount() < 0)
     {
         return;
     }
     count = cache.getRetryCount() - count;
-    if (count <= 0)
+    if(count <= 0)
     {
         removeByUUID(uuid);
     }
@@ -637,7 +637,7 @@ void CacheManager::clear(bool clear_file)
     mutex_list.lock();
     list.clear();
     mutex_list.unlock();
-    if (clear_file)
+    if(clear_file)
     {
         initDB();
         mutex_sqlite_fd.lock();
@@ -661,7 +661,7 @@ int CacheManager::getCacheCount()
     mutex_sqlite_fd.lock();
     int val = com_sqlite_table_row_count(sqlite_fd, CACHE_MANAGER_TABLE_NAME);
     mutex_sqlite_fd.unlock();
-    if (val > 0)
+    if(val > 0)
     {
         count += val;
     }
@@ -678,35 +678,28 @@ std::vector<Cache> CacheManager::getFirst(int count)
     mutex_sqlite_fd.lock();
     DBQuery query(sqlite_fd, sql.c_str());
     mutex_sqlite_fd.unlock();
-    for (int i = 0; i < query.getRowCount(); i++)
+    for(int i = 0; i < query.getCount(); i++)
     {
-        const char* uuid = query.getItem(i, 1);
-        const char* retry = query.getItem(i, 2);
-        const char* expire = query.getItem(i, 3);
-        const char* flag = query.getItem(i, 4);
-        const char* data = query.getItem(i, 5);
-
-        CPPBytes bytes = CPPBytes::FromHexString(data);
-
-        Cache cache(uuid);
-        cache.setRetryCount(strtol(retry, NULL, 10));
-        cache.setExpireTime(strtoll(expire, NULL, 10));
-        cache.setUserFlag(strtol(flag, NULL, 10));
+        CPPBytes bytes = CPPBytes::FromHexString(query.getItem(i, CACHE_MANAGER_TABLE_DATA).c_str());
+        Cache cache(query.getItem(i, CACHE_MANAGER_TABLE_UUID));
+        cache.setRetryCount(query.getItemAsNumber(i, CACHE_MANAGER_TABLE_RETRY));
+        cache.setExpireTime(query.getItemAsNumber(i, CACHE_MANAGER_TABLE_EXPIRE));
+        cache.setUserFlag(query.getItemAsNumber(i, CACHE_MANAGER_TABLE_FLAG));
         cache.setData(bytes);
         rets.push_back(cache);
     }
-    if ((int)rets.size() < count)
+    if((int)rets.size() < count)
     {
         //get from list
         count = count - rets.size();
         mutex_list.lock();
-        if (list.empty() == false)
+        if(list.empty() == false)
         {
-            if (count > (int)list.size())
+            if(count > (int)list.size())
             {
                 count = list.size();
             }
-            for (int i = 0; i < count; i++)
+            for(int i = 0; i < count; i++)
             {
                 rets.push_back(list.at(i));
             }
@@ -721,19 +714,19 @@ std::vector<Cache> CacheManager::getLast(int count)
     std::vector<Cache> rets;
     //get from list
     mutex_list.lock();
-    if (list.empty() == false)
+    if(list.empty() == false)
     {
-        if (count > (int)list.size())
+        if(count > (int)list.size())
         {
             count = list.size();
         }
-        for (size_t i = list.size(); i < list.size() - count; i--)
+        for(size_t i = list.size(); i < list.size() - count; i--)
         {
             rets.push_back(list.at(i));
         }
     }
     mutex_list.unlock();
-    if ((int)rets.size() < count)
+    if((int)rets.size() < count)
     {
         count = count - rets.size();
         //get from file
@@ -743,20 +736,13 @@ std::vector<Cache> CacheManager::getLast(int count)
         mutex_sqlite_fd.lock();
         DBQuery query(sqlite_fd, sql.c_str());
         mutex_sqlite_fd.unlock();
-        for (int i = 0; i < query.getRowCount(); i++)
+        for(int i = 0; i < query.getCount(); i++)
         {
-            const char* uuid = query.getItem(i, 1);
-            const char* retry = query.getItem(i, 2);
-            const char* expire = query.getItem(i, 3);
-            const char* flag = query.getItem(i, 4);
-            const char* data = query.getItem(i, 5);
-
-            CPPBytes bytes = CPPBytes::FromHexString(data);
-
-            Cache cache(uuid);
-            cache.setRetryCount(strtol(retry, NULL, 10));
-            cache.setExpireTime(strtoll(expire, NULL, 10));
-            cache.setUserFlag(strtol(flag, NULL, 10));
+            CPPBytes bytes = CPPBytes::FromHexString(query.getItem(i, CACHE_MANAGER_TABLE_DATA).c_str());
+            Cache cache(query.getItem(i, CACHE_MANAGER_TABLE_UUID));
+            cache.setRetryCount(query.getItemAsNumber(i, CACHE_MANAGER_TABLE_RETRY));
+            cache.setExpireTime(query.getItemAsNumber(i, CACHE_MANAGER_TABLE_EXPIRE));
+            cache.setUserFlag(query.getItemAsNumber(i, CACHE_MANAGER_TABLE_FLAG));
             cache.setData(bytes);
             rets.push_back(cache);
         }
@@ -768,7 +754,7 @@ std::vector<Cache> CacheManager::getLast(int count)
 Cache CacheManager::getFirst()
 {
     std::vector<Cache> caches = getFirst(1);
-    if (caches.empty())
+    if(caches.empty())
     {
         Cache cache;
         return cache;
@@ -780,7 +766,7 @@ Cache CacheManager::getFirst()
 Cache CacheManager::getLast()
 {
     std::vector<Cache> caches = getLast(1);
-    if (caches.empty())
+    if(caches.empty())
     {
         Cache cache;
         return cache;
@@ -797,21 +783,21 @@ void CacheManager::dilution(int step)
     initDB();
     AutoMutex a(mutex_sqlite_fd);
     DBQuery query(sqlite_fd, sql.c_str());
-    if (query.getRowCount() <= 0)
+    if(query.getCount() <= 0)
     {
         return;
     }
     com_sqlite_begin_transaction(sqlite_fd);
-    for (int i = 0; i < query.getRowCount(); i = i + 1 + step)
+    for(int i = 0; i < query.getCount(); i = i + 1 + step)
     {
-        const char* uuid = query.getItem(i, 0);
-        if (uuid != NULL)
+        std::string uuid = query.getItem(i, CACHE_MANAGER_TABLE_UUID);
+        if(uuid.empty() == false)
         {
             sql = com_string_format("DELETE FROM \"%s\" WHERE %s=\"%s\";",
                                     CACHE_MANAGER_TABLE_NAME,
-                                    CACHE_MANAGER_TABLE_UUID, uuid);
+                                    CACHE_MANAGER_TABLE_UUID, uuid.c_str());
 
-            if (com_sqlite_delete(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+            if(com_sqlite_delete(sqlite_fd, sql.c_str()) == -1)
             {
                 com_sqlite_close(sqlite_fd);
                 sqlite_fd = NULL;
@@ -828,7 +814,7 @@ std::vector<std::string> CacheManager::getAllUUID()
     //get from list
     mutex_list.lock();
     vector<Cache>::iterator it;
-    for (it = list.begin(); it != list.end(); it++)
+    for(it = list.begin(); it != list.end(); it++)
     {
         uuids.push_back(it->getUUID());
     }
@@ -842,10 +828,10 @@ std::vector<std::string> CacheManager::getAllUUID()
     mutex_sqlite_fd.lock();
     DBQuery query(sqlite_fd, sql.c_str());
     mutex_sqlite_fd.unlock();
-    for (int i = 0; i < query.getRowCount(); i++)
+    for(int i = 0; i < query.getCount(); i++)
     {
-        const char* uuid = query.getItem(i, 0);
-        if (uuid != NULL)
+        std::string uuid = query.getItem(i, CACHE_MANAGER_TABLE_UUID);
+        if(uuid.empty() == false)
         {
             uuids.push_back(uuid);
         }
@@ -855,7 +841,7 @@ std::vector<std::string> CacheManager::getAllUUID()
 
 Cache CacheManager::getByUUID(const char* uuid)
 {
-    if (uuid == NULL)
+    if(uuid == NULL)
     {
         return Cache();
     }
@@ -867,9 +853,9 @@ Cache CacheManager::getByUUID(const std::string& uuid)
     //get from list
     mutex_list.lock();
     vector<Cache>::iterator it;
-    for (it = list.begin(); it != list.end(); it++)
+    for(it = list.begin(); it != list.end(); it++)
     {
-        if (it->getUUID() == uuid)
+        if(it->getUUID() == uuid)
         {
             mutex_list.unlock();
             return *it;
@@ -884,17 +870,12 @@ Cache CacheManager::getByUUID(const std::string& uuid)
     mutex_sqlite_fd.lock();
     DBQuery query(sqlite_fd, sql.c_str());
     mutex_sqlite_fd.unlock();
-    if (query.getRowCount() > 0)
+    if(query.getCount() > 0)
     {
-        const char* retry = query.getItem(0, 2);
-        const char* expire = query.getItem(0, 3);
-        const char* flag = query.getItem(0, 4);
-        const char* data = query.getItem(0, 5);
-        CPPBytes bytes = CPPBytes::FromHexString(data);
-
-        cache.setRetryCount(strtol(retry, NULL, 10));
-        cache.setExpireTime(strtoll(expire, NULL, 10));
-        cache.setUserFlag(strtol(flag, NULL, 10));
+        CPPBytes bytes = CPPBytes::FromHexString(query.getItem(0, CACHE_MANAGER_TABLE_DATA).c_str());
+        cache.setRetryCount(query.getItemAsNumber(0, CACHE_MANAGER_TABLE_RETRY));
+        cache.setExpireTime(query.getItemAsNumber(0, CACHE_MANAGER_TABLE_EXPIRE));
+        cache.setUserFlag(query.getItemAsNumber(0, CACHE_MANAGER_TABLE_FLAG));
         cache.setData(bytes);
     }
     return cache;
@@ -907,7 +888,7 @@ void CacheManager::flushToDisk()
     AutoMutex a(mutex_sqlite_fd);
     com_sqlite_begin_transaction(sqlite_fd);
     vector<Cache>::iterator it;
-    for (it = list.begin(); it != list.end(); it++)
+    for(it = list.begin(); it != list.end(); it++)
     {
         std::string sql = com_string_format("REPLACE INTO \"%s\" (%s,%s,%s,%s,%s) VALUES ('%s',%d,%lld,%d,'%s');",
                                             CACHE_MANAGER_TABLE_NAME,
@@ -922,7 +903,7 @@ void CacheManager::flushToDisk()
                                             it->getUserFlag(),
                                             it->toHexString().c_str());
 
-        if (com_sqlite_run_sql(sqlite_fd, sql.c_str()) == COM_SQL_ERR_FAILED)
+        if(com_sqlite_run_sql(sqlite_fd, sql.c_str()) == -1)
         {
             com_sqlite_close(sqlite_fd);
             sqlite_fd = NULL;

@@ -20,6 +20,7 @@ AutoTestService& GetAutoTestService()
 
 AutoTestService::AutoTestService()
 {
+    this->addConfigFile(FILE_AUTO_TEST_CONFIG);
     initHttpController();
     startService();
 }
@@ -28,6 +29,16 @@ AutoTestService::~AutoTestService()
 {
     LOG_I("called");
     stopService();
+}
+
+void AutoTestService::addConfigFile(const char* file)
+{
+    if(file == NULL)
+    {
+        return;
+    }
+    std::lock_guard<std::mutex> lck(mutex_config_file_list);
+    config_file_list.push_back(file);
 }
 
 bool AutoTestService::hasLatestInfo(const char* group, const char* key)
@@ -53,29 +64,6 @@ bool AutoTestService::hasLatestInfo(const char* group, const char* key)
     return false;
 }
 
-bool AutoTestService::hasStatisticInfo(const char* group, const char* key)
-{
-    std::lock_guard<std::mutex> lck(mutex_latest_info);
-    if(group == NULL && key == NULL)
-    {
-        return false;
-    }
-    else if(group != NULL && key == NULL)
-    {
-        return (statistic_info.count(group) > 0);
-    }
-    else if(group != NULL && key != NULL)
-    {
-        if(statistic_info.count(group) <= 0)
-        {
-            return false;
-        }
-        Message& msg = statistic_info[group];
-        return msg.isKeyExist(key);
-    }
-    return false;
-}
-
 void AutoTestService::removeLatestInfo(const char* group, const char* key)
 {
     std::lock_guard<std::mutex> lck(mutex_latest_info);
@@ -85,30 +73,21 @@ void AutoTestService::removeLatestInfo(const char* group, const char* key)
     }
     else if(group != NULL && key == NULL)
     {
-        latest_info.erase(group);
+        for(auto it = latest_info.begin(); it != latest_info.end();)
+        {
+            if(com_string_match(it->first.c_str(), group))
+            {
+                it = latest_info.erase(it);
+            }
+            else
+            {
+                it++;
+            }
+        }
     }
     else if(group != NULL && key != NULL)
     {
         Message& msg = latest_info[group];
-        msg.remove(key);
-    }
-    return;
-}
-
-void AutoTestService::removeStatisticInfo(const char* group, const char* key)
-{
-    std::lock_guard<std::mutex> lck(mutex_statistic_info);
-    if(group == NULL && key == NULL)
-    {
-        statistic_info.clear();
-    }
-    else if(group != NULL && key == NULL)
-    {
-        statistic_info.erase(group);
-    }
-    else if(group != NULL && key != NULL)
-    {
-        Message& msg = statistic_info[group];
         msg.remove(key);
     }
     return;
@@ -132,35 +111,63 @@ std::string AutoTestService::getLatestInfo(const char* group, const char* key)
     std::lock_guard<std::mutex> lck(mutex_latest_info);
     if(group == NULL || key == NULL || latest_info.count(group) <= 0)
     {
-        LOG_W("%s:%s not found", group, key);
         return std::string();
     }
     Message& msg = latest_info[group];
     return msg.getString(key);
 }
 
-Message AutoTestService::getStatisticInfo(const char* name)
+int64 AutoTestService::getLatestInfoAsNumber(const char* group, const char* key, int64 default_val)
 {
-    std::lock_guard<std::mutex> lck(mutex_statistic_info);
-    if(name != NULL && statistic_info.count(name) > 0)
+    std::string str = getLatestInfo(group, key);
+    if(str.empty())
     {
-        return statistic_info[name];
+        return default_val;
+    }
+    return strtoll(str.c_str(), NULL, 10);
+}
+
+double AutoTestService::getLatestInfoAsDouble(const char* group, const char* key, double default_val)
+{
+    std::string str = getLatestInfo(group, key);
+    if(str.empty())
+    {
+        return default_val;
+    }
+    return strtod(str.c_str(), NULL);
+}
+
+bool AutoTestService::getLatestInfoAsBool(const char* group, const char* key, bool default_val)
+{
+    std::string str = getLatestInfo(group, key);
+    if(str.empty())
+    {
+        return default_val;
+    }
+    com_string_to_lower(str);
+    if(str == "true")
+    {
+        return true;
+    }
+    else if(str == "false")
+    {
+        return false;
     }
     else
     {
-        return Message();
+        return (strtol(str.c_str(), NULL, 10) == 1);
     }
 }
 
-std::string AutoTestService::getStatisticInfo(const char* group, const char* name)
+CPPBytes AutoTestService::getLatestInfoAsBytes(const char* group, const char* key)
 {
-    std::lock_guard<std::mutex> lck(mutex_statistic_info);
-    if(group == NULL || name == NULL || latest_info.count(group) > 0)
+    std::lock_guard<std::mutex> lck(mutex_latest_info);
+    if(group == NULL || key == NULL || latest_info.count(group) <= 0)
     {
-        return std::string();
+        return CPPBytes();
     }
-    Message& msg = statistic_info[group];
-    return msg.getString(name);
+    Message& msg = latest_info[group];
+    return msg.getBytes(key);
 }
 
 Server& AutoTestService::getHttpServer()
@@ -182,6 +189,7 @@ void AutoTestService::stopService()
     LOG_I("called");
     http_server.stop();
     thread_controller_running = false;
+    sem.post();
     if(thread_controller.joinable())
     {
         thread_controller.join();
@@ -196,6 +204,7 @@ bool AutoTestService::isHttpServerRunning()
 void AutoTestService::initHttpController()
 {
     std::string base_path;
+
     http_server.Get(base_path + "/show", [this](const Request & request, Response & response)
     {
         std::string result;
@@ -209,7 +218,7 @@ void AutoTestService::initHttpController()
             }
             else
             {
-                response.status = 400;
+                response.status = 500;
             }
         }
         else if(request.has_param("group"))
@@ -222,17 +231,21 @@ void AutoTestService::initHttpController()
             }
             else
             {
-                response.status = 400;
+                response.status = 500;
             }
         }
         else
         {
             mutex_latest_info.lock();
+            result += "{\n";
             for(auto it = latest_info.begin(); it != latest_info.end(); it++)
             {
                 Message& msg = it->second;
-                result += it->first + ":\n" + msg.toJSON(true) + "\n\n";
+                result += "\"" + it->first + "\":\n" + msg.toJSON(true) + ",\n";
             }
+            result.pop_back();
+            result.pop_back();
+            result += "\n}";
             mutex_latest_info.unlock();
         }
         response.set_content(result, "text/plain;charset=UTF-8");
@@ -249,7 +262,7 @@ void AutoTestService::initHttpController()
         }
         else
         {
-            response.status = 400;
+            response.status = 500;
         }
     });
 
@@ -286,32 +299,34 @@ void AutoTestService::ThreadController(AutoTestService* ctx)
     std::string app_name = com_get_bin_name();
     while(ctx->thread_controller_running)
     {
-        if(com_file_type(FILE_AUTO_TEST_CONFIG) != FILE_TYPE_FILE)
-        {
-            com_sleep_s(10);
-            continue;
-        }
+        std::vector<std::string> config_files;
+        ctx->mutex_config_file_list.lock();
+        config_files = ctx->config_file_list;
+        ctx->mutex_config_file_list.unlock();
 
-        config.load(FILE_AUTO_TEST_CONFIG);
-        if(config.isKeyExist(app_name.c_str(), "port") == false)
+        for(const std::string& path : config_files)
         {
-            com_sleep_s(10);
-            continue;
-        }
+            if(com_file_type(path.c_str()) != FILE_TYPE_FILE)
+            {
+                continue;
+            }
+            config.load(path.c_str());
+            if(config.isKeyExist(app_name.c_str(), "port"))
+            {
+                uint16 port = config.getUInt16(app_name.c_str(), "port");
+                if(port == 0)
+                {
+                    port = (uint16)(com_process_get_pid() % 64536);
+                    port += 1000;
+                }
 
-        uint16 port = config.getUInt16(app_name.c_str(), "port");
-        if(port == 0)
-        {
-            port = (uint16)(com_thread_get_pid() % 64536);
-            port += 1000;
+                LOG_I("start service for %s, path=http://127.0.0.1:%u", app_name.c_str(), port);
+                ctx->http_server_running = true;
+                ctx->http_server.listen("0.0.0.0", port);
+                ctx->http_server_running = false;
+            }
         }
-
-        LOG_I("start service for %s, path=http://127.0.0.1:%u", app_name.c_str(), port);
-        ctx->http_server_running = true;
-        ctx->http_server.listen("0.0.0.0", port);
-        ctx->http_server_running = false;
-        com_sleep_s(10);
+        ctx->sem.wait(10 * 1000);
     }
     return;
 }
-

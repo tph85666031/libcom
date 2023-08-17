@@ -1,53 +1,62 @@
 #ifndef __COM_LOG_H__
 #define __COM_LOG_H__
 
-#include "com_stack.h"
+#include "com_base.h"
 
-#define LOG_LEVEL_TRACE       0x0000
-#define LOG_LEVEL_DEBUG       0x0001
-#define LOG_LEVEL_INFO        0x0002
-#define LOG_LEVEL_WARNING     0x0004
-#define LOG_LEVEL_ERROR       0x0008
-#define LOG_LEVEL_FATAL       0x0010
+#define LOG_LEVEL_TRACE       1
+#define LOG_LEVEL_DEBUG       2
+#define LOG_LEVEL_INFO        3
+#define LOG_LEVEL_WARNING     4
+#define LOG_LEVEL_ERROR       5
+#define LOG_LEVEL_FATAL       6
 
-#define LOG_OPTION_DEFAULT    (LOG_LEVEL_DEBUG \
-                               | LOG_LEVEL_INFO  \
-                               | LOG_LEVEL_WARNING \
-                               | LOG_LEVEL_ERROR \
-                               | LOG_LEVEL_FATAL)
+#define LOG_LEVEL_DEFAULT     LOG_LEVEL_INFO
 
-typedef void (*log_hook_fc)(int level, const char* buf);
+typedef void (*fp_log_callbcak)(int level, const char* message);
 
-void com_log_init(const char* file, const char* file_err, bool console_enable,
-                  int file_size_max = 10 * 1024 * 1024, int file_count = 3, int level = LOG_LEVEL_INFO, int flush_interval_s = 5);
-void com_log_uninit(void);
-void com_log_use_log4xx();
-void com_log_set_hook(log_hook_fc hook_fc);
-void com_log_output(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+//全局日志系统
+COM_EXPORT void com_log_init(const char* file = NULL, const char* file_err = NULL, bool console_enable = true, bool syslog_enable = false,
+                             int file_size_max = 10 * 1024 * 1024, int file_count = 3, int level = LOG_LEVEL_DEFAULT, int flush_interval_s = 5);
+COM_EXPORT void com_log_set_hook(fp_log_callbcak fc);
+COM_EXPORT void com_log_shift_level();
+COM_EXPORT void com_log_set_level(int level);
+COM_EXPORT void com_log_set_level(const char* level);
+COM_EXPORT int com_log_get_level();
+COM_EXPORT void com_log_uninit(void);
+COM_EXPORT void com_log_output(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+
+//自定义日志
+COM_EXPORT void com_logger_create(const char* name, const char* file, bool console_enable = false,
+                                  int file_size_max = 10 * 1024 * 1024, int file_count = 3, int level = LOG_LEVEL_TRACE, int flush_interval_s = 5);
+COM_EXPORT void com_logger_destroy(const char* name);
+COM_EXPORT void com_logger_set_level(const char* name, int level);
+COM_EXPORT void com_logger_set_level(const char* name, const char* level);
+COM_EXPORT void com_logger_set_pattern(const char* name, const char* pattern);
+COM_EXPORT void com_logger_log(const char* name, int level, const char* fmt, ...);
 
 #define LOG_T(fmt,...)    com_log_output(LOG_LEVEL_TRACE,   "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_D(fmt,...)    com_log_output(LOG_LEVEL_DEBUG,   "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_I(fmt,...)    com_log_output(LOG_LEVEL_INFO,    "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_W(fmt,...)    com_log_output(LOG_LEVEL_WARNING, "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_E(fmt,...)    com_log_output(LOG_LEVEL_ERROR,   "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
-#define LOG_F(fmt,...)    do{com_log_output(LOG_LEVEL_FATAL,"(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__);com_stack_print();}while(0)
+#define LOG_F(fmt,...)    com_log_output(LOG_LEVEL_FATAL,   "(%s:%s:%d) - " fmt, __FILENAME__, __func__, __LINE__, ##__VA_ARGS__)
 
-class LogTimeCalc final
+class COM_EXPORT LogTimeCalc final
 {
 public:
-    LogTimeCalc(const char* func_name, int line_number);
+    LogTimeCalc(const char* file_name, int line_number);
     ~LogTimeCalc();
+    void show(int line_number);
+    void printTimeCost(const char* log_message);
 private:
-    std::string func_name;
+    std::string file_name;
     int line_number;
     uint64 time_cost_ns;
 };
 
-#if __linux__ == 1
-#define TIME_COST() LogTimeCalc MACRO_CONCAT(__calc__,__LINE__)(__FUNC__,__LINE__)
-#else
-#define TIME_COST() LogTimeCalc __calc__(__FUNC__,__LINE__)
-#endif
+#define TIME_COST()      LogTimeCalc __calc__(__FILENAME__,__LINE__)
+#define TIME_COST_SHOW() __calc__.show(__LINE__)
+#define PRINT_TIME_COST(msg) __calc__.printTimeCost(msg)
 
 #endif /* __COM_LOG_H__ */
 

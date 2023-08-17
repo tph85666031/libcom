@@ -5,21 +5,11 @@
 #define SOCK_CLOEXEC 0
 #define MSG_DONTWAIT 0
 #elif defined(__APPLE__)
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/event.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
 #include <netinet/tcp_fsm.h>
 #include <arpa/inet.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <sys/un.h>
-#include <stddef.h>
-#include <fnmatch.h>
 #elif __linux__ == 1
 #include <unistd.h>
 #include <sys/socket.h>
@@ -30,10 +20,21 @@
 #endif
 
 #include "com_socket.h"
-#include "com_serializer.h"
-#include "com_thread.h"
-#include "com_file.h"
-#include "com_log.h"
+
+void com_socket_global_init()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    WSADATA wsaData;
+    WSAStartup(0x0002, &wsaData);
+#endif
+}
+
+void com_socket_global_uninit()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    WSACleanup();
+#endif
+}
 
 //对connect同样适用
 void com_socket_set_recv_timeout(int sock, int timeout_ms)
@@ -208,49 +209,49 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
     return socketfd;
 }
 
-int com_unix_domain_tcp_open(const char* my_name, const char* server_name)
+int com_socket_unix_domain_open(const char* my_name, const char* server_name)
 {
-#if __linux__ == 1
-    if(my_name == NULL || server_name == NULL)
+#if defined(_WIN32) || defined(_WIN64)
+    return -1;
+#else
+    if(server_name == NULL)
     {
         LOG_E("arg incorrect");
         return -1;
     }
-    struct sockaddr_un server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sun_family = AF_UNIX;
-    strcpy(server_addr.sun_path, server_name);
-
-    com_file_remove(my_name);
-    struct sockaddr_un client_addr;
-    memset(&client_addr, 0, sizeof(client_addr));
-    client_addr.sun_family = AF_UNIX;
-    strcpy(client_addr.sun_path, my_name);
     int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(socketfd < 0)
     {
         LOG_E("failed to create unix domain socket");
         return -1;
     }
-    //long len = offsetof(struct sockaddr_un, sun_path) + strlen(client_addr.sun_path);
-    int ret = bind(socketfd, (struct sockaddr*)(&client_addr), sizeof(client_addr));
-    if(ret < 0)
+
+    struct sockaddr_un server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strcpy(server_addr.sun_path, server_name);
+
+    if(NULL != my_name && strlen(my_name) > 0)
     {
-        com_socket_close(socketfd);
-        LOG_E("bind failed");
-        return -1;
+        com_file_remove(my_name);
+        struct sockaddr_un client_addr;
+        memset(&client_addr, 0, sizeof(client_addr));
+        client_addr.sun_family = AF_UNIX;
+        strcpy(client_addr.sun_path, my_name);
+        if(bind(socketfd, (struct sockaddr*)(&client_addr), sizeof(client_addr)) < 0)
+        {
+            LOG_E("bind failed, %s", strerror(errno));
+            com_socket_close(socketfd);
+            return -1;
+        }
     }
-    //len = offsetof(struct sockaddr_un, sun_path) + strlen(server_addr.sun_path);
-    ret = connect(socketfd, (struct sockaddr*)(&server_addr), sizeof(server_addr));
-    if(ret != 0)
+    if(connect(socketfd, (struct sockaddr*)(&server_addr), sizeof(server_addr)) != 0)
     {
+        LOG_E("connect failed, error: %s", strerror(errno));
         com_socket_close(socketfd);
-        LOG_E("connect failed");
         return -1;
     }
     return socketfd;
-#else
-    return -1;
 #endif
 }
 
@@ -395,7 +396,7 @@ int com_socket_tcp_send(int socketfd, const void* data, int data_size)
     }
     if(socketfd <= 0)
     {
-        LOG_E("socket is incorrect");
+        LOG_E("socket is incorrect,socketfd=%d", socketfd);
         return -3;
     }
     return send(socketfd, (char*)data, data_size, 0);
@@ -422,20 +423,17 @@ int com_socket_udp_read(int socketfd, uint8* data, int data_size,
         if(select_rtn == -1)
         {
             LOG_E("failed");
-            com_socket_close(socketfd);
             return -1;
         }
         if(select_rtn == 0)
         {
             LOG_D("timeout");
-            com_socket_close(socketfd);
             return -2;
         }
         if(FD_ISSET(socketfd, &readfds) == 0)
         {
             LOG_D("no data");
             ((char*)data)[0] = '\0';
-            com_socket_close(socketfd);
             return 0;
         }
     }
@@ -477,17 +475,17 @@ int com_socket_tcp_read(int socketfd, uint8* data, int data_size,
         //如果对端关闭了连接,select的返回值可能为1,且errno为2
         if(select_rtn < 0)
         {
-            LOG_W("failed,ret=%d,errno=%d:%s", select_rtn, errno, strerror(errno));
+            LOG_W("select() failed,ret=%d,errno=%d:%s", select_rtn, errno, strerror(errno));
             return -1;
         }
         if(select_rtn == 0)
         {
-            //LOG_D("timeout");
+            LOG_T("select() timeout");
             return -2;
         }
         if(FD_ISSET(socketfd, &readfds) == 0)
         {
-            LOG_D("no data");
+            LOG_D("select() no data");
             ((char*)data)[0] = '\0';
             return 0;
         }
@@ -781,6 +779,7 @@ std::string Socket::getInterface()
 
 SocketTcpClient::SocketTcpClient()
 {
+    com_socket_global_init();
     reconnect_at_once = false;
     running = false;
     connected = false;
@@ -788,6 +787,7 @@ SocketTcpClient::SocketTcpClient()
 
 SocketTcpClient::SocketTcpClient(const char* host, uint16 port)
 {
+    com_socket_global_init();
     reconnect_at_once = false;
     running = false;
     connected = false;
@@ -798,59 +798,86 @@ SocketTcpClient::SocketTcpClient(const char* host, uint16 port)
 SocketTcpClient::~SocketTcpClient()
 {
     stopClient();
+    com_socket_global_uninit();
 }
 
-void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* socket_client)
+void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
 {
-    if(socket_client == NULL)
+    if(ctx == NULL)
     {
         LOG_E("arg incorrect");
         return;
     }
-    uint8 buf[1024];
-    while(socket_client->running)
+    uint8 buf[4096 * 4];
+    while(ctx->running)
     {
-        if(socket_client->reconnect_at_once || com_socket_get_tcp_connection_status(socket_client->socketfd) == 0)
+        if(ctx->reconnect_at_once || com_socket_get_tcp_connection_status(ctx->socketfd) == 0)
         {
-            com_socket_close(socket_client->socketfd);
-            socket_client->socketfd = -1;
+            com_socket_close(ctx->socketfd);
+            ctx->socketfd = -1;
             LOG_I("connection to %s:%u lost, will reconnect later",
-                  socket_client->getHost().c_str(), socket_client->getPort());
-            socket_client->connected = false;
-            socket_client->onConnectionChanged(socket_client->connected);
-            if(socket_client->reconnect_at_once)
+                  ctx->getHost().c_str(), ctx->getPort());
+            ctx->connected = false;
+            ctx->onConnectionChanged(ctx->connected);
+            if(ctx->reconnect_at_once)
             {
-                socket_client->reconnect_at_once = false;
+                ctx->reconnect_at_once = false;
             }
             else
             {
-                com_sleep_ms(socket_client->reconnect_interval_ms);
+                com_sleep_ms(ctx->reconnect_interval_ms);
             }
         }
-        if(socket_client->socketfd <= 0)
+        if(ctx->socketfd <= 0)
         {
-            socket_client->socketfd = com_socket_tcp_open(socket_client->getHost().c_str(),
-                                      socket_client->getPort(), 10 * 1000,
-                                      socket_client->getInterface().c_str());
-            if(socket_client->socketfd <= 0)
+            ctx->socketfd = com_socket_tcp_open(ctx->getHost().c_str(),
+                                                ctx->getPort(), 10 * 1000,
+                                                ctx->getInterface().c_str());
+            if(ctx->socketfd <= 0)
             {
-                LOG_E("connection to %s:%u failed, will retry 1 sec later",
-                      socket_client->getHost().c_str(), socket_client->getPort());
-                com_sleep_ms(socket_client->reconnect_interval_ms);
+                LOG_E("connection to %s:%u failed, will retry 3 sec later",
+                      ctx->getHost().c_str(), ctx->getPort());
+                com_sleep_ms(ctx->reconnect_interval_ms);
                 continue;
             }
-            socket_client->connected = true;
-            socket_client->onConnectionChanged(socket_client->connected);
+            LOG_I("connect to %s:%u success,fd=%d", ctx->getHost().c_str(), ctx->getPort(), ctx->socketfd.load());
+            ctx->connected = true;
+            ctx->onConnectionChanged(ctx->connected);
         }
         memset(buf, 0, sizeof(buf));
-        int ret = com_socket_tcp_read(socket_client->socketfd, buf, sizeof(buf), 1000);
-        if(ret == -1)
+        int ret = com_socket_tcp_read(ctx->socketfd, buf, sizeof(buf), 1000);
+        if(ret > 0)
         {
-            socket_client->reconnect_at_once = true;
+            ctx->onRecv(buf, ret);
         }
-        else if(ret > 0)
+        else if(0 == ret)
         {
-            socket_client->onRecv(buf, ret);
+            LOG_W("read data empty! will reconnect after 3s");
+            ctx->reconnect_at_once = true;
+            com_sleep_s(3);
+        }
+        else
+        {
+            if(-1 == ret)
+            {
+                LOG_E("read data failed! will reconnect after 3s");
+                ctx->reconnect_at_once = true;
+                com_sleep_s(3);
+            }
+            else if(-2 == ret)
+            {
+                // select() timeout
+                // com_sleep_s(1);
+            }
+            else if(-3 == ret)
+            {
+                // arg incorrect
+            }
+            else
+            {
+                LOG_F("recv() returns error: %s, ret: %d", strerror(errno), ret);
+                com_sleep_s(1); // 防止CPU占用率过高
+            }
         }
     }
     return;
@@ -865,6 +892,7 @@ bool SocketTcpClient::startClient()
     }
     running = true;
     thread_runner = std::thread(ThreadSocketClientRunner, this);
+    LOG_I("start connect to server: %s:%d", getHost().c_str(), getPort());
     return true;
 }
 
@@ -943,46 +971,86 @@ UnixDomainTcpClient::~UnixDomainTcpClient()
     com_file_remove(getFileName().c_str());
 }
 
+void UnixDomainTcpClient::setServerFileName(const char* server_file_name)
+{
+    if(server_file_name != NULL)
+    {
+        this->server_file_name = server_file_name;
+    }
+}
+
+void UnixDomainTcpClient::setFileName(const char* file_name)
+{
+    if(file_name != NULL)
+    {
+        this->file_name = file_name;
+    }
+}
+
 void UnixDomainTcpClient::ThreadUnixDomainClientReceiver(UnixDomainTcpClient* client)
 {
     if(client == NULL)
     {
         return;
     }
-    uint8 buf[1024];
+    uint8 buf[4096 * 4];
     while(client->receiver_running)
     {
         if(client->need_reconnect)
         {
             com_socket_close(client->socketfd);
             client->socketfd = -1;
-            LOG_I("connection to %s lost, will reconnect later",
-                  client->server_file_name.c_str());
+            LOG_I("connection to %s lost, will reconnect later", client->server_file_name.c_str());
             client->onConnectionChanged(false);
             client->need_reconnect = false;
         }
         if(client->socketfd <= 0)
         {
-            client->socketfd = com_unix_domain_tcp_open(client->file_name.c_str(),
+            client->socketfd = com_socket_unix_domain_open(client->file_name.c_str(),
                                client->server_file_name.c_str());
             if(client->socketfd <= 0)
             {
-                LOG_E("connection to %s failed, will retry 1 sec later",
-                      client->server_file_name.c_str());
-                com_sleep_ms(1000);
+                LOG_E("connection to %s failed, will retry 3 sec later", client->server_file_name.c_str());
+                com_sleep_ms(3000);
                 continue;
             }
+            LOG_I("connect to %s success", client->server_file_name.c_str());
             client->onConnectionChanged(true);
         }
         memset(buf, 0, sizeof(buf));
         int ret = com_socket_tcp_read(client->socketfd, buf, sizeof(buf), 1000);
-        if(ret == -1)
-        {
-            client->need_reconnect = true;
-        }
-        else if(ret > 0)
+        if(ret > 0)
         {
             client->onRecv(buf, ret);
+        }
+        else if(0 == ret)
+        {
+            LOG_W("read data empty! will reconnect after 3s");
+            client->need_reconnect = true;
+            com_sleep_s(3);
+        }
+        else
+        {
+            if(-1 == ret)
+            {
+                LOG_E("read data failed! will reconnect after 3s");
+                client->need_reconnect = true;
+                com_sleep_s(3);
+            }
+            else if(-2 == ret)
+            {
+                // select() timeout
+                // com_sleep_s(1);
+            }
+            else if(-3 == ret)
+            {
+                // arg incorrect
+            }
+            else
+            {
+                LOG_F("recv() returns error: %s, ret: %d", strerror(errno), ret);
+                com_sleep_s(1); // 防止CPU占用率过高
+            }
         }
     }
     return;
@@ -990,14 +1058,16 @@ void UnixDomainTcpClient::ThreadUnixDomainClientReceiver(UnixDomainTcpClient* cl
 
 int UnixDomainTcpClient::startClient()
 {
-    socketfd = com_unix_domain_tcp_open(file_name.c_str(), server_file_name.c_str());
+    socketfd = com_socket_unix_domain_open(file_name.c_str(), server_file_name.c_str());
     if(socketfd <= 0)
     {
         LOG_W("connection to %s failed, will auto reconnect later", server_file_name.c_str());
     }
+    LOG_I("socketfd: %d, success open server file: %s", socketfd.load(), server_file_name.c_str());
     receiver_running = true;
     onConnectionChanged(true);
     thread_receiver = std::thread(ThreadUnixDomainClientReceiver, this);
+    LOG_I("start unix domain tcp client");
     return 0;
 }
 
@@ -1053,3 +1123,592 @@ void UnixDomainTcpClient::onConnectionChanged(bool connected)
 void UnixDomainTcpClient::onRecv(uint8* data, int data_size)
 {
 }
+
+MulticastNode::MulticastNode()
+{
+    com_socket_global_init();
+    memset(buf, 0, sizeof(buf));
+}
+
+MulticastNode::~MulticastNode()
+{
+    stopNode();
+    com_socket_global_uninit();
+}
+
+bool MulticastNode::startNode()
+{
+    LOG_I("called");
+    stopNode();
+    socketfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if(socketfd < 0)
+    {
+        return false;
+    }
+
+#if defined(_WIN32) || defined(_WIN64)
+    char option = 1;
+#else
+    int option = 1;
+#endif
+    int ret = setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    if(ret < 0)
+    {
+        LOG_E("set socket reuse failed");
+        return false;
+    }
+
+    struct ip_mreq mreq; // 多播地址结构体
+    mreq.imr_multiaddr.s_addr = inet_addr(getHost().c_str());
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    ret = setsockopt(socketfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*)&mreq, sizeof(mreq));
+    if(ret < 0)
+    {
+        LOG_E("add multicast group failed");
+        return false;
+    }
+
+    struct sockaddr_in local_addr;
+    memset(&local_addr, 0, sizeof(local_addr));
+
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    local_addr.sin_port = htons(getPort());
+
+    ret = bind(socketfd.load(), (struct sockaddr*)&local_addr, sizeof(local_addr));
+    if(ret < 0)
+    {
+        perror("bind failed");
+        return false;
+    }
+
+    thread_rx_running = true;
+    thread_rx = std::thread(ThreadRX, this);
+    return true;
+}
+
+void MulticastNode::stopNode()
+{
+    LOG_I("called");
+    thread_rx_running = false;
+    if(thread_rx.joinable())
+    {
+        thread_rx.join();
+    }
+    com_socket_close(socketfd);
+    socketfd = -1;
+}
+
+int MulticastNode::send(const void* data, int data_size)
+{
+    return com_socket_udp_send(socketfd, getHost().c_str(), port, data, data_size);
+}
+
+void MulticastNode::ThreadRX(MulticastNode* client)
+{
+    if(client == NULL)
+    {
+        return;
+    }
+    int ret = 0;
+    while(client->thread_rx_running)
+    {
+        ret = com_socket_udp_read(client->socketfd, client->buf, sizeof(client->buf), 1000);
+        if(ret > 0)
+        {
+            client->onRecv(client->buf, ret);
+        }
+        else if(ret == -2)
+        {
+        }
+        else if(ret < 0)
+        {
+            break;
+        }
+    }
+    LOG_I("quit,ret=%d", ret);
+    return;
+}
+
+void MulticastNode::onRecv(uint8* data, int data_size)
+{
+    CPPBytes bytes(data, data_size);
+    LOG_I("received,hex=%s,size=%d", bytes.toHexString().c_str(), data_size);
+}
+
+
+MulticastNodeString::MulticastNodeString()
+{
+}
+
+MulticastNodeString::~MulticastNodeString()
+{
+}
+
+int MulticastNodeString::send(const char* str)
+{
+    if(str == NULL)
+    {
+        return 0;
+    }
+    int size = (int)strlen(str) + 1;
+    return send(str, size);
+}
+
+int MulticastNodeString::send(const std::string& str)
+{
+    return send(str.c_str(), (int)str.length() + 1);
+}
+
+int MulticastNodeString::getCount()
+{
+    std::lock_guard<std::mutex> lck(mutex_queue);
+    return (int)queue.size();
+}
+
+bool MulticastNodeString::fetchString(std::string& item)
+{
+    std::lock_guard<std::mutex> lck(mutex_queue);
+    if(queue.empty())
+    {
+        return false;
+    }
+    item = queue.front();
+    queue.pop();
+    return true;
+}
+
+bool MulticastNodeString::waitString(int timeout_ms)
+{
+    return condition_queue.wait(timeout_ms);
+}
+
+void MulticastNodeString::onRecv(uint8* data, int data_size)
+{
+    if(data == NULL || data_size <= 0)
+    {
+        return;
+    }
+    for(int i = 0; i < data_size; i++)
+    {
+        if(data[i] != '\0')
+        {
+            item.push_back((char)data[i]);
+            continue;
+        }
+        if(item.empty())
+        {
+            continue;
+        }
+        mutex_queue.lock();
+        queue.push(item);
+        mutex_queue.unlock();
+        condition_queue.notifyAll();
+        item.clear();
+    }
+}
+
+StringIPCClient::StringIPCClient()
+{
+}
+
+StringIPCClient::~StringIPCClient()
+{
+    stopIPC();
+}
+
+bool StringIPCClient::startIPC(const char* name, const char* host, uint16 port)
+{
+    if(name == NULL || host == NULL)
+    {
+        return false;
+    }
+    this->name = name;
+    setHost(host);
+    setPort(port);
+
+    thread_receiver_running = true;
+    thread_receiver = std::thread(ThreadReceiver, this);
+    return startClient();
+}
+
+void StringIPCClient::stopIPC()
+{
+    thread_receiver_running = false;
+    if(thread_receiver.joinable())
+    {
+        thread_receiver.join();
+    }
+    stopClient();
+}
+
+bool StringIPCClient::sendString(const char* name_to, const std::string& message)
+{
+    return sendString(name_to, message.c_str());
+}
+
+bool StringIPCClient::sendString(const char* name_to, const char* message)
+{
+    if(name_to == NULL || message == NULL)
+    {
+        return false;
+    }
+
+    std::string data = this->name;
+    data.append("\n");
+    data.append(name_to);
+    data.append("\n");
+    data.append(message);
+    if(send(data.c_str(), data.length() + 1) != (int)data.length() + 1)
+    {
+        return false;
+    }
+    return true;
+}
+
+std::string StringIPCClient::getName()
+{
+    return name;
+}
+
+void StringIPCClient::onMessage(const std::string& name, const std::string& message)
+{
+    LOG_I("name=%s,message=%s", name.c_str(), message.c_str());
+}
+
+void StringIPCClient::onConnectionChanged(bool connected)
+{
+}
+
+void StringIPCClient::onRecv(uint8* data, int data_size)
+{
+    if(data == NULL || data_size <= 0)
+    {
+        return;
+    }
+    for(int i = 0; i < data_size; i++)
+    {
+        if(data[i] != '\0')
+        {
+            val.push_back((char)data[i]);
+            continue;
+        }
+
+        if(val.empty())
+        {
+            continue;
+        }
+
+        size_t pos_from = val.find_first_of("\n");
+        if(pos_from == std::string::npos)
+        {
+            val.clear();
+            continue;
+        }
+
+        size_t pos_to = val.find("\n", pos_from + 1);
+        if(pos_to == std::string::npos)
+        {
+            val.clear();
+            continue;
+        }
+
+        std::string name_from = val.substr(0, pos_from);
+        std::string name_to = val.substr(pos_from + 1, pos_to - pos_from - 1);
+
+        if(name_to != this->name)
+        {
+            val.clear();
+            continue;
+        }
+
+        mutex_queue.lock();
+        queue.push(val);
+        mutex_queue.unlock();
+        condition_queue.notifyAll();
+        val.clear();
+    }
+}
+
+void StringIPCClient::ThreadReceiver(StringIPCClient* ctx)
+{
+    if(ctx == NULL)
+    {
+        return;
+    }
+    while(ctx->thread_receiver_running)
+    {
+        ctx->condition_queue.wait(1000);
+        while(ctx->thread_receiver_running)
+        {
+            ctx->mutex_queue.lock();
+            if(ctx->queue.empty())
+            {
+                ctx->mutex_queue.unlock();
+                break;
+            }
+            std::string val = ctx->queue.front();
+            ctx->queue.pop();
+            ctx->mutex_queue.unlock();
+            if(val.empty())
+            {
+                continue;
+            }
+
+            size_t pos_from = val.find_first_of("\n");
+            if(pos_from == std::string::npos)
+            {
+                continue;
+            }
+
+            size_t pos_to = val.find("\n", pos_from + 1);
+            if(pos_to == std::string::npos)
+            {
+                continue;
+            }
+
+            std::string name_from = val.substr(0, pos_from);
+            val.erase(0, pos_to + 1);
+            ctx->onMessage(name_from, val);
+        }
+    }
+}
+
+StringIPCServer::StringIPCServer()
+{
+}
+
+StringIPCServer::~StringIPCServer()
+{
+    stopIPC();
+}
+
+bool StringIPCServer::startIPC(const char* name, uint16 port)
+{
+    if(name == NULL)
+    {
+        return false;
+    }
+    this->name = name;
+    thread_receiver_running = true;
+    thread_receiver = std::thread(ThreadReceiver, this);
+    setPort(port);
+    return (startServer() == 0);
+}
+
+void StringIPCServer::stopIPC()
+{
+    thread_receiver_running = false;
+    if(thread_receiver.joinable())
+    {
+        thread_receiver.join();
+    }
+    stopServer();
+}
+
+bool StringIPCServer::sendString(const char* name_to, const std::string& message)
+{
+    return sendString(name_to, message.c_str());
+}
+
+bool StringIPCServer::sendString(const char* name_to, const char* message)
+{
+    if(name_to == NULL || message == NULL)
+    {
+        return false;
+    }
+    int fd = getClientFD(name_to);
+    if(fd < 0)
+    {
+        return false;
+    }
+
+    std::string data = this->name;
+    data.append("\n");
+    data.append(name_to);
+    data.append("\n");
+    data.append(message);
+    if(send(fd, data.c_str(), data.length() + 1) != (int)data.length() + 1)
+    {
+        return false;
+    }
+    return true;
+}
+
+void StringIPCServer::setClientFD(const char* name, int fd)
+{
+    if(name != NULL)
+    {
+        LOG_D("String IPC, Get Connection:%s fd:%d", name, fd);
+        mutex_clients.lock();
+        clients[name] = fd;
+        mutex_clients.unlock();
+    }
+}
+
+int StringIPCServer::getClientFD(const char* name)
+{
+    if(name == NULL)
+    {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lck(mutex_clients);
+    if(clients.count(name) == 0)
+    {
+        return -1;
+    }
+    return clients[name];
+}
+
+std::string StringIPCServer::getName()
+{
+    return name;
+}
+
+void StringIPCServer::removeClientFD(int fd)
+{
+    mutex_clients.lock();
+    for(auto it = clients.begin(); it != clients.end(); it++)
+    {
+        if(it->second == fd)
+        {
+            clients.erase(it);
+            break;
+        }
+    }
+    mutex_clients.unlock();
+}
+
+void StringIPCServer::onMessage(const std::string& name, const std::string& message)
+{
+    LOG_I("name=%s,message=%s", name.c_str(), message.c_str());
+}
+
+void StringIPCServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
+{
+    LOG_D("String IPC Connection Changed, fd:%d connected:%d", socketfd, connected);
+    if(connected == false)
+    {
+        removeClientFD(socketfd);
+    }
+}
+
+void StringIPCServer::removeClientFD(const char* name)
+{
+    if(name == NULL)
+    {
+        return;
+    }
+    mutex_clients.lock();
+    auto it = clients.find(name);
+    if(it != clients.end())
+    {
+        clients.erase(it);
+    }
+    mutex_clients.unlock();
+}
+
+void StringIPCServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
+{
+
+    if(data == NULL || data_size <= 0)
+    {
+        return;
+    }
+    LOG_D("String IPC Recv Data, fd:%d data size: %d data:%s", socketfd, data_size, (char *)data);
+
+    if(vals.count(socketfd) == 0)
+    {
+        vals[socketfd] = std::string();
+    }
+    std::string& val = vals[socketfd];
+    for(int i = 0; i < data_size; i++)
+    {
+        if(data[i] != '\0')
+        {
+            val.push_back((char)data[i]);
+            continue;
+        }
+
+        if(val.empty())
+        {
+            continue;
+        }
+
+        size_t pos_from = val.find_first_of("\n");
+        if(pos_from == std::string::npos)
+        {
+            val.clear();
+            continue;
+        }
+        size_t pos_to = val.find("\n", pos_from + 1);
+        if(pos_to == std::string::npos)
+        {
+            val.clear();
+            continue;
+        }
+
+        std::string name_from = val.substr(0, pos_from);
+        std::string name_to = val.substr(pos_from + 1, pos_to - pos_from - 1);
+        setClientFD(name_from.c_str(), socketfd);
+        if(name_to == this->name)//发给server
+        {
+            mutex_queue.lock();
+            queue.push(val);
+            mutex_queue.unlock();
+            condition_queue.notifyAll();
+        }
+        else//转发
+        {
+            send(getClientFD(name_to.c_str()), val.c_str(), val.length() + 1);
+        }
+
+        val.clear();
+    }
+}
+
+void StringIPCServer::ThreadReceiver(StringIPCServer* ctx)
+{
+    if(ctx == NULL)
+    {
+        return;
+    }
+    while(ctx->thread_receiver_running)
+    {
+        ctx->condition_queue.wait(1000);
+        while(ctx->thread_receiver_running)
+        {
+            ctx->mutex_queue.lock();
+            if(ctx->queue.empty())
+            {
+                ctx->mutex_queue.unlock();
+                break;
+            }
+            std::string val = ctx->queue.front();
+            ctx->queue.pop();
+            ctx->mutex_queue.unlock();
+
+            if(val.empty())
+            {
+                continue;
+            }
+
+            size_t pos_from = val.find_first_of("\n");
+            if(pos_from == std::string::npos)
+            {
+                continue;
+            }
+
+            size_t pos_to = val.find("\n", pos_from + 1);
+            if(pos_to == std::string::npos)
+            {
+                continue;
+            }
+
+            std::string name_from = val.substr(0, pos_from);
+            val.erase(0, pos_to + 1);
+            ctx->onMessage(name_from, val);
+        }
+    }
+}
+

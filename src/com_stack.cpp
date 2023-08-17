@@ -2,10 +2,10 @@
 #include <string.h>
 #include <stdarg.h>
 #include <string>
-#ifdef __GLIBC__
-#include <signal.h>
+#if __linux__ == 1
 #include <execinfo.h>
 #include <sys/signalfd.h>
+#include <sys/resource.h>
 #endif
 #include "com_base.h"
 #include "com_stack.h"
@@ -19,6 +19,9 @@
 
 static std::atomic<void*> signal_cb_user_data;
 static std::atomic<signal_cb> signal_cb_func;
+static std::vector<int> signal_value_ignore;
+static std::vector<int> signal_value_none_reset;
+static std::vector<int> signal_value_reset;
 
 static bool com_stack_name_of_pid(uint64 pid, char* name, int name_size)
 {
@@ -77,6 +80,10 @@ static std::string stack_addr2line(const char* info, const char* file_addr2line,
     }
 
     file = val.substr(0, pos_file);
+    if(com_file_type(file.c_str()) != FILE_TYPE_FILE)
+    {
+        return std::string();
+    }
     std::string::size_type pos_function = val.find_first_of("+", pos_file + 1);
     if(pos_function != std::string::npos)
     {
@@ -143,7 +150,7 @@ static std::string stack_addr2line(const char* info, const char* file_addr2line,
 
 static std::string search_file_addr2line()
 {
-    std::string path ;
+    std::string path;
 
     path = com_string_format("./%s", FILE_ADDR2LINE);
     if(com_file_type(path.c_str()) == FILE_TYPE_FILE)
@@ -167,7 +174,7 @@ static std::string search_file_addr2line()
 
 static std::string search_file_objdump()
 {
-    std::string path ;
+    std::string path;
 
     path = com_string_format("./%s", FILE_OBJDUMP);
     if(com_file_type(path.c_str()) == FILE_TYPE_FILE)
@@ -189,23 +196,26 @@ static std::string search_file_objdump()
     return std::string();
 }
 
-#if __linux__ == 1
+#if defined(_WIN32) || defined(_WIN64)
+static void stack_signal_function(int sig)
+#else
 static void stack_signal_function(int sig, siginfo_t* info, void* context)
+#endif
 {
-    if(signal_cb_func != NULL)
+    signal_cb fp = signal_cb_func;
+    if(fp != NULL && fp(sig, signal_cb_user_data))
     {
-        if(signal_cb_func(sig, signal_cb_user_data))
-        {
-            return;
-        }
+        return;
     }
 
+#if __linux__ == 1
     char pid_name[128];
     com_stack_name_of_pid(info->si_pid, pid_name, sizeof(pid_name));
-    LOG_W("%s:%d called\nsig=%d:%s, from=%s[%u], my pid=%llu",
-          __FUNC__, __LINE__, sig, strsignal(sig), pid_name, info->si_pid, com_thread_get_pid());
+    LOG_W("%s:%d called\nsig=%d:%s, from=%s[%u], my pid=%d",
+          __FUNC__, __LINE__, sig, strsignal(sig), pid_name, info->si_pid, com_process_get_pid());
 
     com_stack_print();
+#endif
 
     //默认动作
     switch(sig)
@@ -226,44 +236,56 @@ static void stack_signal_function(int sig, siginfo_t* info, void* context)
             LOG_I("SIGTERM system will exist");
             exit(sig);
             break;
+#if __linux__ == 1
         case SIGTTIN:
             LOG_I("SIGTTIN system will exist");
             exit(sig);
             break;
+#endif
         case SIGUSR1:
             LOG_I("SIGUSR1");
             break;
         case SIGUSR2:
             LOG_I("SIGUSR2");
+            com_log_shift_level();
             break;
         default:
             LOG_W("UNKNOWN signal:%d", sig);
             break;
     }
 }
-#endif
 
 void com_stack_init()
 {
     signal_cb_func = NULL;
     signal_cb_user_data = NULL;
 
-#if __linux__ == 1
-    std::vector<int> signal_value_ignore;
-    std::vector<int> signal_value_none_reset;
-    std::vector<int> signal_value_reset;
-
+#if defined(_WIN32) || defined(_WIN64)
+    signal_value_none_reset.push_back(SIGINT);
+    signal_value_none_reset.push_back(SIGBREAK);
+    signal_value_none_reset.push_back(SIGFPE);
+    signal_value_none_reset.push_back(SIGABRT);
+    signal_value_none_reset.push_back(SIGSEGV);
+    signal_value_none_reset.push_back(SIGTERM);
+    signal_value_none_reset.push_back(SIGUSR1);
+    signal_value_none_reset.push_back(SIGUSR2);
+    for(size_t i = 0; i < signal_value_none_reset.size(); i++)
+    {
+        signal(signal_value_none_reset[i], stack_signal_function);
+    }
+#elif __linux__ == 1
     signal_value_ignore.push_back(SIGPIPE);
+    signal_value_ignore.push_back(SIGCHLD);//子进程无需wait，避免产生僵尸进程
     signal_value_reset.push_back(SIGINT);
     signal_value_reset.push_back(SIGABRT);
     signal_value_reset.push_back(SIGSEGV);
     signal_value_reset.push_back(SIGBUS);
     signal_value_reset.push_back(SIGSYS);
-    signal_value_none_reset.push_back(SIGTERM);
+    signal_value_reset.push_back(SIGTERM);
     signal_value_none_reset.push_back(SIGUSR1);
     signal_value_none_reset.push_back(SIGUSR2);
 
-    for (size_t i = 0; i < signal_value_ignore.size(); i++)
+    for(size_t i = 0; i < signal_value_ignore.size(); i++)
     {
         signal(signal_value_ignore[i], SIG_IGN);
     }
@@ -294,26 +316,32 @@ void com_stack_init()
 
 void com_stack_uninit()
 {
-#if __linux__ == 1
-    for(int i = 0; i <= SIGRTMAX; i++)
+    for(size_t i = 0; i < signal_value_ignore.size(); i++)
     {
-        signal(i, SIG_DFL);
+        signal(signal_value_ignore[i], SIG_DFL);
     }
-#endif
+    for(size_t i = 0; i < signal_value_reset.size(); i++)
+    {
+        signal(signal_value_reset[i], SIG_DFL);
+    }
+    for(size_t i = 0; i < signal_value_none_reset.size(); i++)
+    {
+        signal(signal_value_none_reset[i], SIG_DFL);
+    }
     signal_cb_func = NULL;
 }
 
-void com_stack_print()
+std::string com_stack_get()
 {
+    std::string buf;
 #ifdef __GLIBC__
     void* stack_addr[32];
     int nstack;
 
     memset(stack_addr, 0, sizeof(stack_addr));
-    nstack = backtrace(stack_addr, 32);
+    nstack = backtrace(stack_addr, sizeof(stack_addr) / sizeof(void*));
     std::string file_addr2line = search_file_addr2line();
     std::string file_objdump = search_file_objdump();
-    std::string buf;
     buf.append("\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
     buf.append(com_string_format("  Print Stack For Thread: %s\n", com_thread_get_name().c_str()));
     char** callstack = backtrace_symbols(stack_addr, nstack);
@@ -337,8 +365,13 @@ void com_stack_print()
         }
         free(callstack);
     }
-    LOG_W("%s", buf.c_str());
 #endif
+    return buf;
+}
+
+void com_stack_print()
+{
+    LOG_W("%s", com_stack_get().c_str());
 }
 
 void com_stack_set_hook(signal_cb cb, void* user_data)
@@ -347,11 +380,29 @@ void com_stack_set_hook(signal_cb cb, void* user_data)
     signal_cb_user_data = user_data;
 }
 
-void com_system_send_signal(int sig)
+void com_stack_enable_coredump()
 {
 #if __linux__ == 1
-    raise(sig);
+    struct rlimit rlim;
+    rlim.rlim_cur = RLIM_INFINITY;
+    rlim.rlim_max = RLIM_INFINITY;
+    setrlimit(RLIMIT_CORE, &rlim);
 #endif
+}
+
+void com_stack_disable_coredump()
+{
+#if __linux__ == 1
+    struct rlimit rlim;
+    rlim.rlim_cur = 0;
+    rlim.rlim_max = 0;
+    setrlimit(RLIMIT_CORE, &rlim);
+#endif
+}
+
+void com_system_send_signal(int sig)
+{
+    raise(sig);
 }
 
 void com_system_send_signal(uint64 pid, int sig)
@@ -363,11 +414,7 @@ void com_system_send_signal(uint64 pid, int sig)
 
 void com_system_exit(bool force)
 {
-#if __linux__ == 1
     com_system_send_signal(SIGTERM);
-#else
-    exit(0);
-#endif
     if(force)
     {
         //信号会被程序截获，程序会执行清退工作
