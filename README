@@ -3,12 +3,10 @@
 cjson  
 md5计算  
 sqlite3操作api  
-unqlite KV读写型数据库操作api  
 config KV只读型配置文件操作api  
 socket操作api  
 mutex,sem,thread操作api  
 堆栈打印api  
-gps nmea格式解析api  
 自动持久化缓存操作api【CacheManager】  
 
 
@@ -17,10 +15,6 @@ gps nmea格式解析api
 1：编译
 ./build -h   #build编译系统会自动从服务器下载编译脚本
 
-编译参数说明：
-o:
-交叉编译工具链类型（交叉编译工具链需用户预先配置），build脚本会自动根据此类型来适配依赖关系，同时此类型会转化为宏定义供被编译源码使用
-
 d:
 若指定，build将尝试编译源码为debug版本
 
@@ -28,10 +22,8 @@ u：
 若指定，build将编译带单元测试模块的版本（请参考实例在源码中引用UNIT_TEST_LIB或UNIT_TEST_APP）
 
 c：
-清除编译产生的临时文件（不包括从服务器下载的依赖关系文件）
+清除编译产生的临时文件
 
-C：
-清除所有编译产生的临时文件（包括下载的依赖关系文件）
 
 
 
