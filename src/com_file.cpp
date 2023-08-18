@@ -109,7 +109,7 @@ std::string com_dir_system_temp()
         return std::string();
     }
     buf[len] = L'\0';
-    std::string dir = com_string_utf16_to_utf8(buf);
+    std::string dir = com_wstring_to_utf8(buf);
     while(dir.empty() == false)
     {
         if(dir.back() != '\0')
@@ -189,7 +189,7 @@ bool com_dir_create(const char* full_path)
             continue;
         }
 #if defined(_WIN32) || defined(_WIN64)
-        if(path.back() != ':' && _wmkdir(com_string_utf8_to_utf16(path).c_str()) != 0)
+        if(path.back() != ':' && _wmkdir(com_wstring_from_utf8(path).c_str()) != 0)
         {
             LOG_W("make dir %s failed, dir may already exist", path.c_str());
             return false;
@@ -214,7 +214,7 @@ int64 com_dir_size_max(const char* dir)
     int64 total_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     int64 free_size_byte = 0;
-    if(GetDiskFreeSpaceExW(com_string_utf8_to_utf16(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
                            (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
@@ -245,7 +245,7 @@ int64 com_dir_size_used(const char* dir)
     int64 total_size_byte = 0;
     int64 free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    if(GetDiskFreeSpaceExW(com_string_utf8_to_utf16(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
                            (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
@@ -276,7 +276,7 @@ int64 com_dir_size_freed(const char* dir)
     int64 free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     int64 total_size_byte = 0;
-    if(GetDiskFreeSpaceExW(com_string_utf8_to_utf16(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(dir).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
                            (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
@@ -306,7 +306,7 @@ int com_dir_remove(const char* dir_path)
     }
 #if defined(_WIN32) || defined(_WIN64)
     struct _wfinddata_t file_info;
-    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", com_string_utf8_to_utf16(dir_path).c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
+    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", com_wstring_from_utf8(dir_path).c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
     if(handle == -1)
     {
         _rmdir(dir_path);
@@ -316,7 +316,7 @@ int com_dir_remove(const char* dir_path)
     {
         std::string path = dir_path;
         path.append(PATH_DELIM_STR);
-        path.append(com_string_utf16_to_utf8(file_info.name));
+        path.append(com_wstring_to_utf8(file_info.name));
         if(file_info.attrib & _A_SUBDIR)
         {
             if(wcscmp(file_info.name, L".") == 0 || wcscmp(file_info.name, L"..") == 0)
@@ -401,7 +401,7 @@ static bool com_dir_list(const char* dir_root, std::map<std::string, int>& list,
 
 #if defined(_WIN32) || defined(_WIN64)
     struct _wfinddata_t file_info;
-    std::wstring dir_root_w = com_string_utf8_to_utf16(dir_root);
+    std::wstring dir_root_w = com_wstring_from_utf8(dir_root);
     if(dir_root_w.back() != PATH_DELIM_WCHAR)
     {
         dir_root_w.append(PATH_DELIM_WSTR);
@@ -418,7 +418,7 @@ static bool com_dir_list(const char* dir_root, std::map<std::string, int>& list,
         {
             path.append(PATH_DELIM_STR);
         }
-        path.append(com_string_utf16_to_utf8(file_info.name));
+        path.append(com_wstring_to_utf8(file_info.name));
         if(file_info.attrib & _A_SUBDIR)
         {
             if(wcscmp(file_info.name, L".") == 0 || wcscmp(file_info.name, L"..") == 0)
@@ -565,7 +565,7 @@ int com_file_type(const char* file)
     }
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat buf;
-    int ret = _wstat(com_string_utf8_to_utf16(file).c_str(), &buf);
+    int ret = _wstat(com_wstring_from_utf8(file).c_str(), &buf);
     if(0 != ret)
     {
         if(errno == ENOENT)
@@ -654,7 +654,7 @@ int64 com_file_size(const char* file_path)
     unsigned long filesize = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
-    if(_wstat(com_string_utf8_to_utf16(file_path).c_str(), &statbuff) == 0)
+    if(_wstat(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
     {
         filesize = statbuff.st_size;
     }
@@ -676,7 +676,7 @@ uint64 com_file_get_id(const char* file_path)
     }
     uint64 inode = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    HANDLE fp = CreateFileW(com_string_utf8_to_utf16(file_path).c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+    HANDLE fp = CreateFileW(com_wstring_from_utf8(file_path).c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
     if(fp == NULL)
     {
         return 0;
@@ -711,7 +711,7 @@ uint32 com_file_get_change_time(const char* file_path)
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
-    if(_wstat(com_string_utf8_to_utf16(file_path).c_str(), &statbuff) == 0)
+    if(_wstat(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_ctime;
     }
@@ -734,7 +734,7 @@ uint32 com_file_get_modify_time(const char* file_path)
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
-    if(_wstat(com_string_utf8_to_utf16(file_path).c_str(), &statbuff) == 0)
+    if(_wstat(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_mtime;
     }
@@ -757,7 +757,7 @@ uint32 com_file_get_access_time(const char* file_path)
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat statbuff;
-    if(_wstat(com_string_utf8_to_utf16(file_path).c_str(), &statbuff) == 0)
+    if(_wstat(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_atime;
     }
@@ -785,7 +785,7 @@ bool com_file_set_access_time(const char* path, uint32 time_s)
     struct _utimbuf buf;
     buf.actime = time_s;
     buf.modtime = com_file_get_modify_time(path);
-    _wutime(com_string_utf8_to_utf16(path).c_str(), &buf);
+    _wutime(com_wstring_from_utf8(path).c_str(), &buf);
 #else
     struct utimbuf buf;
     buf.actime = time_s;
@@ -809,7 +809,7 @@ bool com_file_set_modify_time(const char* path, uint32 time_s)
     struct _utimbuf buf;
     buf.actime = time_s;
     buf.modtime = time_s;
-    _wutime(com_string_utf8_to_utf16(path).c_str(), &buf);
+    _wutime(com_wstring_from_utf8(path).c_str(), &buf);
 #else
     struct utimbuf buf;
     buf.actime = time_s;
@@ -857,8 +857,8 @@ bool com_file_copy(const char* file_path_to, const char* file_path_from, bool ap
         com_dir_create(dir.c_str());
     }
 #if defined(_WIN32) || defined(_WIN64)
-    std::wifstream ifs(com_string_utf8_to_utf16(file_path_from), std::ios::binary);
-    std::wofstream ofs(com_string_utf8_to_utf16(file_path_to), append ? std::ios::binary | std::ios_base::app : std::ios::binary);
+    std::wifstream ifs(com_wstring_from_utf8(file_path_from), std::ios::binary);
+    std::wofstream ofs(com_wstring_from_utf8(file_path_to), append ? std::ios::binary | std::ios_base::app : std::ios::binary);
 #else
     std::ifstream ifs(file_path_from, std::ios::binary);
     std::ofstream ofs(file_path_to, append ? std::ios::binary | std::ios_base::app : std::ios::binary);
@@ -1019,7 +1019,7 @@ bool com_file_rename(const char* file_name_new, const char* file_name_old)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    return (_wrename(com_string_utf8_to_utf16(file_name_old).c_str(), com_string_utf8_to_utf16(file_name_new).c_str()) == 0);
+    return (_wrename(com_wstring_from_utf8(file_name_old).c_str(), com_wstring_from_utf8(file_name_new).c_str()) == 0);
 #else
     return (rename(file_name_old, file_name_new) == 0);
 #endif
@@ -1032,7 +1032,7 @@ FILE* com_file_open(const char* file_path, const char* flag)
         return NULL;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    return _wfopen(com_string_utf8_to_utf16(file_path).c_str(), com_string_utf8_to_utf16(flag).c_str());
+    return _wfopen(com_wstring_from_utf8(file_path).c_str(), com_wstring_from_utf8(flag).c_str());
 #else
     return fopen(file_path, flag);
 #endif
@@ -1620,7 +1620,7 @@ bool com_file_remove(const char* file_name)
     }
     int ret = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    ret = _wremove(com_string_utf8_to_utf16(file_name).c_str());
+    ret = _wremove(com_wstring_from_utf8(file_name).c_str());
 #else
     ret = remove(file_name);
 #endif
@@ -1761,11 +1761,11 @@ std::string com_file_path_absolute(const char* path)
     }
 #if defined(_WIN32) || defined(_WIN64)
     wchar_t path_full[_MAX_PATH];
-    if(_wfullpath(path_full, com_string_utf8_to_utf16(path).c_str(), sizeof(path_full)) == NULL)
+    if(_wfullpath(path_full, com_wstring_from_utf8(path).c_str(), sizeof(path_full)) == NULL)
     {
         return std::string();
     }
-    return com_string_utf16_to_utf8(path_full);
+    return com_wstring_to_utf8(path_full);
 #else
     char path_full[PATH_MAX];
     if(realpath(path, path_full) == NULL)
@@ -1871,7 +1871,7 @@ FileDetail::FileDetail(const char* path) : FilePath(path)
     this->path = path;
 #if defined(_WIN32) || defined(_WIN64)
     struct _stat buf;
-    int ret = _wstat(com_string_utf8_to_utf16(path).c_str(), &buf);
+    int ret = _wstat(com_wstring_from_utf8(path).c_str(), &buf);
     if(0 != ret)
     {
         if(errno == ENOENT)
@@ -1968,7 +1968,7 @@ bool FileDetail::setAccessTime(uint32 timestamp_s)
     struct _utimbuf buf;
     buf.actime = time_access_s;
     buf.modtime = time_modify_s;
-    _wutime(com_string_utf8_to_utf16(path).c_str(), &buf);
+    _wutime(com_wstring_from_utf8(path).c_str(), &buf);
 #else
     struct utimbuf buf;
     buf.actime = time_access_s;
@@ -1995,7 +1995,7 @@ bool FileDetail::setModifyTime(uint32 timestamp_s)
     struct _utimbuf buf;
     buf.actime = time_access_s;
     buf.modtime = time_modify_s;
-    _wutime(com_string_utf8_to_utf16(path).c_str(), &buf);
+    _wutime(com_wstring_from_utf8(path).c_str(), &buf);
 #else
     struct utimbuf buf;
     buf.actime = time_access_s;
@@ -2025,7 +2025,7 @@ SingleInstanceProcess::SingleInstanceProcess(const char* file_lock)
     sa.bInheritHandle = FALSE;
     sa.lpSecurityDescriptor = &sd;
 
-    fp = CreateMutexW(&sa, FALSE, com_string_utf8_to_utf16(file).c_str());
+    fp = CreateMutexW(&sa, FALSE, com_wstring_from_utf8(file).c_str());
     if(ERROR_ALREADY_EXISTS == GetLastError())
     {
         LOG_W("process already running");
