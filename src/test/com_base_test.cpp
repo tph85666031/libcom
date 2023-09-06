@@ -506,9 +506,11 @@ void com_base_unit_test_suit(void** state)
     TIME_COST_SHOW();
 
     SingleInstanceProcess s("sss");
+#if defined(_WIN32) || defined(_WIN64)
     com_run_shell("D:\\1.bat");
     std::string result = com_run_shell_with_output("dir");
     LOG_I("reault=%s", result.c_str());
+#endif
 }
 
 void com_base_bytearray_unit_test_suit(void** state)

@@ -545,6 +545,12 @@ std::string com_path_name(const char* path)
     return file_path.getName();
 }
 
+std::string com_path_suffix(const char* path)
+{
+    FilePath file_path(path);
+    return file_path.getSuffix();
+}
+
 std::string com_path_name_without_suffix(const char* path)
 {
     FilePath file_path(path);
@@ -1014,7 +1020,7 @@ bool com_file_create(const char* file_path)
 
 bool com_file_rename(const char* file_name_new, const char* file_name_old)
 {
-    if(file_name_new == NULL || file_name_old == NULL)
+    if(com_string_is_empty(file_name_new) || com_string_is_empty(file_name_old))
     {
         return false;
     }
@@ -1027,7 +1033,7 @@ bool com_file_rename(const char* file_name_new, const char* file_name_old)
 
 FILE* com_file_open(const char* file_path, const char* flag)
 {
-    if(file_path == NULL || flag == NULL)
+    if(com_string_is_empty(file_path) || com_string_is_empty(flag))
     {
         return NULL;
     }
@@ -1040,7 +1046,7 @@ FILE* com_file_open(const char* file_path, const char* flag)
 
 CPPBytes com_file_read(const char* file, int size, int64 offset)
 {
-    if(file == NULL || size <= 0)
+    if(com_string_is_empty(file) || size <= 0)
     {
         return CPPBytes();
     }
@@ -1067,7 +1073,7 @@ CPPBytes com_file_read(const char* file, int size, int64 offset)
     data.append(buf, ret);
 
     com_file_close(fp);
-    return std::move(data);
+    return data;
 }
 
 CPPBytes com_file_read(FILE* file, int size)
@@ -1089,7 +1095,7 @@ CPPBytes com_file_read(FILE* file, int size)
     int ret = com_file_read(file, buf, size % sizeof(buf));
     data.append(buf, ret);
 
-    return std::move(data);
+    return data;
 }
 
 int64 com_file_read(FILE* file, void* buf, int64 size)
@@ -1168,7 +1174,7 @@ CPPBytes com_file_read_until(FILE* file, const uint8* data, int data_size)
             break;
         }
     }
-    return std::move(result);
+    return result;
 }
 
 CPPBytes com_file_read_until(FILE* file, std::function<bool(uint8)> func)
@@ -1193,7 +1199,7 @@ CPPBytes com_file_read_until(FILE* file, std::function<bool(uint8)> func)
         }
         result.append(val);
     }
-    return std::move(result);
+    return result;
 }
 
 int64 com_file_find(const char* file, const char* key, int64 offset)
@@ -1626,7 +1632,7 @@ bool com_file_remove(const char* file_name)
 #endif
     if(ret != 0)
     {
-        LOG_E("failed to remove %s,ret=%d", file_name, errno);
+        LOG_D("failed to remove %s,ret=%d", file_name, errno);
         return false;
     }
     return true;
@@ -1818,7 +1824,13 @@ bool FilePath::parse(const char* path)
     {
         dir = ".";
         name = this->path;
-        return false;
+        pos = name.find_last_of('.');
+        if(pos != std::string::npos)
+        {
+            suffix = name.substr(pos + 1);
+            name_without_suffix = name.substr(0, pos);
+        }
+        return true;
     }
 
     name = this->path.substr(pos + 1);

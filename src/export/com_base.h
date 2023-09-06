@@ -184,8 +184,8 @@ COM_EXPORT std::vector<std::string> com_string_split(const char* str, const char
 COM_EXPORT std::string& com_string_trim_left(std::string& str, const char* t = " \t\n\r\f\v");
 COM_EXPORT std::string& com_string_trim_right(std::string& str, const char* t = " \t\n\r\f\v");
 COM_EXPORT std::string& com_string_trim(std::string& str, const char* t = " \t\n\r\f\v");
-COM_EXPORT char* com_string_trim_left(char* str);
-COM_EXPORT char* com_string_trim_right(char* str);
+COM_EXPORT char* com_string_trim_left(char* str, const char* t = " \t\n\r\f\v");
+COM_EXPORT char* com_string_trim_right(char* str, const char* t = " \t\n\r\f\v");
 COM_EXPORT char* com_string_trim(char* str);
 COM_EXPORT bool com_string_start_with(const char* str, const char* prefix);
 COM_EXPORT bool com_string_end_with(const char* str, const char* trail);
@@ -349,12 +349,14 @@ public:
     CPPBytes& append(uint8 val);
     CPPBytes& append(const uint8* data, int data_size);
     CPPBytes& append(const char* data);
+    CPPBytes& append(const std::string& data);
     CPPBytes& append(const CPPBytes& bytes);
     CPPBytes& insert(int pos, uint8 val);
     CPPBytes& insert(int pos, const uint8* data, int data_size);
     CPPBytes& insert(int pos, const char* data);
     CPPBytes& insert(int pos, CPPBytes& bytes);
     uint8 getAt(int pos) const;
+    void setAt(int pos, uint8 val);
     void removeAt(int pos);
     void removeHead(int count = 1);
     void removeTail(int count = 1);

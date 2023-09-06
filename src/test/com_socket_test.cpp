@@ -203,7 +203,7 @@ public:
 
     void onMessage(const std::string& name, const std::string& message)
     {
-        LOG_I("from name=%s,message=%s", name.c_str(), message.c_str());
+        LOG_D("from name=%s,message=%s", name.c_str(), message.c_str());
         counts[name]++;
     }
 

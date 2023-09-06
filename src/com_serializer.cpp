@@ -7,20 +7,26 @@ Serializer::Serializer()
     this->pos_detach = 0;
 }
 
-Serializer::Serializer(const uint8* data, int dataSize)
+Serializer::Serializer(const uint8* data, int data_size)
 {
-    this->pos_detach = 0;
-    if(data != NULL && dataSize > 0)
-    {
-        for(int i = 0; i < dataSize; i++)
-        {
-            buf.push_back(data[i]);
-        }
-    }
+    load(data, data_size);
 }
 
 Serializer::~Serializer()
 {
+}
+
+void Serializer::load(const uint8* data, int data_size)
+{
+    this->pos_detach = 0;
+    if(data == NULL || data_size <= 0)
+    {
+        return;
+    }
+    for(int i = 0; i < data_size; i++)
+    {
+        buf.push_back(data[i]);
+    }
 }
 
 Serializer& Serializer::enableByteOrderModify()

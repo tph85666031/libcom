@@ -50,12 +50,13 @@ public:
     
     void setMessageID(uint32 id);
     uint32 getMessageID();
+
+    void stopTimerManager();
 private:
     void updateTimer(CPPTimer& timer);
     void removeTimer(std::string uuid);
     bool isTimerExist(std::string uuid);
     void startTimerManager();
-    void stopTimerManager();
     void threadPoolRunner(Message& msg);
     static void ThreadTimerLoop(CPPTimerManager* manager);
 private:

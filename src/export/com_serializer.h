@@ -11,6 +11,7 @@ public:
     Serializer();
     Serializer(const uint8* data, int data_size);
     ~Serializer();
+    void load(const uint8* data, int data_size);
     Serializer& append(bool val);
     Serializer& append(char val);
     Serializer& append(uint8 val);

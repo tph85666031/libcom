@@ -773,7 +773,7 @@ void ThreadPool::startThreadPool()
     startManagerThread();
 }
 
-void ThreadPool::stopThreadPool()
+void ThreadPool::stopThreadPool(bool force)
 {
     thread_mgr_running = false;
     do
@@ -792,20 +792,19 @@ void ThreadPool::stopThreadPool()
             }
         }
         mutex_threads.unlock();
-        if(all_finished)
+        if(force || all_finished)
         {
             break;
         }
-        else
-        {
-            com_sleep_ms(100);
-        }
+        com_sleep_ms(100);
     }
     while(true);
 
     mutex_threads.lock();
-    std::map<std::thread::id, THREAD_POLL_INFO>::iterator it;
-    for(it = threads.begin(); it != threads.end(); it++)
+    std::map<std::thread::id, THREAD_POLL_INFO> threads_tmp = threads;
+    mutex_threads.unlock();
+    
+    for(auto it = threads_tmp.begin(); it != threads_tmp.end(); it++)
     {
         THREAD_POLL_INFO& des = it->second;
         if(des.t != NULL && des.t->joinable())
@@ -814,6 +813,8 @@ void ThreadPool::stopThreadPool()
             delete des.t;
         }
     }
+
+    mutex_threads.lock();
     threads.clear();
     mutex_threads.unlock();
     if(thread_mgr.joinable())

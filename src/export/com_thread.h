@@ -46,7 +46,7 @@ public:
     bool pushPoolMessage(const Message& msg);
     void waitAllDone(int timeout_ms = 0);
     void startThreadPool();
-    void stopThreadPool();
+    void stopThreadPool(bool force = false);
     virtual void threadPoolRunner(Message& msg) {};
 private:
     static void ThreadLoop(ThreadPool* poll);

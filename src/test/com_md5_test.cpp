@@ -47,8 +47,13 @@ void com_md5_unit_test_suit(void** state)
         }
         std::string file = it->first;
         std::string md5_my = CPPMD5::Digest(file.c_str()).toHexString();
+#if defined(_WIN32) || defined(_WIN64)
         std::string val = com_run_shell_with_output("md5sum.exe %s", file.c_str());
+#else
+        std::string val = com_run_shell_with_output("md5sum %s", file.c_str());
+#endif
         //LOG_I("md5_my=%s,val=%s,file=%s", md5_my.c_str(), val.c_str(), file.c_str());
         ASSERT_TRUE(com_string_contain(val.c_str(), md5_my.c_str()));
     }
 }
+

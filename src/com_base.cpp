@@ -23,6 +23,7 @@
 #include <codecvt>
 #endif
 
+#include "ConvertUTF.h"
 #include "CJsonObject.h"
 #include "com_base.h"
 #include "com_md5.h"
@@ -502,20 +503,35 @@ std::string& com_string_trim(std::string& str, const char* t)
     return com_string_trim_left(com_string_trim_right(str, t), t);
 }
 
-char* com_string_trim_left(char* str)
+char* com_string_trim_left(char* str, const char* t)
 {
-    if(str == NULL)
+    if(com_string_is_empty(str) || com_string_is_empty(t))
     {
-        return NULL;
+        return str;
     }
     char* p1 = str;
     char* p2 = str;
-    while(*p1 == ' ' || *p1 == '\t'
-            || *p1 == '\n' || *p1 == '\r'
-            || *p1 == '\f' || *p1 == '\v')
+    int len_t = com_string_len(t);
+    do
     {
+        bool match = false;
+        for(int i = 0; i < len_t; i++)
+        {
+            if(*p1 == t[i])
+            {
+                match = true;
+                break;
+            }
+        }
+
+        if(match == false)
+        {
+            break;
+        }
         p1++;
     }
+    while(*p1);
+
     while(*p1 != '\0')
     {
         *p2 = *p1;
@@ -526,24 +542,32 @@ char* com_string_trim_left(char* str)
     return str;
 }
 
-char* com_string_trim_right(char* str)
+char* com_string_trim_right(char* str, const char* t)
 {
-    if(str == NULL)
+    if(com_string_is_empty(str) || com_string_is_empty(t))
     {
-        return NULL;
+        return str;
     }
-    int len = (int)strlen(str);
+    int len_t = com_string_len(t);
     int i = 0;
-    for(i = len - 1; i >= 0; i--)
+    for(i = com_string_len(str) - 1; i >= 0; i--)
     {
-        if(str[i] != ' ' && str[i] != '\t'
-                && str[i] != '\n' && str[i] != '\r'
-                && str[i] != '\f' && str[i] != '\v')
+        bool match = false;
+        for(int j = 0; j < len_t; j++)
         {
+            if(str[i] == t[j])
+            {
+                match = true;
+                break;
+            }
+        }
+
+        if(match == false)
+        {
+            str[i + 1] = '\0';
             break;
         }
     }
-    str[i + 1] = '\0';
     return str;
 }
 
@@ -2521,6 +2545,11 @@ CPPBytes& CPPBytes::append(const char* data)
     return *this;
 }
 
+CPPBytes& CPPBytes::append(const std::string& data)
+{
+    return append((uint8*)data.data(), data.size());
+}
+
 CPPBytes& CPPBytes::append(const CPPBytes& bytes)
 {
     if(this == &bytes)
@@ -2587,6 +2616,15 @@ uint8 CPPBytes::getAt(int pos) const
         return 0;
     }
     return buf[pos];
+}
+
+void CPPBytes::setAt(int pos, uint8 val)
+{
+    if(pos < 0 || pos >= (int)buf.size())
+    {
+        return;
+    }
+    buf[pos] = val;
 }
 
 void CPPBytes::removeAt(int pos)
@@ -3408,7 +3446,7 @@ CPPBytes ByteStreamReader::read(int size)
     CPPBytes result;
     result.append(buffer.getData() + buffer_pos, size);
     buffer_pos += size;
-    return std::move(result);
+    return result;
 }
 
 int ByteStreamReader::read(uint8* buf, int buf_size)

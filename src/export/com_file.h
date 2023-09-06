@@ -81,6 +81,7 @@ COM_EXPORT int com_dir_remove(const char* dir_path);
 COM_EXPORT bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool recursion = false);
 
 COM_EXPORT std::string com_path_name(const char* path);
+COM_EXPORT std::string com_path_suffix(const char* path);
 COM_EXPORT std::string com_path_name_without_suffix(const char* path);
 COM_EXPORT std::string com_path_dir(const char* path);
 

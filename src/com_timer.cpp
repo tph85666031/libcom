@@ -42,7 +42,7 @@ void CPPTimerManager::stopTimerManager()
     {
         thread_timer_loop.join();
     }
-    stopThreadPool();
+    stopThreadPool(true);
 }
 
 void CPPTimerManager::threadPoolRunner(Message& msg)
