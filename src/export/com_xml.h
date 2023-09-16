@@ -8,9 +8,11 @@ class COM_EXPORT CPPXmlParser
 public:
     CPPXmlParser();
     CPPXmlParser(const char* file);
+    CPPXmlParser(const CPPBytes& content);
     virtual ~CPPXmlParser();
 
     bool load(const char* file);
+    bool load(const CPPBytes& content);
     bool save();
     bool saveAs(const char* file);
 

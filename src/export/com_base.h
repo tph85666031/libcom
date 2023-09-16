@@ -209,23 +209,6 @@ COM_EXPORT bool com_string_is_utf8(const char* str);
 COM_EXPORT std::string com_string_format(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 COM_EXPORT std::wstring com_wstring_format(const wchar_t* fmt, ...);
 
-COM_EXPORT std::wstring com_wstring_from_ansi(const std::string& s);
-COM_EXPORT std::wstring com_wstring_from_ansi(const char* s);
-COM_EXPORT std::string com_wstring_to_ansi(const std::wstring& s);
-COM_EXPORT std::string com_wstring_to_ansi(const wchar_t* s);
-COM_EXPORT std::string com_wstring_to_utf8(const std::wstring& s);
-COM_EXPORT std::string com_wstring_to_utf8(const wchar_t* s);
-COM_EXPORT std::wstring com_wstring_from_utf8(const std::string& s);
-COM_EXPORT std::wstring com_wstring_from_utf8(const char* s);
-COM_EXPORT std::string com_string_ansi_to_utf8(const std::string& s);
-COM_EXPORT std::string com_string_ansi_to_utf8(const char* s);
-COM_EXPORT std::string com_string_utf8_to_ansi(const std::string& s);
-COM_EXPORT std::string com_string_utf8_to_ansi(const char* s);
-COM_EXPORT std::string com_string_utf8_to_local(const std::string& s);
-COM_EXPORT std::string com_string_utf8_to_local(const char* s);
-COM_EXPORT std::string com_string_local_to_utf8(const std::string& s);
-COM_EXPORT std::string com_string_local_to_utf8(const char* s);
-
 COM_EXPORT int com_snprintf(char* buf, int buf_size, const char* fmt, ...) __attribute__((format(printf, 3, 4)));
 COM_EXPORT std::string com_bytes_to_hexstring(const uint8* data, uint16 size);
 COM_EXPORT int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size);
@@ -587,6 +570,30 @@ private:
 };
 
 COM_EXPORT CPPBytes com_hexstring_to_bytes(const char* str);
+
+COM_EXPORT CPPBytes com_string_utf8_to_utf16(const CPPBytes& utf8);
+COM_EXPORT CPPBytes com_string_utf16_to_utf8(const CPPBytes& utf16);
+COM_EXPORT CPPBytes com_string_utf8_to_utf32(const CPPBytes& utf8);
+COM_EXPORT CPPBytes com_string_utf32_to_utf8(const CPPBytes& utf32);
+COM_EXPORT CPPBytes com_string_utf16_to_utf32(const CPPBytes& utf16);
+COM_EXPORT CPPBytes com_string_utf32_to_utf16(const CPPBytes& utf32);
+COM_EXPORT std::string com_string_ansi_to_utf8(const std::string& ansi);
+COM_EXPORT std::string com_string_ansi_to_utf8(const char* ansi);
+COM_EXPORT std::string com_string_utf8_to_ansi(const std::string& utf8);
+COM_EXPORT std::string com_string_utf8_to_ansi(const char* utf8);
+COM_EXPORT std::string com_string_utf8_to_local(const std::string& utf8);
+COM_EXPORT std::string com_string_utf8_to_local(const char* s);
+COM_EXPORT std::string com_string_local_to_utf8(const std::string& s);
+COM_EXPORT std::string com_string_local_to_utf8(const char* s);
+COM_EXPORT std::wstring com_wstring_from_utf8(const CPPBytes& utf8);
+COM_EXPORT std::wstring com_wstring_from_utf16(const CPPBytes& utf16);
+COM_EXPORT std::wstring com_wstring_from_utf32(const CPPBytes& utf32);
+COM_EXPORT CPPBytes com_wstring_to_utf8(const wchar_t* wstr);
+COM_EXPORT CPPBytes com_wstring_to_utf8(const std::wstring& wstr);
+COM_EXPORT CPPBytes com_wstring_to_utf16(const wchar_t* wstr);
+COM_EXPORT CPPBytes com_wstring_to_utf16(const std::wstring& wstr);
+COM_EXPORT CPPBytes com_wstring_to_utf32(const wchar_t* wstr);
+COM_EXPORT CPPBytes com_wstring_to_utf32(const std::wstring& wstr);
 
 #endif /* __COM_BASE_H__ */
 

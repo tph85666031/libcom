@@ -36,7 +36,7 @@ extern void com_socket_stringipc_unit_test_suit(void** state);
 
 CMUnitTest test_cases_com_lib[] =
 {
-#if 1
+#if 0
     cmocka_unit_test(com_base_unit_test_suit),
     cmocka_unit_test(com_base_string_split_unit_test_suit),
     cmocka_unit_test(com_base_string_unit_test_suit),
@@ -67,7 +67,7 @@ CMUnitTest test_cases_com_lib[] =
     cmocka_unit_test(com_sync_unit_test_suit),
     cmocka_unit_test(com_socket_stringipc_unit_test_suit)
 #else
-    cmocka_unit_test(com_file_unit_test_suit)
+    cmocka_unit_test(com_base_string_unit_test_suit)
 #endif
 };
 

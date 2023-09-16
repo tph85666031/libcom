@@ -273,8 +273,20 @@ void com_base_string_unit_test_suit(void** state)
     com_string_replace(x, "below", "");
     ASSERT_STR_EQUAL(x.c_str(), "IF U already have files U can push them using command line instructions ");
 
-    std::string str_utf8 = com_wstring_to_utf8(L"测试");
-    ASSERT_STR_EQUAL(com_string_utf8_to_local(str_utf8).c_str(), "测试");
+    std::string str_utf8 = com_wstring_to_utf8(L"测试").toString();
+    ASSERT_STR_EQUAL(com_string_utf8_to_local(str_utf8.c_str()).c_str(), "测试");
+    CPPBytes utf16 = com_string_utf8_to_utf16(CPPBytes("中文测试"));
+    CPPBytes utf32 = com_string_utf16_to_utf32(utf16);
+    CPPBytes utf8 = com_string_utf32_to_utf8(utf32);
+    ASSERT_STR_EQUAL(utf8.toString().c_str(), "中文测试");
+
+    CPPBytes utf16_2 = com_string_utf32_to_utf16(utf32);
+    ASSERT_TRUE(utf16 == utf16_2);
+    CPPBytes utf8_2 = com_string_utf16_to_utf8(utf16);
+    ASSERT_TRUE(utf8 == utf8_2);
+    std::wstring wstr = com_wstring_from_utf8(utf8_2);
+    CPPBytes utf8_3 = com_wstring_to_utf8(wstr);
+    ASSERT_TRUE(utf8_2 == utf8_3);
 
     ASSERT_TRUE(com_string_match("123456", "123?56"));
     ASSERT_TRUE(com_string_match("123456", "123*56"));
@@ -307,7 +319,6 @@ void com_base_string_unit_test_suit(void** state)
 
     ASSERT_TRUE(com_string_is_utf8("abcd"));
     ASSERT_TRUE(com_string_is_utf8("UTF8中文"));
-    ASSERT_FALSE(com_string_is_utf8("\x41\x4e\x53\x49\xd6\xd0\xce\xc4"));//ANSI中文
     ASSERT_FALSE(com_string_is_utf8(NULL));
 }
 

@@ -46,24 +46,6 @@ static std::mutex mutex_app_path;
 #define XFOLD(c) ((flags & XFNM_CASEFOLD) ? std::tolower(c) : (c))
 #define XEOS '\0'
 
-static const uint8 UTF8_TABLE[] =
-{
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 00..1f
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 20..3f
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 40..5f
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 60..7f
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, // 80..9f
-    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, // a0..bf
-    8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // c0..df
-    0xa, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x4, 0x3, 0x3, // e0..ef
-    0xb, 0x6, 0x6, 0x6, 0x5, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, 0x8, // f0..ff
-    0x0, 0x1, 0x2, 0x3, 0x5, 0x8, 0x7, 0x1, 0x1, 0x1, 0x4, 0x6, 0x1, 0x1, 0x1, 0x1, // s0..s0
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, // s1..s2
-    1, 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, // s3..s4
-    1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 3, 1, 1, 1, 1, 1, 1, // s5..s6
-    1, 3, 1, 1, 1, 1, 1, 3, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // s7..s8
-};
-
 static const char* xfnmatch_rangematch(const char* pattern, int test, int flags)
 {
     char c = 0;
@@ -719,156 +701,241 @@ bool com_string_match(const char* str, const char* pattern, bool is_path)
     return (xfnmatch(pattern, str, is_path ? XFNM_PATHNAME | XFNM_NOESCAPE : XFNM_NOESCAPE) == 0);
 }
 
-std::wstring com_wstring_from_ansi(const std::string& s)
+CPPBytes com_string_utf8_to_utf16(const CPPBytes& utf8)
 {
-    return com_wstring_from_ansi(s.c_str());
-}
-std::wstring com_wstring_from_ansi(const char* s)
-{
-    if(s == NULL)
+    if(utf8.empty())
     {
-        return std::wstring();
+        return CPPBytes();
+    }
+    const UTF8* p_utf8 = utf8.getData();
+    UTF16* p_utf16 = new UTF16[utf8.getDataSize()];
+    UTF16* p_utf16_tmp = p_utf16;
+    ConversionResult ret = ConvertUTF8toUTF16(&p_utf8, p_utf8 + utf8.getDataSize(),
+                           &p_utf16_tmp, p_utf16_tmp + utf8.getDataSize(), lenientConversion);
+    if(ret != conversionOK && ret != sourceExhausted)
+    {
+        delete[] p_utf16;
+        return CPPBytes();
+    }
+
+    if(p_utf16_tmp <= p_utf16)
+    {
+        delete[] p_utf16;
+        return CPPBytes();
+    }
+    CPPBytes result;
+    result.append((uint8*)p_utf16, (int)(p_utf16_tmp - p_utf16) * 2);
+    delete[] p_utf16;
+    return result;
+}
+
+CPPBytes com_string_utf16_to_utf8(const CPPBytes& utf16)
+{
+    if(utf16.empty())
+    {
+        return CPPBytes();
+    }
+    const UTF16* p_utf16 = (const UTF16*)utf16.getData();
+    UTF8* p_utf8 = new UTF8[utf16.getDataSize() * 2];
+    UTF8* p_utf8_tmp = p_utf8;
+    ConversionResult ret = ConvertUTF16toUTF8(&p_utf16, p_utf16 + utf16.getDataSize() / 2,
+                           &p_utf8_tmp, p_utf8_tmp + utf16.getDataSize() * 2, lenientConversion);
+    if(ret != conversionOK && ret != sourceExhausted)
+    {
+        delete[] p_utf8;
+        return CPPBytes();
+    }
+
+    if(p_utf8_tmp <= p_utf8)
+    {
+        delete[] p_utf8;
+        return CPPBytes();
+    }
+    CPPBytes result;
+    result.append(p_utf8, (int)(p_utf8_tmp - p_utf8));
+    delete[] p_utf8;
+    return result;
+}
+
+CPPBytes com_string_utf8_to_utf32(const CPPBytes& utf8)
+{
+    if(utf8.empty())
+    {
+        return CPPBytes();
+    }
+    const UTF8* p_utf8 = utf8.getData();
+    UTF32* p_utf32 = new UTF32[utf8.getDataSize()];
+    UTF32* p_utf32_tmp = p_utf32;
+    ConversionResult ret = ConvertUTF8toUTF32(&p_utf8, p_utf8 + utf8.getDataSize(),
+                           &p_utf32_tmp, p_utf32 + utf8.getDataSize(), lenientConversion);
+    if(ret != conversionOK && ret != sourceExhausted)
+    {
+        delete[] p_utf32;
+        return CPPBytes();
+    }
+
+    if(p_utf32_tmp <= p_utf32)
+    {
+        delete[] p_utf32;
+        return CPPBytes();
+    }
+    CPPBytes result;
+    result.append((uint8*)p_utf32, (int)(p_utf32_tmp - p_utf32) * 4);
+    delete[] p_utf32;
+    return result;
+}
+
+CPPBytes com_string_utf32_to_utf8(const CPPBytes& utf32)
+{
+    if(utf32.empty())
+    {
+        return CPPBytes();
+    }
+    const UTF32* p_utf32 = (const UTF32*)utf32.getData();
+    UTF8* p_utf8 = new UTF8[utf32.getDataSize()];
+    UTF8* p_utf8_tmp = p_utf8;
+    ConversionResult ret = ConvertUTF32toUTF8(&p_utf32, p_utf32 + utf32.getDataSize() / 4,
+                           &p_utf8_tmp, p_utf8_tmp + utf32.getDataSize(), lenientConversion);
+    if(ret != conversionOK && ret != sourceExhausted)
+    {
+        delete[] p_utf8;
+        return CPPBytes();
+    }
+
+    if(p_utf8_tmp <= p_utf8)
+    {
+        delete[] p_utf8;
+        return CPPBytes();
+    }
+    CPPBytes result;
+    result.append(p_utf8, (int)(p_utf8_tmp - p_utf8));
+    delete[] p_utf8;
+    return result;
+}
+
+CPPBytes com_string_utf16_to_utf32(const CPPBytes& utf16)
+{
+    if(utf16.empty())
+    {
+        return CPPBytes();
+    }
+    const UTF16* p_utf16 = (const UTF16*)utf16.getData();
+    UTF32* p_utf32 = new UTF32[utf16.getDataSize()];
+    UTF32* p_utf32_tmp = p_utf32;
+    ConversionResult ret = ConvertUTF16toUTF32(&p_utf16, p_utf16 + utf16.getDataSize() / 2,
+                           &p_utf32_tmp, p_utf32_tmp + utf16.getDataSize(), lenientConversion);
+    if(ret != conversionOK && ret != sourceExhausted)
+    {
+        delete[] p_utf32;
+        return CPPBytes();
+    }
+
+    if(p_utf32_tmp <= p_utf32)
+    {
+        delete[] p_utf32;
+        return CPPBytes();
+    }
+    CPPBytes result;
+    result.append((uint8*)p_utf32, (int)(p_utf32_tmp - p_utf32) * 4);
+    delete[] p_utf32;
+    return result;
+}
+
+CPPBytes com_string_utf32_to_utf16(const CPPBytes& utf32)
+{
+    if(utf32.empty())
+    {
+        return CPPBytes();
+    }
+    const UTF32* p_utf32 = (const UTF32*)utf32.getData();
+    UTF16* p_utf16 = new UTF16[utf32.getDataSize()];
+    UTF16* p_utf16_tmp = p_utf16;
+    ConversionResult ret = ConvertUTF32toUTF16(&p_utf32, p_utf32 + utf32.getDataSize() / 4,
+                           &p_utf16_tmp, p_utf16_tmp + utf32.getDataSize(), lenientConversion);
+    if(ret != conversionOK && ret != sourceExhausted)
+    {
+        delete[] p_utf16;
+        return CPPBytes();
+    }
+
+    if(p_utf16_tmp <= p_utf16)
+    {
+        delete[] p_utf16;
+        return CPPBytes();
+    }
+    CPPBytes result;
+    result.append((uint8*)p_utf16, (int)(p_utf16_tmp - p_utf16) * 2);
+    delete[] p_utf16;
+    return result;
+}
+
+std::string com_string_ansi_to_utf8(const std::string& ansi)
+{
+    return com_string_ansi_to_utf8(ansi.c_str());
+}
+
+std::string com_string_ansi_to_utf8(const char* ansi)
+{
+    if(ansi == NULL)
+    {
+        return std::string();
     }
 #if defined(_WIN32) || defined(_WIN64)
     std::wstring str_utf16;
-    int size = MultiByteToWideChar(CP_ACP, 0, s, -1, 0, 0);
+    int size = MultiByteToWideChar(CP_ACP, 0, ansi, -1, 0, 0);
     if(size)
     {
         str_utf16.resize(size);
-        MultiByteToWideChar(CP_ACP, 0, s, -1, &str_utf16[0], str_utf16.size());
+        MultiByteToWideChar(CP_ACP, 0, ansi, -1, &str_utf16[0], str_utf16.size());
     }
-    return str_utf16;
+
+    return com_string_utf16_to_utf8(CPPBytes(str_utf16.c_str())).toString();
 #else
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
-    return conv_.from_bytes(s);
+    return ansi;
 #endif
 }
 
-std::string com_wstring_to_ansi(const std::wstring& s)
+std::string com_string_utf8_to_ansi(const std::string& utf8)
 {
-    return com_wstring_to_ansi(s.c_str());
+    return com_string_utf8_to_ansi(utf8.c_str());
 }
-std::string com_wstring_to_ansi(const wchar_t* s)
+
+std::string com_string_utf8_to_ansi(const char* utf8)
 {
-    if(s == NULL)
+    if(utf8 == NULL)
     {
         return std::string();
     }
 #if defined(_WIN32) || defined(_WIN64)
+    std::wstring wstr = com_wstring_from_utf8(CPPBytes(utf8));
     std::string str_ansi;
-    int size = WideCharToMultiByte(CP_ACP, 0, s, -1, 0, 0, 0, 0);
+    int size = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, 0, 0, 0, 0);
     if(size > 0)
     {
         str_ansi.resize(size);
-        WideCharToMultiByte(CP_ACP, 0, s, -1, &str_ansi[0], str_ansi.size(), NULL, NULL);
+        WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, &str_ansi[0], str_ansi.size(), NULL, NULL);
     }
     return str_ansi;
 #else
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
-    return conv_.to_bytes(s);
+    return utf8;
 #endif
 }
 
-std::string com_wstring_to_utf8(const std::wstring& s)
+std::string com_string_utf8_to_local(const std::string& utf8)
 {
-    return com_wstring_to_utf8(s.c_str());
+    return com_string_utf8_to_local(utf8.c_str());
 }
-std::string com_wstring_to_utf8(const wchar_t* s)
+
+std::string com_string_utf8_to_local(const char* utf8)
 {
-    if(s == NULL)
+    if(utf8 == NULL)
     {
         return std::string();
     }
 #if defined(_WIN32) || defined(_WIN64)
-    std::string str_utf8;
-    int size = WideCharToMultiByte(CP_UTF8, 0, s, -1, 0, 0, 0, 0);
-    if(size > 0)
-    {
-        str_utf8.resize(size);
-        WideCharToMultiByte(CP_UTF8, 0, s, -1, &str_utf8[0], str_utf8.size(), NULL, NULL);
-    }
-    return str_utf8;
+    return com_string_utf8_to_ansi(utf8);
 #else
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
-    return conv_.to_bytes(s);
-#endif
-}
-
-std::wstring com_wstring_from_utf8(const std::string& s)
-{
-    return com_wstring_from_utf8(s.c_str());
-}
-std::wstring com_wstring_from_utf8(const char* s)
-{
-    if(s == NULL)
-    {
-        return std::wstring();
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    std::wstring wstr;
-    int size = MultiByteToWideChar(CP_UTF8, 0, s, -1, 0, 0);
-    if(size)
-    {
-        wstr.resize(size);
-        MultiByteToWideChar(CP_UTF8, 0, s, -1, &wstr[0], wstr.size());
-    }
-    return wstr;
-#else
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv_;
-    return conv_.from_bytes(s);
-#endif
-}
-
-std::string com_string_ansi_to_utf8(const std::string& s)
-{
-    return com_string_ansi_to_utf8(s.c_str());
-}
-std::string com_string_ansi_to_utf8(const char* s)
-{
-    if(s == NULL)
-    {
-        return std::string();
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    std::wstring wstr = com_wstring_from_ansi(s);
-    return com_wstring_to_utf8(wstr);
-#else
-    return s;
-#endif
-}
-
-std::string com_string_utf8_to_ansi(const std::string& s)
-{
-    return com_string_utf8_to_ansi(s.c_str());
-}
-std::string com_string_utf8_to_ansi(const char* s)
-{
-    if(s == NULL)
-    {
-        return std::string();
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    std::wstring wstr = com_wstring_from_utf8(s);
-    return com_wstring_to_ansi(wstr);
-#else
-    return s;
-#endif
-}
-
-std::string com_string_utf8_to_local(const std::string& s)
-{
-    return com_string_utf8_to_local(s.c_str());
-}
-std::string com_string_utf8_to_local(const char* s)
-{
-    if(s == NULL)
-    {
-        return std::string();
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    return com_string_utf8_to_ansi(s);
-#else
-    return s;
+    return utf8;
 #endif
 }
 
@@ -876,6 +943,7 @@ std::string com_string_local_to_utf8(const std::string& s)
 {
     return com_string_local_to_utf8(s.c_str());
 }
+
 std::string com_string_local_to_utf8(const char* s)
 {
     if(s == NULL)
@@ -887,6 +955,165 @@ std::string com_string_local_to_utf8(const char* s)
 #else
     return s;
 #endif
+}
+
+std::wstring com_wstring_from_utf8(const CPPBytes& utf8)
+{
+    std::wstring wstr;
+    if(sizeof(wchar_t) == 2)
+    {
+        CPPBytes utf16 = com_string_utf8_to_utf16(utf8);
+        wstr.append((wchar_t*)utf16.getData(), utf16.getDataSize() / 2);
+    }
+    else
+    {
+        CPPBytes utf32 = com_string_utf8_to_utf32(utf8);
+        wstr.append((wchar_t*)utf32.getData(), utf32.getDataSize() / 4);
+    }
+
+    return wstr;
+}
+
+std::wstring com_wstring_from_utf16(const CPPBytes& utf16)
+{
+    std::wstring wstr;
+    if(sizeof(wchar_t) == 2)
+    {
+        wstr.append((wchar_t*)utf16.getData(), utf16.getDataSize() / 2);
+    }
+    else
+    {
+        CPPBytes utf32 = com_string_utf16_to_utf32(utf16);
+        wstr.append((wchar_t*)utf32.getData(), utf32.getDataSize() / 4);
+    }
+
+    return wstr;
+}
+
+std::wstring com_wstring_from_utf32(const CPPBytes& utf32)
+{
+    std::wstring wstr;
+    if(sizeof(wchar_t) == 2)
+    {
+        CPPBytes utf16 = com_string_utf32_to_utf16(utf32);
+        wstr.append((wchar_t*)utf16.getData(), utf16.getDataSize() / 2);
+    }
+    else
+    {
+        wstr.append((wchar_t*)utf32.getData(), utf32.getDataSize() / 4);
+    }
+
+    return wstr;
+}
+
+CPPBytes com_wstring_to_utf8(const wchar_t* wstr)
+{
+    if(wstr == NULL)
+    {
+        return CPPBytes();
+    }
+    CPPBytes result;
+    if(sizeof(wchar_t) == 2)
+    {
+        result.append((uint8*)wstr, wcslen(wstr) * 2);
+        result = com_string_utf16_to_utf8(result);
+    }
+    else
+    {
+        result.append((uint8*)wstr, wcslen(wstr) * 4);
+        result = com_string_utf32_to_utf8(result);
+    }
+
+    return result;
+}
+
+CPPBytes com_wstring_to_utf8(const std::wstring& wstr)
+{
+    CPPBytes result;
+    if(sizeof(wchar_t) == 2)
+    {
+        result.append((uint8*)wstr.data(), wstr.length() * 2);
+        result = com_string_utf16_to_utf8(result);
+    }
+    else
+    {
+        result.append((uint8*)wstr.data(), wstr.length() * 4);
+        result = com_string_utf32_to_utf8(result);
+    }
+
+    return result;
+}
+
+CPPBytes com_wstring_to_utf16(const wchar_t* wstr)
+{
+    if(wstr == NULL)
+    {
+        return CPPBytes();
+    }
+    CPPBytes result;
+    if(sizeof(wchar_t) == 2)
+    {
+        result.append((uint8*)wstr, wcslen(wstr) * 2);
+    }
+    else
+    {
+        result.append((uint8*)wstr, wcslen(wstr) * 4);
+        result = com_string_utf32_to_utf16(result);
+    }
+
+    return result;
+}
+
+CPPBytes com_wstring_to_utf16(const std::wstring& wstr)
+{
+    CPPBytes result;
+    if(sizeof(wchar_t) == 2)
+    {
+        result.append((uint8*)wstr.data(), wstr.length() * 2);
+    }
+    else
+    {
+        result.append((uint8*)wstr.data(), wstr.length() * 4);
+        result = com_string_utf32_to_utf16(result);
+    }
+
+    return result;
+}
+
+CPPBytes com_wstring_to_utf32(const wchar_t* wstr)
+{
+    if(wstr == NULL)
+    {
+        return CPPBytes();
+    }
+    CPPBytes result;
+    if(sizeof(wchar_t) == 2)
+    {
+        result.append((uint8*)wstr, wcslen(wstr) * 2);
+        result = com_string_utf16_to_utf32(result);
+    }
+    else
+    {
+        result.append((uint8*)wstr, wcslen(wstr) * 4);
+    }
+
+    return result;
+}
+
+CPPBytes com_wstring_to_utf32(const std::wstring& wstr)
+{
+    CPPBytes result;
+    if(sizeof(wchar_t) == 2)
+    {
+        result.append((uint8*)wstr.data(), wstr.length() * 2);
+        result = com_string_utf16_to_utf32(result);
+    }
+    else
+    {
+        result.append((uint8*)wstr.data(), wstr.length() * 4);
+    }
+
+    return result;
 }
 
 std::string com_bytes_to_hexstring(const uint8* data, uint16 size)
@@ -1041,26 +1268,21 @@ bool com_string_is_ip(const char* ip)
 
 bool com_string_is_utf8(const std::string& str)
 {
-    return com_string_is_utf8(str.c_str());
+    if(str.empty())
+    {
+        return false;
+    }
+    return isLegalUTF8Sequence((const UTF8*)str.c_str(), (const UTF8*)str.c_str() + str.length());
 }
 
 bool com_string_is_utf8(const char* str)
 {
-    if(str == NULL)
+    if(str == NULL || str[0] == '\0')
     {
         return false;
     }
 
-    int type = 0;
-    int state = 0;
-    int index = 0;
-    while(str[index] != '\0')
-    {
-        type = UTF8_TABLE[(uint8)str[index]];
-        state = UTF8_TABLE[256 + state * 16 + type];
-        index++;
-    }
-    return (state == 0);
+    return isLegalUTF8Sequence((const UTF8*)str, (const UTF8*)str + strlen(str));
 }
 
 
@@ -2668,6 +2890,7 @@ bool CPPBytes::toFile(const char* file)
     {
         return false;
     }
+    com_dir_create(com_path_dir(file).c_str());
     FILE* f = com_file_open(file, "w+");
     if(f == NULL)
     {

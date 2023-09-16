@@ -1102,7 +1102,6 @@ int64 com_file_read(FILE* file, void* buf, int64 size)
 {
     if(file == NULL || buf == NULL || size <= 0)
     {
-        LOG_E("arg incorrect,file=%p,buf=%p,size=%lld", file, buf, size);
         return -1;
     }
     int64 size_readed = 0;
