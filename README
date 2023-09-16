@@ -1,36 +1,9 @@
-集成字符串操作库  
-时间api  
-cjson  
-md5计算  
-sqlite3操作api  
-config KV只读型配置文件操作api  
-socket操作api  
-mutex,sem,thread操作api  
-堆栈打印api  
-自动持久化缓存操作api【CacheManager】  
+Useful API (include file,string,log,socket,thread,timer,task,sql,config,md5,crc,url,base64 ...)for cross-platform(Win Linux MacOS)
 
 
 
-
-1：编译
-./build -h   #build编译系统会自动从服务器下载编译脚本
-
-d:
-若指定，build将尝试编译源码为debug版本
-
-u：
-若指定，build将编译带单元测试模块的版本（请参考实例在源码中引用UNIT_TEST_LIB或UNIT_TEST_APP）
-
-c：
-清除编译产生的临时文件
-
-
-
-
-2：目录结构
-文件夹结构必须要保留src/export
-需要对外输出的头文件必须置于src/export下面
-src/export不允许有子文件夹
-所有源码均放置于src目录下,不建议存放于src下的子文件夹，否则需要修改CMakeLists.txt文件
-所有头文件(除需要对外输出)均放置于src目录下,不建议存放于src下的子文件夹，否则需要修改CMakeLists.txt文件
+compile:
+./build -h ;for help
+./build    ;compile as lib
+./build -u ;build unit-test tool
 
