@@ -1,8 +1,11 @@
 Useful API (include file,string,log,socket,thread,timer,task,sql,config,md5,crc,url,base64 ...)for cross-platform(Win Linux MacOS)
 
+How to use:
+Refer src/text/*.cpp as the example
 
 
-compile:
+
+Compile:
 ./build -h ;for help
 ./build    ;compile as lib
 ./build -u ;build unit-test tool
