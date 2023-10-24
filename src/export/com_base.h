@@ -324,6 +324,7 @@ public:
     CPPBytes& operator+=(uint8 val);
     bool operator==(CPPBytes& bytes);
     bool operator!=(CPPBytes& bytes);
+    void reserve(int size);
     void clear();
     bool empty() const;
     uint8* getData();

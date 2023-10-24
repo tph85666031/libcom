@@ -154,7 +154,6 @@ std::string CPPXmlParser::getText(const char* path)
     const char* text = node->GetText();
     if(text == NULL)
     {
-        LOG_E("text not found,path=%s, node=%s", path, node->Name());
         return std::string();
     }
     return text;
@@ -259,7 +258,6 @@ void* CPPXmlParser::getNode(const char* path)
         child = child->FirstChildElement(items[i].c_str());
         if(child == NULL)
         {
-            LOG_E("path node not found:%s", items[i].c_str());
             break;
         }
     }

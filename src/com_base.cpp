@@ -2709,6 +2709,14 @@ bool CPPBytes::operator!=(CPPBytes& bytes)
     return false;
 }
 
+void CPPBytes::reserve(int size)
+{
+    if(size > 0)
+    {
+        buf.reserve(size);
+    }
+}
+
 void CPPBytes::clear()
 {
     buf.clear();
