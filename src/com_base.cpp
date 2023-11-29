@@ -2386,9 +2386,7 @@ std::string com_uuid_generator()
                                         com_time_rtc_us(),
                                         com_time_cpu_us(),
                                         com_rand(0, 0xFFFFFFFF));
-    CPPMD5 md5;
-    md5.append((const uint8*)val.data(), val.size());
-    return md5.finish().toHexString(false);
+    return CPPMD5::Digest(val.data(), val.size()).toHexString(false);
 }
 
 //计算最大公约数
@@ -2574,6 +2572,36 @@ std::string com_user_get_display_logined()
 #else
     return std::string();
 #endif
+}
+
+std::string com_user_get_language()
+{
+    std::string local_lang;
+#if defined(_WIN32) || defined(_WIN64)
+    DWORD id = GetUserDefaultUILanguage();
+    if(id == 0x0804)
+    {
+        local_lang = "zh_cn";
+    }
+    else if(id == 0x0404)
+    {
+        local_lang = "zh_tw";
+    }
+#else
+
+    try
+    {
+        std::locale val("");
+        local_lang = val.name();
+        com_string_to_lower(local_lang);
+    }
+    catch(std::exception& e)
+    {
+        LOG_E("%s", e.what());
+    }
+#endif
+
+    return local_lang;
 }
 
 CPPBytes::CPPBytes()

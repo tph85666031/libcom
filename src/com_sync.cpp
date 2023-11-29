@@ -178,7 +178,10 @@ bool SyncAdapter::syncPost(uint64 uuid, const void* data, int data_size)
     {
         return false;
     }
-    sync.data.append((uint8*)data, data_size);
+    if(data != NULL && data_size > 0)
+    {
+        sync.data.append((uint8*)data, data_size);
+    }
     return sync.sem->post();
 }
 

@@ -284,6 +284,7 @@ COM_EXPORT int com_user_get_gid_logined();
 COM_EXPORT std::string com_user_get_name_logined();
 COM_EXPORT std::string com_user_get_home_logined();
 COM_EXPORT std::string com_user_get_display_logined();
+COM_EXPORT std::string com_user_get_language();
 
 template <class... T>
 COM_EXPORT int com_gcd(int x, int y, T...ns)

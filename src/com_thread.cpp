@@ -281,12 +281,8 @@ std::vector<int> com_process_get_pid_all(const char* name)
 
 int com_process_get_ppid(int pid)
 {
-    if(pid < 0)
-    {
-        return -1;
-    }
 #if defined(_WIN32) || defined(_WIN64)
-    if(pid == 0)
+    if(pid <= 0)
     {
         pid = com_process_get_pid();
     }
@@ -296,10 +292,13 @@ int com_process_get_ppid(int pid)
         return -1;
     }
     PROCESSENTRY32 pe;
-    memset(&pe, 0, sizeof(pe));
     pe.dwSize = sizeof(PROCESSENTRY32);
     int ppid = 0;
-    for(bool ret = Process32First(handle_snapshot, &pe); ret; ret = Process32Next(handle_snapshot, &pe))
+    bool ret = Process32First(handle_snapshot, &pe);
+    if (!ret) {
+        LOG_E("Process32First failed, error code is:%d", GetLastError());
+    }
+    for(; ret; ret = Process32Next(handle_snapshot, &pe))
     {
         if(pe.th32ProcessID == pid)
         {
@@ -309,7 +308,7 @@ int com_process_get_ppid(int pid)
     CloseHandle(handle_snapshot);
     return ppid;
 #else
-    if(pid == 0)
+    if(pid <= 0)
     {
         return getppid();
     }
