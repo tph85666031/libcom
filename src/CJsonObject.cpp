@@ -4110,5 +4110,33 @@ CJsonObject::CJsonObject(cJSON* pJsonData)
 {
 }
 
+void CJsonObject::GetAllKeys(std::vector<std::string> &keys) {
+    cJSON *internalData = NULL;
+    if(m_pJsonData != NULL)
+    {
+        if(m_pJsonData->type == cJSON_Object)
+        {
+            internalData = m_pJsonData;
+        }
+    }
+    else if(m_pExternJsonDataRef != NULL)
+    {
+        if(m_pExternJsonDataRef->type == cJSON_Object)
+        {
+            internalData = m_pExternJsonDataRef;
+        }
+    }
+
+    if (internalData != NULL) {
+
+        cJSON* child = internalData->child;
+        while (child != NULL) {
+            keys.emplace_back(child->string);
+            child = child->next;
+        }
+    }
+
+}
+
 
 

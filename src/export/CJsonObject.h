@@ -65,6 +65,7 @@ public:     // method of ordinary json object or json array
     void DisableEmptyString();
 
 public:     // method of ordinary json object
+    void GetAllKeys(std::vector<std::string> &keys);
     bool AddEmptySubObject(const std::string& strKey);
     bool AddEmptySubArray(const std::string& strKey);
     bool GetKey(std::string& strKey) const;

@@ -7,18 +7,38 @@
 #include <thread>
 #include "com_base.h"
 
+class COM_EXPORT ProcInfo
+{
+public:
+    ProcInfo();
+public:
+    bool valid = false;
+    int stat = -1;
+    int pid = -1;
+    int gid = -1;
+    int ppid = -1;
+    int rpid = -1;//valid for MacOS only
+    int session_id = -1;
+    int thread_count = 0;
+};
+
 COM_EXPORT bool com_process_exist(int pid);
 COM_EXPORT int com_process_join(int pid);
 COM_EXPORT int com_process_create(const char* app, std::vector<std::string> args = std::vector<std::string>());
 COM_EXPORT int com_process_get_pid(const char* name = NULL);
 COM_EXPORT std::vector<int> com_process_get_pid_all(const char* name = NULL);
-COM_EXPORT int com_process_get_ppid(int pid = 0);
-COM_EXPORT std::string com_process_get_name(int pid = 0);
+COM_EXPORT int com_process_get_ppid(int pid = -1);
+COM_EXPORT std::string com_process_get_path(int pid = -1);
+COM_EXPORT std::string com_process_get_name(int pid = -1);
 
 COM_EXPORT void com_thread_set_name(std::thread* t, const char* name);
 COM_EXPORT void com_thread_set_name(std::thread& t, const char* name);
 COM_EXPORT void com_thread_set_name(uint64 tid_posix, const char* name);
 COM_EXPORT void com_thread_set_name(const char* name);
+COM_EXPORT ProcInfo com_process_get(int pid);
+COM_EXPORT std::map<int, ProcInfo> com_process_get_all();
+COM_EXPORT ProcInfo com_process_get_parent(int pid = -1);
+COM_EXPORT std::vector<ProcInfo> com_process_get_parent_all(int pid= -1);
 COM_EXPORT std::string com_thread_get_name(std::thread* t);
 COM_EXPORT std::string com_thread_get_name(std::thread& t);
 COM_EXPORT std::string com_thread_get_name(uint64 tid_posix);

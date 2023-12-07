@@ -50,7 +50,6 @@ public:
     
     void setMessageID(uint32 id);
     uint32 getMessageID();
-
     void stopTimerManager();
 private:
     void updateTimer(CPPTimer& timer);

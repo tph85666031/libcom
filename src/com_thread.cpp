@@ -18,6 +18,7 @@ typedef struct
 #include <sys/wait.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <dirent.h>
 #else
 #include <signal.h>
 #include <sys/syscall.h>
@@ -26,11 +27,24 @@ typedef struct
 #include <sys/prctl.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <dirent.h>
 #endif
 
 #include "com_thread.h"
 #include "com_file.h"
 #include "com_log.h"
+
+ProcInfo::ProcInfo()
+{
+    valid = false;
+    stat = -1;
+    pid = -1;
+    gid = -1;
+    ppid = -1;
+    rpid = -1;//valid for MacOS only
+    session_id = -1;
+    thread_count = 0;
+}
 
 bool com_process_exist(int pid)
 {
@@ -94,7 +108,7 @@ int com_process_create(const char* app, std::vector<std::string> args)
         return -1;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    STARTUPINFO si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
     ZeroMemory(&pi, sizeof(pi));
@@ -105,10 +119,11 @@ int com_process_create(const char* app, std::vector<std::string> args)
         val += " " + args[i];
     }
 
-    std::vector<char> cmd;
-    cmd.assign(val.begin(), val.end());
-    cmd.push_back('\0');
-    if(CreateProcessA(NULL, &cmd[0], NULL, NULL, false, 0, NULL, NULL, &si, &pi) == false)
+    std::wstring val_w = com_string_utf8_to_utf16(val);
+    std::vector<wchar_t> cmd;
+    cmd.assign(val_w.begin(), val_w.end());
+    cmd.push_back(L'\0');
+    if(CreateProcessW(NULL, &cmd[0], NULL, NULL, false, 0, NULL, NULL, &si, &pi) == false)
     {
         return -1;
     }
@@ -170,11 +185,13 @@ int com_process_get_pid(const char* name)
     {
         return -1;
     }
-    PROCESSENTRY32 pe;
-    int pid = 0;
-    for(bool ret = Process32First(handle_snapshot, &pe); ret; ret = Process32Next(handle_snapshot, &pe))
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+    int pid = -1;
+    for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
     {
-        if(com_string_equal(pe.szExeFile, name))
+        std::string name_cur = com_string_utf16_to_utf8(pe.szExeFile);
+        if(com_string_match(name_cur.c_str(), name))
         {
             pid = pe.th32ProcessID;
             break;
@@ -185,8 +202,7 @@ int com_process_get_pid(const char* name)
 #else
     std::map<std::string, int> list;
     com_dir_list("/proc", list);
-    std::string name_expect = com_path_name(name);
-    char name_cur[128];
+    std::vector<char> name_cur(4096);
     for(auto it = list.begin(); it != list.end(); it++)
     {
         if(it->second != FILE_TYPE_DIR)
@@ -198,17 +214,21 @@ int com_process_get_pid(const char* name)
         {
             continue;
         }
-        int pid = 0;
-        int ppid = 0;
-        int gid = 0;
-        name_cur[0] = '\0';
-        if(sscanf(content.c_str(), "%d %s %*s %d %d %*d", &pid, name_cur, &ppid, &gid) != 4)
+        int pid = -1;
+        int ppid = -1;
+        int gid = -1;
+        if(sscanf(content.c_str(), "%d %*s %*s %d %d %*d", &pid, &ppid, &gid) != 3)
         {
             continue;
         }
-        com_string_replace(name_cur, ')', '\0');
-        name_cur[sizeof(name_cur) - 1] = '\0';
-        if(com_string_equal(name_expect.c_str(), name_cur + 1))
+
+        int ret = readlink(com_string_format("%s/exe", it->first.c_str()).c_str(), &name_cur[0], name_cur.size() - 1);
+        if(ret <= 0)
+        {
+            continue;
+        }
+        name_cur[ret] = '\0';
+        if(com_string_match(com_path_name(&name_cur[0]).c_str(), name))
         {
             return pid;
         }
@@ -236,11 +256,13 @@ std::vector<int> com_process_get_pid_all(const char* name)
     {
         return pids;
     }
-    PROCESSENTRY32 pe;
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(PROCESSENTRY32W);
     int pid = 0;
-    for(bool ret = Process32First(handle_snapshot, &pe); ret; ret = Process32Next(handle_snapshot, &pe))
+    for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
     {
-        if(com_string_equal(pe.szExeFile, name))
+        std::string name_cur = com_string_utf16_to_utf8(pe.szExeFile);
+        if(com_string_match(name_cur.c_str(), name))
         {
             pids.push_back(pe.th32ProcessID);
         }
@@ -249,7 +271,7 @@ std::vector<int> com_process_get_pid_all(const char* name)
 #else
     std::map<std::string, int> list;
     com_dir_list("/proc", list);
-    char name_cur[128];
+    std::vector<char> name_cur(4096);
     for(auto it = list.begin(); it != list.end(); it++)
     {
         if(it->second != FILE_TYPE_DIR)
@@ -261,16 +283,20 @@ std::vector<int> com_process_get_pid_all(const char* name)
         {
             continue;
         }
-        int pid = 0;
-        int ppid = 0;
-        int gid = 0;
-        name_cur[0] = '\0';
-        if(sscanf(content.c_str(), "%d (%s) %*s %d %d %*d", &pid, name_cur, &ppid, &gid) != 4)
+        int pid = -1;
+        int ppid = -1;
+        int gid = -1;
+        if(sscanf(content.c_str(), "%d %*s %*s %d %d %*d", &pid, &ppid, &gid) != 3)
         {
             continue;
         }
-        name_cur[sizeof(name_cur) - 1] = '\0';
-        if(com_string_equal(name, name_cur))
+        int ret = readlink(com_string_format("%s/exe", it->first.c_str()).c_str(), &name_cur[0], name_cur.size() - 1);
+        if(ret <= 0)
+        {
+            continue;
+        }
+        name_cur[ret] = '\0';
+        if(com_string_match(com_path_name(&name_cur[0]).c_str(), name))
         {
             pids.push_back(pid);
         }
@@ -282,33 +308,31 @@ std::vector<int> com_process_get_pid_all(const char* name)
 int com_process_get_ppid(int pid)
 {
 #if defined(_WIN32) || defined(_WIN64)
-    if(pid <= 0)
+    if(pid < 0)
     {
         pid = com_process_get_pid();
     }
-    HANDLE handle_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    HANDLE handle_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, pid);
     if(INVALID_HANDLE_VALUE == handle_snapshot)
     {
+        LOG_E("failed");
         return -1;
     }
-    PROCESSENTRY32 pe;
-    pe.dwSize = sizeof(PROCESSENTRY32);
-    int ppid = 0;
-    bool ret = Process32First(handle_snapshot, &pe);
-    if (!ret) {
-        LOG_E("Process32First failed, error code is:%d", GetLastError());
-    }
-    for(; ret; ret = Process32Next(handle_snapshot, &pe))
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+    int ppid = -1;
+    for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
     {
         if(pe.th32ProcessID == pid)
         {
             ppid = pe.th32ParentProcessID;
+            break;
         }
     }
     CloseHandle(handle_snapshot);
     return ppid;
 #else
-    if(pid <= 0)
+    if(pid < 0)
     {
         return getppid();
     }
@@ -331,29 +355,228 @@ int com_process_get_ppid(int pid)
 #endif
 }
 
-std::string com_process_get_name(int pid)
+ProcInfo com_process_get(int pid)
 {
+    ProcInfo info;
     if(pid < 0)
     {
-        return std::string();
+        return info;
     }
-    if(pid == 0)
+#if defined(_WIN32) || defined(_WIN64)
+    HANDLE handle_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, pid);
+    if(INVALID_HANDLE_VALUE == handle_snapshot)
     {
-        pid = com_process_get_pid();
+        return info;
     }
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+    bool ret = Process32FirstW(handle_snapshot, &pe);
+    if(ret == false)
+    {
+        LOG_E("failed, error code is:%d", GetLastError());
+        return info;
+    }
+    for(; ret; ret = Process32NextW(handle_snapshot, &pe))
+    {
+        if(pe.th32ProcessID == pid)
+        {
+            info.pid = pid;
+            info.ppid = pe.th32ParentProcessID;
+            info.thread_count = pe.cntThreads;
+            DWORD session_id = 0;
+            info.valid = ProcessIdToSessionId(pe.th32ParentProcessID, &session_id);
+            info.session_id = (int)session_id;
+            break;
+        }
+    }
+    CloseHandle(handle_snapshot);
+    return info;
+#else
+    std::string content = com_file_readall(com_string_format("/proc/%d/stat", pid).c_str()).toString();
+    if(content.empty())
+    {
+        return info;
+    }
+    if(sscanf(content.c_str(),
+              "%d %*s %*s %d %d %d %*d %*d"\
+              "%*u %*u %*u %*u %*u"\
+              "%*u %*u %*u %*u"\
+              "%*d %*d"\
+              "%d",
+              &info.pid, &info.ppid, &info.gid, &info.session_id, &info.thread_count) == 5)
+    {
+        info.valid = true;
+    }
+    return info;
+#endif
+}
+
+std::map<int, ProcInfo> com_process_get_all()
+{
+    std::map<int, ProcInfo> infos;
 #if defined(_WIN32) || defined(_WIN64)
     HANDLE handle_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if(INVALID_HANDLE_VALUE == handle_snapshot)
     {
-        return std::string();
+        return infos;
     }
-    PROCESSENTRY32 pe;
-    for(bool ret = Process32First(handle_snapshot, &pe); ret; ret = Process32Next(handle_snapshot, &pe))
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+    for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
     {
+        ProcInfo info;
+        info.pid = pe.th32ProcessID;
+        info.ppid = pe.th32ParentProcessID;
+        info.thread_count = pe.cntThreads;
+        DWORD session_id = 0;
+        info.valid = ProcessIdToSessionId(pe.th32ParentProcessID, &session_id);
+        info.session_id = (int)session_id;
+        infos[pe.th32ProcessID] = info;
+    }
+    CloseHandle(handle_snapshot);
+    return infos;
+#else
+    std::vector<std::string> list;
+    DIR* dir = opendir("/proc/");
+    if(dir == NULL)
+    {
+        return infos;
+    }
+    struct dirent* ptr = NULL;
+    while((ptr = readdir(dir)) != NULL)
+    {
+#if __ANDROID__ != 1
+        if(ptr->d_name == NULL)
+        {
+            continue;
+        }
+#endif
+        if(ptr->d_type != DT_DIR)
+        {
+            continue;
+        }
+        list.push_back(com_string_format("/proc/%ld/stat", strtol(ptr->d_name, NULL, 10)));
+    }
+    closedir(dir);
 
+    for(size_t i = 0; i < list.size(); i++)
+    {
+        std::string content = com_file_readall(list[i].c_str()).toString();
+        if(content.empty())
+        {
+            continue;
+        }
+        ProcInfo info;
+        if(sscanf(content.c_str(),
+                  "%d %*s %*s %d %d %d %*d %*d"\
+                  "%*u %*u %*u %*u %*u"\
+                  "%*u %*u %*u %*u"\
+                  "%*d %*d"\
+                  "%d",
+                  &info.pid, &info.ppid, &info.gid, &info.session_id, &info.thread_count) == 5)
+        {
+            info.valid = true;
+            infos[info.pid] = info;
+        }
+    }
+    return infos;
+#endif
+}
+
+ProcInfo com_process_get_parent(int pid)
+{
+    if(pid < 0)
+    {
+        pid = com_process_get_pid();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    HANDLE handle_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, pid);
+    if(INVALID_HANDLE_VALUE == handle_snapshot)
+    {
+        return ProcInfo();
+    }
+    ProcInfo info;
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+    for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
+    {
         if(pe.th32ProcessID == pid)
         {
-            return pe.szExeFile;
+            info.pid = pe.th32ProcessID;
+            info.ppid = pe.th32ParentProcessID;
+            info.thread_count = pe.cntThreads;
+            DWORD session_id = 0;
+            info.valid = ProcessIdToSessionId(pe.th32ParentProcessID, &session_id);
+            info.session_id = (int)session_id;
+            break;
+        }
+    }
+    CloseHandle(handle_snapshot);
+    return info;
+#else
+    std::string content = com_file_readall(com_string_format("/proc/%d/stat", com_process_get_ppid(pid)).c_str()).toString();
+    if(content.empty())
+    {
+        return ProcInfo();
+    }
+    ProcInfo info;
+    if(sscanf(content.c_str(),
+              "%d %*s %*s %d %d %d %*d %*d"\
+              "%*u %*u %*u %*u %*u"\
+              "%*u %*u %*u %*u"\
+              "%*d %*d"\
+              "%d",
+              &info.pid, &info.ppid, &info.gid, &info.session_id, &info.thread_count) == 5)
+    {
+        info.valid = true;
+    }
+    return info;
+#endif
+}
+
+std::vector<ProcInfo> com_process_get_parent_all(int pid)
+{
+    int pid_cur = com_process_get_ppid(pid);
+    std::vector<ProcInfo> result;
+    std::map<int, ProcInfo> infos = com_process_get_all();
+    while(pid_cur > 0)
+    {
+        auto it = infos.find(pid_cur);
+        if(it == infos.end())
+        {
+            break;
+        }
+        result.push_back(it->second);
+        if(it->second.ppid == pid_cur)
+        {
+            break;
+        }
+        pid_cur = it->second.ppid;
+    }
+    return result;
+}
+
+std::string com_process_get_path(int pid)
+{
+    if(pid < 0)
+    {
+        pid = com_process_get_pid();
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    HANDLE handle_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS | TH32CS_SNAPALL, pid);
+    if(INVALID_HANDLE_VALUE == handle_snapshot)
+    {
+        LOG_E("failed");
+        return std::string();
+    }
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+    for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
+    {
+        if(pe.th32ProcessID == pid)
+        {
+            CloseHandle(handle_snapshot);
+            return com_string_utf16_to_utf8(pe.szExeFile);
         }
     }
     CloseHandle(handle_snapshot);
@@ -366,8 +589,13 @@ std::string com_process_get_name(int pid)
         return std::string();
     }
     app[ret] = '\0';
-    return com_path_name(&app[0]);
+    return std::string(&app[0], ret);
 #endif
+}
+
+std::string com_process_get_name(int pid)
+{
+    return com_path_name(com_process_get_path(pid).c_str());
 }
 
 uint64 com_thread_get_tid()
@@ -603,13 +831,16 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
         }
 
         //更新线程状态为执行中
+
         poll->mutex_threads.lock();
+
         if(poll->threads.count(tid) > 0)
         {
             THREAD_POLL_INFO& des = poll->threads[tid];
             des.running_flag = 1;
         }
         poll->mutex_threads.unlock();
+
 
         //继续获取数据进行处理
         poll->mutex_msgs.lock();
@@ -622,6 +853,7 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
         poll->msgs.pop();
         poll->mutex_msgs.unlock();
         poll->threadPoolRunner(msg);
+
     }
 
     //本线程退出，设置标记为退出
@@ -630,7 +862,9 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
     {
         THREAD_POLL_INFO& des = poll->threads[tid];
         des.running_flag = -1;
+        LOG_D("pool thread exit set flag -1");
     }
+
     poll->mutex_threads.unlock();
 
     LOG_D("thread pool quit[%llu]", com_thread_get_tid());
@@ -774,6 +1008,7 @@ void ThreadPool::startThreadPool()
 
 void ThreadPool::stopThreadPool(bool force)
 {
+    LOG_I("stop thread pool enter");
     thread_mgr_running = false;
     do
     {
@@ -791,6 +1026,7 @@ void ThreadPool::stopThreadPool(bool force)
             }
         }
         mutex_threads.unlock();
+
         if(force || all_finished)
         {
             break;
@@ -798,6 +1034,8 @@ void ThreadPool::stopThreadPool(bool force)
         com_sleep_ms(100);
     }
     while(true);
+
+    LOG_I("stop all threads");
 
     mutex_threads.lock();
     std::map<std::thread::id, THREAD_POLL_INFO> threads_tmp = threads;
@@ -816,9 +1054,11 @@ void ThreadPool::stopThreadPool(bool force)
     mutex_threads.lock();
     threads.clear();
     mutex_threads.unlock();
+
     if(thread_mgr.joinable())
     {
         thread_mgr.join();
+
     }
 }
 
