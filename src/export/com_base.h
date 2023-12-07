@@ -313,6 +313,7 @@ class COM_EXPORT CPPBytes
 public:
     CPPBytes();
     CPPBytes(const char* data);
+    CPPBytes(const std::string& data);
     CPPBytes(const char* data, int data_size);
     CPPBytes(const uint8* data, int data_size);
     CPPBytes(const CPPBytes& bytes);

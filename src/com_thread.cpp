@@ -119,7 +119,7 @@ int com_process_create(const char* app, std::vector<std::string> args)
         val += " " + args[i];
     }
 
-    std::wstring val_w = com_string_utf8_to_utf16(val);
+    std::wstring val_w = com_wstring_from_utf8(CPPBytes(val));
     std::vector<wchar_t> cmd;
     cmd.assign(val_w.begin(), val_w.end());
     cmd.push_back(L'\0');
@@ -190,7 +190,7 @@ int com_process_get_pid(const char* name)
     int pid = -1;
     for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
     {
-        std::string name_cur = com_string_utf16_to_utf8(pe.szExeFile);
+        std::string name_cur = com_wstring_to_utf8(pe.szExeFile).toString();
         if(com_string_match(name_cur.c_str(), name))
         {
             pid = pe.th32ProcessID;
@@ -261,7 +261,7 @@ std::vector<int> com_process_get_pid_all(const char* name)
     int pid = 0;
     for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
     {
-        std::string name_cur = com_string_utf16_to_utf8(pe.szExeFile);
+        std::string name_cur = com_wstring_to_utf8(pe.szExeFile).toString();
         if(com_string_match(name_cur.c_str(), name))
         {
             pids.push_back(pe.th32ProcessID);
@@ -576,7 +576,7 @@ std::string com_process_get_path(int pid)
         if(pe.th32ProcessID == pid)
         {
             CloseHandle(handle_snapshot);
-            return com_string_utf16_to_utf8(pe.szExeFile);
+            return com_wstring_to_utf8(pe.szExeFile).toString();
         }
     }
     CloseHandle(handle_snapshot);

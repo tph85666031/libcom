@@ -889,7 +889,7 @@ std::string com_string_ansi_to_utf8(const char* ansi)
         MultiByteToWideChar(CP_ACP, 0, ansi, -1, &str_utf16[0], str_utf16.size());
     }
 
-    return com_string_utf16_to_utf8(CPPBytes(str_utf16.c_str())).toString();
+    return com_wstring_to_utf8(str_utf16).toString();
 #else
     return ansi;
 #endif
@@ -2649,6 +2649,14 @@ CPPBytes::CPPBytes(const char* data)
     if(len > 0)
     {
         buf.insert(buf.end(), data, data + len);
+    }
+}
+
+CPPBytes::CPPBytes(const std::string& data)
+{
+    if(data.empty() == false)
+    {
+        buf.insert(buf.end(), data.data(), data.data() + data.size());
     }
 }
 
