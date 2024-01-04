@@ -2935,7 +2935,7 @@ bool CPPBytes::toFile(const char* file)
         return false;
     }
     com_dir_create(com_path_dir(file).c_str());
-    FILE* f = com_file_open(file, "w+");
+    FILE* f = com_file_open(file, "wb+");
     if(f == NULL)
     {
         return false;
