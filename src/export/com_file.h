@@ -77,6 +77,7 @@ COM_EXPORT int64 com_dir_size_freed(const char* dir);
 COM_EXPORT bool com_dir_exists(const char* dir);
 COM_EXPORT bool com_dir_create(const char* full_path);
 COM_EXPORT void com_dir_clear(const char* dir_path);
+COM_EXPORT bool com_file_erase(const char* file_path, uint8 val = 0);
 COM_EXPORT int com_dir_remove(const char* dir_path);
 COM_EXPORT bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool recursion = false);
 
@@ -86,6 +87,8 @@ COM_EXPORT std::string com_path_name_without_suffix(const char* path);
 COM_EXPORT std::string com_path_dir(const char* path);
 
 COM_EXPORT int com_file_type(const char* file);
+COM_EXPORT int com_file_type(int fd);
+COM_EXPORT int com_file_type(FILE* file);
 COM_EXPORT bool com_file_exist(const char* file_path);
 COM_EXPORT bool com_file_create(const char* file_path);
 COM_EXPORT FILE* com_file_open(const char* file_path, const char* flag);

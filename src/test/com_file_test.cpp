@@ -187,6 +187,28 @@ void com_file_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(detail.getModifyTimeS(), detail.getAccessTimeS());
     com_file_remove(PATH_TO_LOCAL("./file_test_time.txt").c_str());
 
+#if defined(_WIN32) || defined(_WIN64)
+#else
+    ASSERT_INT_EQUAL(com_file_writef(PATH_TO_LOCAL("./line.txt").c_str(), "line1"), 5);
+    ASSERT_STR_EQUAL(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 0, false).c_str(), "line1");
+    ASSERT_TRUE(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 0, true).empty());
+    ASSERT_TRUE(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 1, true).empty());
+    ASSERT_TRUE(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), -1, true).empty());
+
+    ASSERT_INT_EQUAL(com_file_appendf(PATH_TO_LOCAL("./line.txt").c_str(), "\nline2"), 6);
+    ASSERT_STR_EQUAL(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 0, false).c_str(), "line2");
+    ASSERT_STR_EQUAL(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 0, true).c_str(), "line1");
+    ASSERT_TRUE(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 1, true).empty());
+    ASSERT_TRUE(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), -1, true).empty());
+    ASSERT_STR_EQUAL(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 1, false).c_str(), "line1");
+
+    ASSERT_INT_EQUAL(com_file_appendf(PATH_TO_LOCAL("./line.txt").c_str(), "\nline3\n"), 7);
+    ASSERT_STR_EQUAL(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 0, false).c_str(), "line3");
+    ASSERT_STR_EQUAL(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 0, true).c_str(), "line3");
+
+    ASSERT_STR_EQUAL(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 1, false).c_str(), "line2");
+    ASSERT_STR_EQUAL(com_file_readline_last(PATH_TO_LOCAL("./line.txt").c_str(), 1, true).c_str(), "line2");
+#endif
     com_file_writef(PATH_TO_LOCAL("./line.txt").c_str(), "1234567890");
     com_file_truncate(PATH_TO_LOCAL("./line.txt").c_str(), 2);
     ASSERT_INT_EQUAL(com_file_size(PATH_TO_LOCAL("./line.txt").c_str()), 8);

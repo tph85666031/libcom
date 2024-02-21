@@ -619,6 +619,67 @@ int com_file_type(const char* file)
     return FILE_TYPE_UNKNOWN;
 }
 
+int com_file_type(int fd)
+{
+    if(fd < 0)
+    {
+        return FILE_TYPE_UNKNOWN;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    struct _stat buf;
+    int ret = _fstat(fd, &buf);
+    if(0 != ret)
+    {
+        if(errno == ENOENT)
+        {
+            return FILE_TYPE_NOT_EXIST;
+        }
+        return FILE_TYPE_UNKNOWN;
+    }
+    if(buf.st_mode & S_IFDIR)
+    {
+        return FILE_TYPE_DIR;
+    }
+    if(buf.st_mode & S_IFREG)
+    {
+        return FILE_TYPE_FILE;
+    }
+#else
+    struct stat buf;
+    int ret = fstat(fd, &buf);
+    if(0 != ret)
+    {
+        if(errno == ENOENT)
+        {
+            return FILE_TYPE_NOT_EXIST;
+        }
+        return FILE_TYPE_UNKNOWN;
+    }
+    if(buf.st_mode & S_IFDIR)
+    {
+        return FILE_TYPE_DIR;
+    }
+    if(buf.st_mode & S_IFREG)
+    {
+        return FILE_TYPE_FILE;
+    }
+    if(buf.st_mode & S_IFLNK)
+    {
+        return FILE_TYPE_LINK;
+    }
+    if(buf.st_mode & S_IFSOCK)
+    {
+        return FILE_TYPE_SOCK;
+    }
+#endif
+    return FILE_TYPE_UNKNOWN;
+}
+
+int com_file_type(FILE* file)
+{
+    return com_file_type(fileno(file));
+}
+
 int64 com_file_size(int fd)
 {
     if(fd < 0)
@@ -952,6 +1013,38 @@ bool com_file_truncate(const char* file_path, int64 size)
 bool com_file_clean(const char* file_path)
 {
     return com_file_truncate(file_path, -1);
+}
+
+bool com_file_erase(const char* file_path, uint8 val)
+{
+    FILE* fp = com_file_open(file_path, "wb");
+    if(fp == NULL)
+    {
+        LOG_E("failed to open file,errno=%d", errno);
+        return false;
+    }
+    com_file_seek_tail(fp);
+    int64 total_size = com_file_seek_get(fp);
+    if(total_size <= 0)
+    {
+        com_file_close(fp);
+        LOG_E("file is empty:%s", file_path);
+        return false;
+    }
+    com_file_seek_head(fp);
+    uint8 buf[1024];
+    memset(buf, val, sizeof(buf));
+    for(int64 i = 0; i < total_size / (int64)sizeof(buf); i++)
+    {
+        com_file_write(fp, buf, sizeof(buf));
+    }
+    if(total_size % sizeof(buf))
+    {
+        com_file_write(fp, buf, total_size % sizeof(buf));
+    }
+    com_file_flush(fp);
+    com_file_close(fp);
+    return true;
 }
 
 bool com_file_seek_head(FILE* file)
