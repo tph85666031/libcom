@@ -1828,6 +1828,7 @@ bool com_condition_uninit(Condition* condition)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return false;
 #else
     pthread_cond_destroy(&condition->handle);
@@ -1863,6 +1864,7 @@ bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return false;
 #else
     if(timeout_ms > 0)
@@ -1899,6 +1901,7 @@ bool com_condition_notify_one(Condition* condition)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return false;
 #else
     pthread_cond_signal(&condition->handle);
@@ -1914,6 +1917,7 @@ bool com_condition_notify_all(Condition* condition)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return false;
 #else
     pthread_cond_broadcast(&condition->handle);
@@ -1929,7 +1933,6 @@ bool com_condition_destroy(Condition* condition)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    return false;
 #else
     pthread_cond_destroy(&condition->handle);
 #endif
@@ -2398,6 +2401,7 @@ int com_gcd(int x, int y)
 int com_user_get_uid(const char* user)
 {
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return -1;
 #else
     if(user == NULL || 0 == strlen(user))
@@ -2417,6 +2421,7 @@ int com_user_get_uid(const char* user)
 int com_user_get_gid(const char* user)
 {
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return -1;
 #else
     if(user == NULL || 0 == strlen(user))
@@ -2433,9 +2438,26 @@ int com_user_get_gid(const char* user)
 #endif
 }
 
+std::string com_user_get_name(int uid)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
+    return std::string();
+#else
+    struct passwd* pw = getpwuid(uid);
+    if(pw == NULL || pw->pw_name == NULL)
+    {
+        return std::string();
+    }
+
+    return pw->pw_name;
+#endif
+}
+
 std::string com_user_get_home(const char* user)
 {
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return std::string();
 #else
     if(user == NULL || user[0] == '\0')
@@ -2472,6 +2494,7 @@ std::string com_user_get_home(const std::string& user)
 int com_user_get_uid_logined()
 {
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return 0;
 #else
     struct passwd pwd;
@@ -2492,6 +2515,7 @@ int com_user_get_uid_logined()
 int com_user_get_gid_logined()
 {
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return 0;
 #else
     struct passwd pwd;
@@ -2512,6 +2536,7 @@ int com_user_get_gid_logined()
 std::string com_user_get_name_logined()
 {
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return std::string();
 #else
     char buf[128] = {0};
@@ -2533,6 +2558,7 @@ std::string com_user_get_name_logined()
 std::string com_user_get_home_logined()
 {
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return std::string();
 #else
     const char* snap_user_data = getenv("SNAP_USER_DATA");
@@ -2570,6 +2596,7 @@ std::string com_user_get_display_logined()
     }
     return display;
 #else
+    LOG_E("api not support yet");
     return std::string();
 #endif
 }
@@ -3325,6 +3352,16 @@ void Message::removeAll()
     datas.clear();
 }
 
+std::vector<std::string> Message::getAllKeys() const
+{
+    std::vector<std::string> keys;
+    for(auto it = datas.begin(); it != datas.end(); it++)
+    {
+        keys.push_back(it->first);
+    }
+    return keys;
+}
+
 bool Message::getBool(const char* key, bool default_val) const
 {
     if(isKeyExist(key) == false)
@@ -3669,30 +3706,32 @@ int64 ByteStreamReader::rfind(const uint8* key, int key_size, int offset)
     return -3;
 }
 
-std::string ByteStreamReader::readLine()
+bool ByteStreamReader::readLine(std::string& line)
 {
     if(fp != NULL)
     {
-        return com_file_readline(fp);
+        return com_file_readline(fp, line);
     }
-    std::string line;
+    std::string line_tmp;
     for(int64 i = buffer_pos; i < buffer.getDataSize(); i++)
     {
         uint8 val = buffer.getAt(i);
         if(val == '\n')
         {
-            buffer_pos = i;
-            return line;
+            buffer_pos = i + 1;
+            line = line_tmp;
+            return true;
         }
         else if(val == '\r')
         {
         }
         else
         {
-            line.push_back(val);
+            line_tmp.push_back(val);
         }
     }
-    return std::string();
+    line = line_tmp;
+    return (line_tmp.empty() == false);
 }
 
 CPPBytes ByteStreamReader::read(int size)

@@ -115,7 +115,7 @@ COM_EXPORT int64 com_file_rfind(const char* file, const uint8* key, int key_size
 COM_EXPORT int64 com_file_rfind(FILE* file, const char* key);
 COM_EXPORT int64 com_file_rfind(FILE* file, const uint8* key, int key_size);
 COM_EXPORT bool com_file_readline(FILE* file, char* buf, int size);
-COM_EXPORT std::string com_file_readline(FILE* file);
+COM_EXPORT bool com_file_readline(FILE* file, std::string& line);
 COM_EXPORT CPPBytes com_file_readall(const std::string& file_path, int64 offset = 0);
 COM_EXPORT CPPBytes com_file_readall(const char* file_path, int64 offset = 0);
 COM_EXPORT int64 com_file_write(FILE* file, const void* buf, int size);

@@ -1195,6 +1195,7 @@ int64 com_file_read(FILE* file, void* buf, int64 size)
 {
     if(file == NULL || buf == NULL || size <= 0)
     {
+        LOG_E("arg incorrect");
         return -1;
     }
     int64 size_readed = 0;
@@ -1436,21 +1437,26 @@ bool com_file_readline(FILE* file, char* buf, int size)
     {
         return false;
     }
-    std::string result = com_file_readline(file);
-    strncpy(buf, result.c_str(), size - 1);
+    std::string line;
+    if(com_file_readline(file, line) == false)
+    {
+        return false;
+    }
+    strncpy(buf, line.c_str(), size - 1);
     buf[size - 1] = '\0';
     return true;
 }
 
-std::string com_file_readline(FILE* file)
+bool com_file_readline(FILE* file, std::string& line)
 {
     if(file == NULL)
     {
-        return std::string();
+        return false;
     }
     std::string result;
     char buf[1024];
-    while(fgets(buf, sizeof(buf), file) != NULL)
+    char* ret = NULL;
+    while((ret = fgets(buf, sizeof(buf), file)) != NULL)
     {
         result.append(buf);
         if(result.rfind('\n') != std::string::npos)
@@ -1462,7 +1468,12 @@ std::string com_file_readline(FILE* file)
     {
         result.pop_back();
     }
-    return result;
+    if(ret == NULL && result.empty())
+    {
+        return false;
+    }
+    line = result;
+    return true;
 }
 
 CPPBytes com_file_readall(const std::string& file_path, int64 offset)
@@ -1755,6 +1766,7 @@ bool com_file_lock(int fd, bool share_read, bool wait)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return false;
 #else
     struct flock lock;
@@ -1797,6 +1809,7 @@ bool com_file_is_locked(int fd, int& type, int64& pid)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return false;
 #else
     struct flock lock;
@@ -1837,6 +1850,7 @@ bool com_file_unlock(int fd)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
     return false;
 #else
     struct flock fl;

@@ -19,6 +19,9 @@ typedef struct
 #include <pthread.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <sys/mman.h>
 #else
 #include <signal.h>
 #include <sys/syscall.h>
@@ -28,11 +31,35 @@ typedef struct
 #include <pthread.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+union semun
+{
+    int              val;    /* Value for SETVAL */
+    struct semid_ds* buf;    /* Buffer for IPC_STAT, IPC_SET */
+    unsigned short*  array;  /* Array for GETALL, SETALL */
+    struct seminfo*  __buf;  /* Buffer for IPC_INFO (Linux-specific) */
+};
 #endif
 
 #include "com_thread.h"
 #include "com_file.h"
+#include "com_crc.h"
 #include "com_log.h"
+
+#if defined(_WIN32) || defined(_WIN64)
+#define PROCESS_SEM_VALID(x)      (x!=NULL)
+#define PROCESS_MEM_VALID(x)      (x!=NULL)
+#define PROCESS_SEM_DEFAULT_VALUE (NULL)
+#define PROCESS_MEM_DEFAULT_VALUE (NULL)
+#else
+#define PROCESS_SEM_VALID(x)      (x>=0)
+#define PROCESS_MEM_VALID(x)      (x>=0)
+#define PROCESS_SEM_DEFAULT_VALUE (-1)
+#define PROCESS_MEM_DEFAULT_VALUE (-1)
+#endif
 
 ProcInfo::ProcInfo()
 {
@@ -403,9 +430,23 @@ ProcInfo com_process_get(int pid)
               "%*u %*u %*u %*u"\
               "%*d %*d"\
               "%d",
-              &info.pid, &info.ppid, &info.gid, &info.session_id, &info.thread_count) == 5)
+              &info.pid, &info.ppid, &info.pgrp, &info.session_id, &info.thread_count) == 5)
     {
         info.valid = true;
+    }
+    content = com_file_readall(com_string_format("/proc/%d/status", pid).c_str()).toString();
+    ByteStreamReader reader(content);
+    std::string line;
+    while(reader.readLine(line))
+    {
+        if(com_string_start_with(line.c_str(), "Uid:"))
+        {
+            sscanf(line.c_str(), "%*s %d %d %d %d", &info.uid, &info.euid, &info.suid, &info.fsuid);
+        }
+        else if(com_string_start_with(line.c_str(), "Gid:"))
+        {
+            sscanf(line.c_str(), "%*s %d %d %d %d", &info.gid, &info.egid, &info.sgid, &info.fsgid);
+        }
     }
     return info;
 #endif
@@ -1040,7 +1081,7 @@ void ThreadPool::stopThreadPool(bool force)
     mutex_threads.lock();
     std::map<std::thread::id, THREAD_POLL_INFO> threads_tmp = threads;
     mutex_threads.unlock();
-    
+
     for(auto it = threads_tmp.begin(); it != threads_tmp.end(); it++)
     {
         THREAD_POLL_INFO& des = it->second;
@@ -1110,5 +1151,406 @@ bool ThreadPool::pushPoolMessage(const Message& msg)
     mutex_msgs.unlock();
     condition.notifyOne();
     return true;
+}
+
+CPPProcessSem::CPPProcessSem()
+{
+    sem = PROCESS_SEM_DEFAULT_VALUE;
+}
+
+CPPProcessSem::CPPProcessSem(const char* name, uint8 offset, int init_val)
+{
+    sem = PROCESS_SEM_DEFAULT_VALUE;
+    init(name, offset, init_val);
+}
+
+CPPProcessSem::~CPPProcessSem()
+{
+    uninit();
+}
+
+bool CPPProcessSem::init(const char* name, uint8 offset, int init_val)
+{
+#if __linux__ == 1 || defined(__APPLE__)
+    key_t key = ftok(name, offset);
+    if(key == -1)
+    {
+        key = (com_crc32((uint8*)name, strlen(name)) + offset) & 0x7FFFFFFF;
+        LOG_W("failed to create key, use crc32 value instead,key=0x%x", key);
+    }
+    int flag = 0666;
+    sem = semget(key, 1, flag);
+    if(sem >= 0)
+    {
+        return true;
+    }
+    flag |= IPC_CREAT;
+    sem = semget(key, 1, flag);
+    if(init_val > 0)
+    {
+        union semun arg;
+        arg.val = init_val;
+        semctl(sem, 0, SETVAL, arg);
+    }
+    return (sem >= 0);
+#elif defined(_WIN32) || defined(_WIN64)
+    if(name == NULL)
+    {
+        return false;
+    }
+    std::string str_name = com_string_format("%s_%d", name, offset);
+    process_sem_t handle = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, true, str_name.c_str());
+    if(handle == NULL)
+    {
+        handle = CreateSemaphoreA(NULL, init_val, 1, str_name.c_str());
+    }
+    sem = handle;
+    return (sem != NULL);
+#endif
+}
+
+void CPPProcessSem::uninit()
+{
+    if(PROCESS_SEM_VALID(sem) == false)
+    {
+        return;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    semctl(sem, 0, IPC_RMID);
+#elif defined(_WIN32) || defined(_WIN64)
+    CloseHandle(sem);
+#endif
+    sem = PROCESS_SEM_DEFAULT_VALUE;
+}
+
+int CPPProcessSem::post()
+{
+    if(PROCESS_SEM_VALID(sem) == false)
+    {
+        return -1;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    struct sembuf buf;
+    buf.sem_num = 0;
+    buf.sem_op = 1;
+    buf.sem_flg = SEM_UNDO;
+    int ret = semop(sem, &buf, 1);
+    if(ret == 0)
+    {
+        return 0;
+    }
+    else if(errno == EIDRM)
+    {
+        return -3;
+    }
+    else
+    {
+        return -1;
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    if(ReleaseSemaphore(sem, 1, NULL) == false)
+    {
+        return -1;
+    }
+    return 0;
+#endif
+}
+
+int CPPProcessSem::wait(int timeout_ms)
+{
+    if(PROCESS_SEM_VALID(sem) == false)
+    {
+        return -1;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    struct sembuf buf;
+    buf.sem_num = 0;
+    buf.sem_op = -1;
+#if defined(__APPLE__)
+    buf.sem_flg = SEM_UNDO | IPC_NOWAIT;
+#else
+    buf.sem_flg = SEM_UNDO;
+#endif
+
+    int ret = 0;
+    int err_no = 0;
+    if(timeout_ms <= 0)
+    {
+        ret = semop(sem, &buf, 1);
+        err_no = errno;
+    }
+#if __linux__ == 1
+    else
+    {
+        //semtimedop使用相对时间
+        struct timespec ts;
+        memset(&ts, 0, sizeof(struct timespec));
+        ts.tv_nsec = ((int64)timeout_ms % 1000) * 1000 * 1000;
+        ts.tv_sec = timeout_ms / 1000;
+        ret = semtimedop(sem, &buf, 1, &ts);
+        err_no = errno;
+    }
+#endif
+#if defined(__APPLE__)
+    else
+    {
+        while(timeout_ms > 0)
+        {
+
+            ret = semop(sem, &buf, 1);
+            err_no = errno;
+
+            if(ret == 0 || err_no != EAGAIN)
+            {
+                break;
+            }
+
+            int wait_ms = 100;
+            // 会修改errno 为 timeout
+            com_sleep_ms(wait_ms);
+            timeout_ms -= wait_ms;
+        }
+    }
+#endif
+
+    if(ret == 0)
+    {
+        return 0;
+    }
+    else if(err_no == EAGAIN)
+    {
+        return -2;
+    }
+    else if(err_no == EIDRM)
+    {
+        return -3;
+    }
+    else
+    {
+        return -1;
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    if(timeout_ms <= 0)
+    {
+        timeout_ms = INFINITE;
+    }
+    int ret = WaitForSingleObject(sem, timeout_ms);
+    if(ret == WAIT_OBJECT_0)
+    {
+        return 0;
+    }
+    else if(ret == WAIT_TIMEOUT)
+    {
+        return -2;
+    }
+    else
+    {
+        return GetLastError();
+    }
+#endif
+}
+
+CPPProcessMutex::CPPProcessMutex()
+{
+}
+
+CPPProcessMutex::CPPProcessMutex(const char* name, uint8 offset)
+{
+    CPPProcessSem::init(name, offset, 1);
+}
+
+CPPProcessMutex::~CPPProcessMutex()
+{
+}
+
+bool CPPProcessMutex::init(const char* name, uint8 offset)
+{
+    return CPPProcessSem::init(name, offset, 1);
+}
+
+void CPPProcessMutex::uninit()
+{
+    CPPProcessSem::uninit();
+}
+
+void CPPProcessMutex::lock()
+{
+    wait(0);
+}
+
+int CPPProcessMutex::trylock(int timeout_ms)
+{
+    return wait(timeout_ms);
+}
+
+void CPPProcessMutex::unlock()
+{
+    post();
+}
+
+CPPShareMemoryV::CPPShareMemoryV()
+{
+    msg = NULL;
+    mem = PROCESS_MEM_DEFAULT_VALUE;
+}
+
+CPPShareMemoryV::CPPShareMemoryV(const char* name, int size)
+{
+    msg = NULL;
+    mem = PROCESS_MEM_DEFAULT_VALUE;
+    init(name, size);
+}
+
+CPPShareMemoryV::~CPPShareMemoryV()
+{
+    uninit();
+}
+
+void* CPPShareMemoryV::init(const char* name, int size)
+{
+    if(name == NULL || size <= 0)
+    {
+        return NULL;
+    }
+    uninit();
+#if __linux__ == 1 || defined(__APPLE__)
+    key_t key = ftok(name, 1);
+    if(key == -1)
+    {
+        key = com_crc32((uint8*)name, strlen(name)) & 0x7FFFFFFF;
+        LOG_W("failed to create key, use crc32 value instead:0x%x", key);
+    }
+    int flag = 0666 | IPC_CREAT;
+#if defined(__APPLE__)
+    unsigned long max_shm_size = 0;
+    size_t len = sizeof(max_shm_size);
+    if(sysctlbyname("kern.sysv.shmmax", &max_shm_size, &len, NULL, 0) == 0)
+    {
+        unsigned long half_size = max_shm_size / 2;
+        if(half_size < ITP_SHARE_MEM_SIZE_MAX)
+        {
+            size = half_size;
+        }
+    }
+#endif
+    mem = shmget(key, size, flag);
+    msg = shmat(mem, NULL, 0);
+#elif defined(_WIN32) || defined(_WIN64)
+    mem = OpenFileMapping(FILE_MAP_ALL_ACCESS, false, name);
+    if(mem == NULL)
+    {
+        mem = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, name);
+    }
+    msg = MapViewOfFile(mem, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+#endif
+    return msg;
+}
+
+void CPPShareMemoryV::uninit()
+{
+#if __linux__ == 1 || defined(__APPLE__)
+    if(msg != NULL)
+    {
+        shmdt(msg);
+    }
+    if(PROCESS_MEM_VALID(mem))
+    {
+        shmctl(mem, IPC_RMID, NULL);
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    if(msg != NULL)
+    {
+        UnmapViewOfFile(msg);
+    }
+    if(PROCESS_MEM_VALID(mem))
+    {
+        CloseHandle(mem);
+    }
+#endif
+    mem = PROCESS_MEM_DEFAULT_VALUE;
+    msg = NULL;
+}
+
+void* CPPShareMemoryV::getAddr()
+{
+    return msg;
+}
+
+CPPShareMemoryMap::CPPShareMemoryMap()
+{
+    msg = NULL;
+    msg_size = 0;
+    mem = PROCESS_MEM_DEFAULT_VALUE;
+}
+
+CPPShareMemoryMap::CPPShareMemoryMap(const char* name, int size)
+{
+    msg = NULL;
+    msg_size = 0;
+    mem = PROCESS_MEM_DEFAULT_VALUE;
+    init(name, size);
+}
+
+CPPShareMemoryMap::~CPPShareMemoryMap()
+{
+    uninit();
+}
+
+void* CPPShareMemoryMap::init(const char* file, int size)
+{
+    if(file == NULL || size <= 0)
+    {
+        return NULL;
+    }
+    uninit();
+#if defined(_WIN32) || defined(_WIN64)
+    mem = OpenFileMapping(FILE_MAP_ALL_ACCESS, false, file);
+    if(mem == NULL)
+    {
+        mem = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, size, file);
+    }
+    msg = MapViewOfFile(mem, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+#else
+    int fd = open(file, O_CREAT | O_RDWR, 0666);
+    if(fd < 0)
+    {
+        return NULL;
+    }
+    ftruncate(fd, size);
+    msg = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+    if(msg == MAP_FAILED)
+    {
+        return NULL;
+    }
+    msg_size = size;
+#endif
+    return msg;
+}
+
+void CPPShareMemoryMap::uninit()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    if(msg != NULL)
+    {
+        UnmapViewOfFile(msg);
+    }
+    if(PROCESS_MEM_VALID(mem))
+    {
+        CloseHandle(mem);
+    }
+#else
+    if(msg != NULL)
+    {
+        munmap(msg, msg_size);
+    }
+#endif
+    mem = PROCESS_MEM_DEFAULT_VALUE;
+    msg = NULL;
+}
+
+void* CPPShareMemoryMap::getAddr()
+{
+    return msg;
 }
 

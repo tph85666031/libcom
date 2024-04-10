@@ -31,7 +31,7 @@ COM_EXPORT void com_mem_set(const char* key, const uint8 val);
 COM_EXPORT void com_mem_set(const char* key, const uint16 val);
 COM_EXPORT void com_mem_set(const char* key, const uint32 val);
 COM_EXPORT void com_mem_set(const char* key, const uint64 val);
- 
+
 COM_EXPORT void com_mem_set(const char* key, const std::string& val);
 COM_EXPORT void com_mem_set(const char* key, const char* val);
 COM_EXPORT void com_mem_set(const char* key, const uint8* val, int val_size);

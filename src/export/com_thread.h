@@ -7,6 +7,14 @@
 #include <thread>
 #include "com_base.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+typedef HANDLE process_sem_t;
+typedef HANDLE process_share_mem_t;
+#else
+typedef int process_sem_t;
+typedef int process_share_mem_t;
+#endif
+
 class COM_EXPORT ProcInfo
 {
 public:
@@ -15,7 +23,15 @@ public:
     bool valid = false;
     int stat = -1;
     int pid = -1;
+    int pgrp = -1;
+    int uid = -1;
+    int euid = -1;
+    int suid = -1;
+    int fsuid = -1;
     int gid = -1;
+    int egid = -1;
+    int sgid = -1;
+    int fsgid = -1;
     int ppid = -1;
     int rpid = -1;//valid for MacOS only
     int session_id = -1;
@@ -38,7 +54,7 @@ COM_EXPORT void com_thread_set_name(const char* name);
 COM_EXPORT ProcInfo com_process_get(int pid);
 COM_EXPORT std::map<int, ProcInfo> com_process_get_all();
 COM_EXPORT ProcInfo com_process_get_parent(int pid = -1);
-COM_EXPORT std::vector<ProcInfo> com_process_get_parent_all(int pid= -1);
+COM_EXPORT std::vector<ProcInfo> com_process_get_parent_all(int pid = -1);
 COM_EXPORT std::string com_thread_get_name(std::thread* t);
 COM_EXPORT std::string com_thread_get_name(std::thread& t);
 COM_EXPORT std::string com_thread_get_name(uint64 tid_posix);
@@ -175,6 +191,68 @@ private:
 
     std::thread thread_runner;
     std::atomic<bool> thread_runner_running = {false};
+};
+
+class COM_EXPORT CPPProcessSem
+{
+public:
+    CPPProcessSem();
+    CPPProcessSem(const char* name, uint8 offset = 0, int init_val = 0);//通过构造函数创建
+    virtual ~CPPProcessSem();
+
+    //相同name，不同的offset也算不同的sem
+    bool init(const char* name, uint8 offset = 0, int init_val = 0);//通过init方法创建
+    void uninit();
+    int post();
+    int wait(int timeout_ms = 0);
+private:
+    process_sem_t sem;
+};
+
+class COM_EXPORT CPPProcessMutex : private CPPProcessSem
+{
+public:
+    CPPProcessMutex();
+    CPPProcessMutex(const char* name, uint8 offset = 0);//通过构造函数创建
+    virtual ~CPPProcessMutex();
+
+    //相同name，不同的offset也算不同的mutex
+    bool init(const char* name, uint8 offset = 0);//通过init方法创建
+    void uninit();
+
+    void lock();
+    int trylock(int timeout_ms);
+    void unlock();
+};
+
+class COM_EXPORT CPPShareMemoryV
+{
+public:
+    CPPShareMemoryV();
+    CPPShareMemoryV(const char* name, int size);//通过构造函数创建
+    virtual ~CPPShareMemoryV();
+
+    void* init(const char* name, int size);//通过init方法创建
+    void uninit();
+    void* getAddr();
+private:
+    process_share_mem_t mem;
+    void* msg;
+};
+
+class COM_EXPORT CPPShareMemoryMap
+{
+public:
+    CPPShareMemoryMap();
+    CPPShareMemoryMap(const char* name, int size);//通过构造函数创建
+    virtual ~CPPShareMemoryMap();
+    void* init(const char* name, int size);//通过init方法创建
+    void uninit();
+    void* getAddr();
+private:
+    process_share_mem_t mem;
+    int msg_size;
+    void* msg;
 };
 
 #endif /* __COM_THREAD_H__ */

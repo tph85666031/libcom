@@ -277,6 +277,7 @@ COM_EXPORT int com_gcd(int x, int y);
 
 COM_EXPORT int com_user_get_uid(const char* user = NULL);
 COM_EXPORT int com_user_get_gid(const char* user = NULL);
+COM_EXPORT std::string com_user_get_name(int uid);
 COM_EXPORT std::string com_user_get_home(const char* user);
 COM_EXPORT std::string com_user_get_home(const std::string& user);
 COM_EXPORT int com_user_get_uid_logined();
@@ -422,6 +423,7 @@ public:
 
     Message& operator=(const Message& bytes);
     Message& operator=(Message&& bytes);
+    Message& operator+=(const Message& msg);
 
     void reset();
 
@@ -453,6 +455,8 @@ public:
     void remove(const char* key);
     void removeAll();
 
+    std::vector<std::string> getAllKeys() const;
+    
     bool getBool(const char* key, bool default_val = false) const;
     char getChar(const char* key, char default_val = '\0') const;
     float getFloat(const char* key, float default_val = 0.0f) const;
@@ -554,7 +558,7 @@ public:
     int64 rfind(const char* key, int offset = 0);
     int64 rfind(const uint8* key, int key_size, int offset = 0);
 
-    std::string readLine();
+    bool readLine(std::string& line);
     CPPBytes read(int size);
     int read(uint8* buf, int buf_size);
     CPPBytes readUntil(const char* key);
