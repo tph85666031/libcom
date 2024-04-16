@@ -2606,16 +2606,12 @@ std::string com_user_get_language()
     std::string local_lang;
 #if defined(_WIN32) || defined(_WIN64)
     DWORD id = GetUserDefaultUILanguage();
-    if(id == 0x0804)
-    {
-        local_lang = "zh_cn";
-    }
-    else if(id == 0x0404)
-    {
-        local_lang = "zh_tw";
-    }
+    wchar_t lang_name[64];
+    GetLocaleInfoW(id, LOCALE_SISO639LANGNAME, lang_name, sizeof(lang_name) / sizeof(wchar_t));
+    wchar_t lang_country[64];
+    GetLocaleInfoW(id, LOCALE_SISO3166CTRYNAME, lang_country, sizeof(lang_country) / sizeof(wchar_t));
+    return com_wstring_to_utf8(com_wstring_format(L"%s-%s",lang_name,lang_country)).toString();
 #else
-
     try
     {
         std::locale val("");

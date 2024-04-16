@@ -56,7 +56,7 @@ if [ x"${OS_TYPE}" == x"Darwin" ];then
 elif [ x"${OS_TYPE}" == x"Linux" ];then
     OS_TYPE="Linux"
 else
-    OS_TYPE="Win"
+    OS_TYPE="Windows"
 fi
 
 #清理环境
@@ -84,7 +84,7 @@ fi
 
 cd ${DIR_ROOT}/tmp
 if [ -d ${DIR_ROOT} ];then
-  if [ x"$OS_TYPE" == x"Win" ];then
+  if [ x"$OS_TYPE" == x"Windows" ];then
       cmake -A ${BUILD_ARCH} -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} ${DIR_ROOT} && cmake --build . --config ${BUILD_TYPE}
   else
       cmake -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} ${DIR_ROOT} && make -j${JOBS}
