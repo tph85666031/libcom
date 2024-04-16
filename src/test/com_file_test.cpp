@@ -130,7 +130,8 @@ void com_file_unit_test_suit(void** state)
     com_file_copy(PATH_TO_LOCAL("./test_copy.dat").c_str(), PATH_TO_LOCAL("./test.dat").c_str());
 
     file = com_file_open(PATH_TO_LOCAL("./test_copy.dat").c_str(), "r");
-    std::string line = com_file_readline(file);
+    std::string line;
+    com_file_readline(file, line);
     ASSERT_STR_EQUAL(line.c_str(), "value=123");
     com_file_close(file);
 
@@ -206,7 +207,7 @@ void com_file_unit_test_suit(void** state)
 
     pos = com_file_rfind("/data/1.rtf", "\\par");
     LOG_I("pos=%lld", pos);
-    
+
     pos = com_file_rfind("/data/1.rtf", "}");
     LOG_I("pos=%lld", pos);
 

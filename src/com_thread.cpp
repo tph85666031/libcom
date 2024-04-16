@@ -22,6 +22,7 @@ typedef struct
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <sys/mman.h>
+#include <sys/sysctl.h>
 #else
 #include <signal.h>
 #include <sys/syscall.h>
@@ -1426,10 +1427,10 @@ void* CPPShareMemoryV::init(const char* name, int size)
     size_t len = sizeof(max_shm_size);
     if(sysctlbyname("kern.sysv.shmmax", &max_shm_size, &len, NULL, 0) == 0)
     {
-        unsigned long half_size = max_shm_size / 2;
-        if(half_size < ITP_SHARE_MEM_SIZE_MAX)
+        if(max_shm_size < size)
         {
-            size = half_size;
+            LOG_E("size is larger then kern.sysv.shmmax:%d>%u", size, max_shm_size);
+            return NULL;
         }
     }
 #endif

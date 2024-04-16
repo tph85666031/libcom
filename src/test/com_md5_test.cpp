@@ -56,4 +56,3 @@ void com_md5_unit_test_suit(void** state)
         ASSERT_TRUE(com_string_contain(val.c_str(), md5_my.c_str()));
     }
 }
-

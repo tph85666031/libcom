@@ -197,11 +197,11 @@ class COM_EXPORT CPPProcessSem
 {
 public:
     CPPProcessSem();
-    CPPProcessSem(const char* name, uint8 offset = 0, int init_val = 0);//Í¨¹ı¹¹Ôìº¯Êı´´½¨
+    CPPProcessSem(const char* name, uint8 offset = 0, int init_val = 0);//é€šè¿‡æ„é€ å‡½æ•°åˆ›å»º
     virtual ~CPPProcessSem();
 
-    //ÏàÍ¬name£¬²»Í¬µÄoffsetÒ²Ëã²»Í¬µÄsem
-    bool init(const char* name, uint8 offset = 0, int init_val = 0);//Í¨¹ıinit·½·¨´´½¨
+    //ç›¸åŒnameï¼Œä¸åŒçš„offsetä¹Ÿç®—ä¸åŒçš„sem
+    bool init(const char* name, uint8 offset = 0, int init_val = 0);//é€šè¿‡initæ–¹æ³•åˆ›å»º
     void uninit();
     int post();
     int wait(int timeout_ms = 0);
@@ -213,11 +213,11 @@ class COM_EXPORT CPPProcessMutex : private CPPProcessSem
 {
 public:
     CPPProcessMutex();
-    CPPProcessMutex(const char* name, uint8 offset = 0);//Í¨¹ı¹¹Ôìº¯Êı´´½¨
+    CPPProcessMutex(const char* name, uint8 offset = 0);//é€šè¿‡æ„é€ å‡½æ•°åˆ›å»º
     virtual ~CPPProcessMutex();
 
-    //ÏàÍ¬name£¬²»Í¬µÄoffsetÒ²Ëã²»Í¬µÄmutex
-    bool init(const char* name, uint8 offset = 0);//Í¨¹ıinit·½·¨´´½¨
+    //ç›¸åŒnameï¼Œä¸åŒçš„offsetä¹Ÿç®—ä¸åŒçš„mutex
+    bool init(const char* name, uint8 offset = 0);//é€šè¿‡initæ–¹æ³•åˆ›å»º
     void uninit();
 
     void lock();
@@ -229,10 +229,10 @@ class COM_EXPORT CPPShareMemoryV
 {
 public:
     CPPShareMemoryV();
-    CPPShareMemoryV(const char* name, int size);//Í¨¹ı¹¹Ôìº¯Êı´´½¨
+    CPPShareMemoryV(const char* name, int size);//é€šè¿‡æ„é€ å‡½æ•°åˆ›å»º
     virtual ~CPPShareMemoryV();
 
-    void* init(const char* name, int size);//Í¨¹ıinit·½·¨´´½¨
+    void* init(const char* name, int size);//é€šè¿‡initæ–¹æ³•åˆ›å»º
     void uninit();
     void* getAddr();
 private:
@@ -244,9 +244,9 @@ class COM_EXPORT CPPShareMemoryMap
 {
 public:
     CPPShareMemoryMap();
-    CPPShareMemoryMap(const char* name, int size);//Í¨¹ı¹¹Ôìº¯Êı´´½¨
+    CPPShareMemoryMap(const char* name, int size);//é€šè¿‡æ„é€ å‡½æ•°åˆ›å»º
     virtual ~CPPShareMemoryMap();
-    void* init(const char* name, int size);//Í¨¹ıinit·½·¨´´½¨
+    void* init(const char* name, int size);//é€šè¿‡initæ–¹æ³•åˆ›å»º
     void uninit();
     void* getAddr();
 private:
