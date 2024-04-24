@@ -1116,7 +1116,7 @@ CPPBytes com_wstring_to_utf32(const std::wstring& wstr)
     return result;
 }
 
-std::string com_bytes_to_hexstring(const uint8* data, uint16 size)
+std::string com_bytes_to_hexstring(const uint8* data, int size)
 {
     char buf[8];
     std::string result;

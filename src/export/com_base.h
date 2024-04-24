@@ -210,7 +210,7 @@ COM_EXPORT std::string com_string_format(const char* fmt, ...) __attribute__((fo
 COM_EXPORT std::wstring com_wstring_format(const wchar_t* fmt, ...);
 
 COM_EXPORT int com_snprintf(char* buf, int buf_size, const char* fmt, ...) __attribute__((format(printf, 3, 4)));
-COM_EXPORT std::string com_bytes_to_hexstring(const uint8* data, uint16 size);
+COM_EXPORT std::string com_bytes_to_hexstring(const uint8* data, int size);
 COM_EXPORT int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size);
 COM_EXPORT uint64 com_time_rtc_s();
 COM_EXPORT uint64 com_time_rtc_ms();
@@ -577,7 +577,6 @@ private:
 };
 
 COM_EXPORT CPPBytes com_hexstring_to_bytes(const char* str);
-
 COM_EXPORT CPPBytes com_string_utf8_to_utf16(const CPPBytes& utf8);
 COM_EXPORT CPPBytes com_string_utf16_to_utf8(const CPPBytes& utf16);
 COM_EXPORT CPPBytes com_string_utf8_to_utf32(const CPPBytes& utf8);

@@ -18,7 +18,7 @@ bool Base64::isBase64(char c)
     return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string Base64::Encode(CPPBytes& bytes)
+std::string Base64::Encode(const CPPBytes& bytes)
 {
     return Encode(bytes.getData(), bytes.getDataSize());
 }
