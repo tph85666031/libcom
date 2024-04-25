@@ -255,14 +255,6 @@ COM_EXPORT bool com_sem_post(Sem* sem);
 COM_EXPORT bool com_sem_wait(Sem* sem, int timeout_ms = 0);
 COM_EXPORT bool com_sem_destroy(Sem* sem);//通过create创建的由destroy删除
 
-COM_EXPORT bool com_condition_init(Condition* condition, const char* name = "Unknown");//通过init来创建
-COM_EXPORT bool com_condition_uninit(Condition* condition);//通过init创建的由uninit删除
-COM_EXPORT Condition* com_condition_create(const char* name = "Unknown");//通过create（malloc）来创建
-COM_EXPORT bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms = 0);
-COM_EXPORT bool com_condition_notify_one(Condition* condition);
-COM_EXPORT bool com_condition_notify_all(Condition* condition);
-COM_EXPORT bool com_condition_destroy(Condition* condition);//通过create创建的由destroy删除
-
 COM_EXPORT std::string com_get_bin_name();
 COM_EXPORT std::string com_get_bin_path();
 

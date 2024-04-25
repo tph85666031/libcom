@@ -149,7 +149,7 @@ std::string com_dir_system_temp()
 #endif
 }
 
-bool com_dir_exists(const char* dir)
+bool com_dir_exist(const char* dir)
 {
     return FILE_TYPE_DIR == com_file_type(dir);
 }
@@ -1750,28 +1750,39 @@ int com_file_get_fd(FILE* file)
     return fileno(file);
 }
 
-bool com_file_lock(FILE* file, bool share_read, bool wait)
+bool com_file_lock(FILE* file, bool allow_share_read, bool wait)
 {
     if(file == NULL)
     {
         return false;
     }
-    return com_file_lock(fileno(file), share_read, wait);
+    return com_file_lock(fileno(file), allow_share_read, wait);
 }
 
-bool com_file_lock(int fd, bool share_read, bool wait)
+bool com_file_lock(int fd, bool allow_share_read, bool wait)
 {
     if(fd < 0)
     {
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
-    return false;
+    OVERLAPPED overlapvar;
+    overlapvar.Offset = 0;
+    overlapvar.OffsetHigh = 0;
+    DWORD flag = 0;
+    if(allow_share_read == false)
+    {
+        flag |= LOCKFILE_EXCLUSIVE_LOCK;
+    }
+    if(wait == false)
+    {
+        flag |= LOCKFILE_FAIL_IMMEDIATELY;
+    }
+    return LockFileEx((HANDLE)_get_osfhandle(fd), flag, 0, MAXDWORD, MAXDWORD, &overlapvar);
 #else
     struct flock lock;
     memset(&lock, 0, sizeof(struct flock));
-    lock.l_type = share_read ? F_RDLCK : F_WRLCK;
+    lock.l_type = allow_share_read ? F_RDLCK : F_WRLCK;
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
     lock.l_len = 0;
@@ -1850,8 +1861,10 @@ bool com_file_unlock(int fd)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
-    return false;
+    OVERLAPPED overlapvar;
+    overlapvar.Offset = 0;
+    overlapvar.OffsetHigh = 0;
+    return UnlockFileEx((HANDLE)_get_osfhandle(fd), 0, MAXDWORD, MAXDWORD, &overlapvar);
 #else
     struct flock fl;
     memset(&fl, 0, sizeof(struct flock));

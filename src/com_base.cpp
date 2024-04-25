@@ -1798,148 +1798,6 @@ bool com_sem_destroy(Sem* sem)
     return true;
 }
 
-bool com_condition_init(Condition* condition, const char* name)
-{
-    if(condition == NULL)
-    {
-        return false;
-    }
-    if(name == NULL)
-    {
-        name = "Unknown";
-    }
-    condition->name = name;
-#if defined(_WIN32) || defined(_WIN64)
-#else
-    if(pthread_cond_init(&condition->handle, NULL) != 0)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-#endif
-    return true;
-}
-
-bool com_condition_uninit(Condition* condition)
-{
-    if(condition == NULL)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
-    return false;
-#else
-    pthread_cond_destroy(&condition->handle);
-#endif
-    return true;
-}
-
-Condition* com_condition_create(const char* name)
-{
-    if(name == NULL)
-    {
-        name = "Unknown";
-    }
-    Condition* condition = new Condition();
-    condition->name = name;
-#if defined(_WIN32) || defined(_WIN64)
-#else
-    if(pthread_cond_init(&condition->handle, NULL) != 0)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        delete condition;
-        return NULL;
-    }
-#endif
-    return condition;
-}
-
-bool com_condition_wait(Condition* condition, Mutex* mutex, int timeout_ms)
-{
-    if(condition == NULL || mutex == NULL)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
-    return false;
-#else
-    if(timeout_ms > 0)
-    {
-        struct timespec ts;
-        memset(&ts, 0, sizeof(struct timespec));
-        clock_gettime(CLOCK_REALTIME, &ts);
-        uint64 tmp = ts.tv_nsec + (int64)timeout_ms * 1000 * 1000;
-        ts.tv_nsec = tmp % (1000 * 1000 * 1000);
-        ts.tv_sec += tmp / (1000 * 1000 * 1000);
-        if(pthread_cond_timedwait(&condition->handle, &mutex->handle, &ts) != 0)
-        {
-            //LOG_I("%s:%d timeout or failed", __FUNC__, __LINE__);
-            return false;
-        }
-    }
-    else
-    {
-        if(pthread_cond_wait(&condition->handle, &mutex->handle) != 0)
-        {
-            LOG_E("%s:%d failed", __FUNC__, __LINE__);
-            return false;
-        }
-    }
-    return true;
-#endif
-}
-
-bool com_condition_notify_one(Condition* condition)
-{
-    if(condition == NULL)
-    {
-        LOG_E("%s:%d arg incorrect", __FUNC__, __LINE__);
-        return false;
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
-    return false;
-#else
-    pthread_cond_signal(&condition->handle);
-#endif
-    return true;
-}
-
-bool com_condition_notify_all(Condition* condition)
-{
-    if(condition == NULL)
-    {
-        LOG_E("%s:%d arg incorrect", __FUNC__, __LINE__);
-        return false;
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
-    return false;
-#else
-    pthread_cond_broadcast(&condition->handle);
-#endif
-    return true;
-}
-
-bool com_condition_destroy(Condition* condition)
-{
-    if(condition == NULL)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-#if defined(_WIN32) || defined(_WIN64)
-#else
-    pthread_cond_destroy(&condition->handle);
-#endif
-    delete condition;
-    return true;
-}
-
 bool com_mutex_init(Mutex* mutex, const char* name)
 {
     if(mutex == NULL)
@@ -2220,8 +2078,12 @@ uint32 com_string_to_ip(const char* ip_str)
 {
     uint32 ip[4];
     int ret = sscanf(ip_str, "%u.%u.%u.%u",
-                     &ip[0], &ip[1], &ip[2],  &ip[3]);
+                     &ip[0], &ip[1], &ip[2], &ip[3]);
     if(ret != 4)
+    {
+        return 0;
+    }
+    if(ip[0] > 255 || ip[1] > 255 || ip[2] > 255 || ip[3] > 255)
     {
         return 0;
     }
@@ -2246,13 +2108,18 @@ std::string com_get_bin_name()
     if(name.empty())
     {
 #if defined(_WIN32) || defined(_WIN64)
-        char szName[260] = { 0 };
-        GetModuleFileNameA(NULL, szName, 260);
-        char* szRes = strrchr(szName, '\\');
-        if(szRes)
+        wchar_t name_buf[MAX_PATH] = { 0 };
+        GetModuleFileNameW(NULL, name_buf, sizeof(name_buf) / sizeof(wchar_t));
+        name = com_wstring_to_utf8(name_buf).toString();
+        wchar_t* pos = wcsrchr(name_buf, L'\\');
+        if(pos != NULL)
         {
-            szRes++;
-            name = szRes;
+            pos++;
+            name = com_wstring_to_utf8(pos).toString();
+        }
+        else
+        {
+            name = com_wstring_to_utf8(name_buf).toString();
         }
 #elif defined(__APPLE__)
         char buf[256];
@@ -2292,12 +2159,12 @@ std::string com_get_bin_path()
     if(path.empty())
     {
 #if defined(_WIN32) || defined(_WIN64)
-        char szName[260] = { 0 };
-        GetModuleFileNameA(NULL, szName, 260);
-        char* szRes = strrchr(szName, '\\');
-        if(szRes)
+        wchar_t name_buf[MAX_PATH] = { 0 };
+        GetModuleFileNameW(NULL, name_buf, sizeof(name_buf) / sizeof(wchar_t));
+        wchar_t* pos = wcsrchr(name_buf, L'\\');
+        if(pos)
         {
-            path = std::string(szName).assign(szName, strlen(szName) - strlen(szRes) + 1);
+            path = com_wstring_to_utf8(std::wstring(name_buf).assign(name_buf, wcslen(name_buf) - wcslen(pos) + 1)).toString();
         }
 #elif defined(__APPLE__)
         char buf[PROC_PIDPATHINFO_MAXSIZE];
@@ -2610,7 +2477,7 @@ std::string com_user_get_language()
     GetLocaleInfoW(id, LOCALE_SISO639LANGNAME, lang_name, sizeof(lang_name) / sizeof(wchar_t));
     wchar_t lang_country[64];
     GetLocaleInfoW(id, LOCALE_SISO3166CTRYNAME, lang_country, sizeof(lang_country) / sizeof(wchar_t));
-    return com_wstring_to_utf8(com_wstring_format(L"%s-%s",lang_name,lang_country)).toString();
+    return com_wstring_to_utf8(com_wstring_format(L"%s-%s", lang_name, lang_country)).toString();
 #else
     try
     {

@@ -74,7 +74,7 @@ COM_EXPORT std::string com_dir_system_temp();
 COM_EXPORT int64 com_dir_size_max(const char* dir);
 COM_EXPORT int64 com_dir_size_used(const char* dir);
 COM_EXPORT int64 com_dir_size_freed(const char* dir);
-COM_EXPORT bool com_dir_exists(const char* dir);
+COM_EXPORT bool com_dir_exist(const char* dir);
 COM_EXPORT bool com_dir_create(const char* full_path);
 COM_EXPORT void com_dir_clear(const char* dir_path);
 COM_EXPORT bool com_file_erase(const char* file_path, uint8 val = 0);

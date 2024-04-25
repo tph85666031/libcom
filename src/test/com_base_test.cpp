@@ -522,6 +522,8 @@ void com_base_unit_test_suit(void** state)
     std::string result = com_run_shell_with_output("dir");
     LOG_I("reault=%s", result.c_str());
 #endif
+    LOG_I("process name=%s", com_get_bin_name().c_str());
+    LOG_I("process path=%s", com_get_bin_path().c_str());
 }
 
 void com_base_bytearray_unit_test_suit(void** state)

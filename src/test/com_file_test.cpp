@@ -196,22 +196,22 @@ void com_file_unit_test_suit(void** state)
 
     com_file_remove(PATH_TO_LOCAL("./line.txt").c_str());
 
-    int64 pos = com_file_rfind("/data/1.rtf", "{\\rtf1");
+    int64 pos = com_file_rfind("./1.rtf", "{\\rtf1");
     LOG_I("pos=%lld", pos);
 
-    pos = com_file_rfind("/data/1.rtf", "\\rtf1");
+    pos = com_file_rfind("./1.rtf", "\\rtf1");
     LOG_I("pos=%lld", pos);
 
-    pos = com_file_rfind("/data/1.rtf", "\\lisb0");
+    pos = com_file_rfind("./1.rtf", "\\lisb0");
     LOG_I("pos=%lld", pos);
 
-    pos = com_file_rfind("/data/1.rtf", "\\par");
+    pos = com_file_rfind("./1.rtf", "\\par");
     LOG_I("pos=%lld", pos);
 
-    pos = com_file_rfind("/data/1.rtf", "}");
+    pos = com_file_rfind("./1.rtf", "}");
     LOG_I("pos=%lld", pos);
 
-    file = com_file_open("/data/1.rtf", "rb");
+    file = com_file_open("./1.rtf", "rb");
     CPPBytes val = com_file_read_until(file, [](uint8 val)
     {
         return val == '9';
@@ -247,5 +247,23 @@ void com_file_unit_test_suit(void** state)
     //LOG_I("val=%s", val.toString().c_str());
 
     com_file_close(file);
+
+    com_file_create(PATH_TO_LOCAL("./1.lck").c_str());
+    FILE* f_lck = com_file_open(PATH_TO_LOCAL("./1.lck").c_str(), "r");
+    ASSERT_NOT_NULL(f_lck);
+#if 0
+    ASSERT_TRUE(com_file_lock(f_lck));
+    LOG_I("file locked");
+    com_sleep_s(10);
+    ASSERT_TRUE(com_file_unlock(f_lck));
+    ASSERT_TRUE(com_file_lock(f_lck, true));
+    LOG_I("file locked for read only");
+    com_sleep_s(10);
+    ASSERT_TRUE(com_file_unlock(f_lck));
+    LOG_I("file unlocked");
+    com_sleep_s(10);
+    com_file_close(f_lck);
+    com_file_remove(PATH_TO_LOCAL("./1.lck").c_str());
+#endif
 }
 
