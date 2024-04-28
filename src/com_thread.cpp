@@ -1180,6 +1180,10 @@ CPPProcessSem::~CPPProcessSem()
 
 bool CPPProcessSem::init(const char* name, int init_val)
 {
+    if(name == NULL)
+    {
+        return false;
+    }
 #if __linux__ == 1 || defined(__APPLE__)
     key_t key = ftok(name, 0);
     if(key == -1)
@@ -1204,10 +1208,6 @@ bool CPPProcessSem::init(const char* name, int init_val)
     }
     return (sem >= 0);
 #elif defined(_WIN32) || defined(_WIN64)
-    if(name == NULL)
-    {
-        return false;
-    }
     std::wstring str_name = com_wstring_from_utf8(CPPBytes(name));
     process_sem_t handle = OpenSemaphoreW(SEMAPHORE_ALL_ACCESS, true, str_name.c_str());
     if(handle == NULL)
@@ -1261,7 +1261,7 @@ int CPPProcessSem::post()
         return -1;
     }
 #elif defined(_WIN32) || defined(_WIN64)
-    if(ReleaseSemaphore(sem, 1, NULL) == false)
+    if(ReleaseSemaphore(sem, 1, NULL) == 0)
     {
         return -1;
     }
@@ -1373,6 +1373,10 @@ CPPProcessMutex::~CPPProcessMutex()
 
 bool CPPProcessMutex::init(const char* name)
 {
+    if(name == NULL)
+    {
+        return false;
+    }
 #if __linux__ == 1 || defined(__APPLE__)
     key_t key = ftok(name, 0);
     if(key == -1)
@@ -1394,15 +1398,11 @@ bool CPPProcessMutex::init(const char* name)
     semctl(mutex, 0, SETVAL, arg);
     return (mutex >= 0);
 #elif defined(_WIN32) || defined(_WIN64)
-    if(name == NULL)
-    {
-        return false;
-    }
-    std::wstring str_name = com_wstring_format(L"%s_%d", com_wstring_from_utf8(CPPBytes(name)).c_str(), offset);
+    std::wstring str_name = com_wstring_from_utf8(CPPBytes(name));
     process_mutex_t handle = OpenMutexW(MUTEX_ALL_ACCESS, true, str_name.c_str());
     if(handle == NULL)
     {
-        handle = CreateMutexW(NULL, str_name.c_str());
+        handle = CreateMutexW(NULL, false, str_name.c_str());
     }
     mutex = handle;
     return (mutex != NULL);
@@ -1465,10 +1465,12 @@ int CPPProcessMutex::lock()
     }
     else if(ret == WAIT_TIMEOUT)
     {
+        LOG_E("failed,ret=%d", ret);
         return -2;
     }
     else
     {
+        LOG_E("failed");
         return GetLastError();
     }
 #endif
@@ -1547,8 +1549,9 @@ int CPPProcessMutex::unlock()
         return -1;
     }
 #elif defined(_WIN32) || defined(_WIN64)
-    if(ReleaseMutex(mutex) == false)
+    if(ReleaseMutex(mutex) == 0)
     {
+        LOG_E("failed");
         return -1;
     }
     return 0;
@@ -1557,19 +1560,26 @@ int CPPProcessMutex::unlock()
 
 CPPProcessCondition::CPPProcessCondition()
 {
+    cond = PROCESS_COND_DEFAULT_VALUE;
 }
 
 CPPProcessCondition::CPPProcessCondition(const char* name)
 {
+    cond = PROCESS_COND_DEFAULT_VALUE;
     init(name);
 }
 
 CPPProcessCondition::~CPPProcessCondition()
 {
+    uninit();
 }
 
 bool CPPProcessCondition::init(const char* name)
 {
+    if(name == NULL)
+    {
+        return false;
+    }
 #if __linux__ == 1 || defined(__APPLE__)
     key_t key = ftok(name, 0);
     if(key == -1)
@@ -1588,15 +1598,11 @@ bool CPPProcessCondition::init(const char* name)
     cond = semget(key, 1, flag);
     return (cond >= 0);
 #elif defined(_WIN32) || defined(_WIN64)
-    if(name == NULL)
-    {
-        return false;
-    }
-    std::wstring str_name = com_wstring_format(L"%s_%d", com_wstring_from_utf8(CPPBytes(name)).c_str(), offset);
+    std::wstring str_name = com_wstring_from_utf8(CPPBytes(name));
     process_cond_t handle = OpenEventW(EVENT_ALL_ACCESS, true, str_name.c_str());
     if(handle == NULL)
     {
-        handle = CreateEventW(NULL, str_name.c_str());
+        handle = CreateEventW(NULL, true, false, str_name.c_str());
     }
     cond = handle;
     return (cond != NULL);
@@ -1691,6 +1697,7 @@ int CPPProcessCondition::wait(int timeout_ms)
         timeout_ms = INFINITE;
     }
     int ret = WaitForSingleObject(cond, timeout_ms);
+    ResetEvent(cond);
     if(ret == WAIT_OBJECT_0)
     {
         return 0;
@@ -1736,6 +1743,12 @@ int CPPProcessCondition::notifyOne()
         return -1;
     }
 #else
+    LOG_W("not support,will wake-up all instances, or use CPPProcessSem instead");
+    if(SetEvent(cond) == 0)
+    {
+        return -1;
+    }
+    return 0;
 #endif
 }
 
@@ -1769,7 +1782,7 @@ int CPPProcessCondition::notifyAll()
         return -1;
     }
 #elif defined(_WIN32) || defined(_WIN64)
-    if(ReleaseSemaphore(cond, 1, NULL) == false)
+    if(SetEvent(cond) == 0)
     {
         return -1;
     }

@@ -38,6 +38,42 @@ static void thread_process_condition_test(int index, CPPProcessCondition* cond)
 
 void com_thread_unit_test_suit(void** state)
 {
+    if(com_string_equal(getenv("CMD"), "cond"))
+    {
+        CPPProcessCondition c1("c1");
+        if(com_string_equal(getenv("OP"), "wait"))
+        {
+            c1.wait();
+        }
+        else
+        {
+            c1.notifyAll();
+        }
+        return;
+    }
+    else if(com_string_equal(getenv("CMD"), "mutex"))
+    {
+        CPPProcessMutex m("m1");
+        LOG_I("try_lock=%d", m.trylock());
+        m.lock();
+
+        com_sleep_s(atoi(getenv("SLEEP")));
+        m.unlock();
+        return;
+    }
+    else if(com_string_equal(getenv("CMD"), "sem"))
+    {
+        CPPProcessSem s("s1");
+        if(com_string_equal(getenv("OP"), "wait"))
+        {
+            s.wait();
+        }
+        else
+        {
+            s.post();
+        }
+        return;
+    }
     LOG_I("current process path=%s", com_process_get_path().c_str());
     LOG_I("process name of %d is %s", com_process_get_pid(), com_process_get_name(com_process_get_pid()).c_str());
     LOG_I("current process id=%d", com_process_get_pid());
@@ -116,7 +152,7 @@ void com_thread_unit_test_suit(void** state)
     LOG_I("process_sem_a wait=%d [after process_sem_b uninit]", process_sem_a.wait());
     LOG_I("process_sem_a wait timeut=%d [after process_sem_b uninit]", process_sem_a.wait(1000));
     LOG_I("process_sem_a post=%d [after process_sem_b uninit]", process_sem_a.post());
-    
+
     process_sem_a.uninit();
     LOG_I("process_sem_b wait=%d [after process_sem_a uninit]", process_sem_b.wait());
     LOG_I("process_sem_b wait timeut=%d [after process_sem_a uninit]", process_sem_b.wait(1000));
