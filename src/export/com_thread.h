@@ -9,9 +9,13 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 typedef HANDLE process_sem_t;
+typedef HANDLE process_mutex_t;
+typedef HANDLE process_cond_t;
 typedef HANDLE process_share_mem_t;
 #else
 typedef int process_sem_t;
+typedef int process_mutex_t;
+typedef int process_cond_t;
 typedef int process_share_mem_t;
 #endif
 
@@ -197,42 +201,52 @@ class COM_EXPORT CPPProcessSem
 {
 public:
     CPPProcessSem();
-    CPPProcessSem(const char* name, uint8 offset = 0, int init_val = 0);//通过构造函数创建
+    CPPProcessSem(const char* name, int init_val = 0);//通过构造函数创建
     virtual ~CPPProcessSem();
 
     //相同name，不同的offset也算不同的sem
-    bool init(const char* name, uint8 offset = 0, int init_val = 0);//通过init方法创建
-    void uninit();
+    bool init(const char* name, int init_val = 0);//通过init方法创建
+    void uninit(bool destroy = false);//destroy=true将从系统删除此Sem，其它进程使用此命名的Sem下的API会立即返回
     int post();
     int wait(int timeout_ms = 0);
 protected:
     process_sem_t sem;
 };
 
-class COM_EXPORT CPPProcessMutex : private CPPProcessSem
+class COM_EXPORT CPPProcessMutex
 {
 public:
     CPPProcessMutex();
-    CPPProcessMutex(const char* name, uint8 offset = 0);//通过构造函数创建
+    CPPProcessMutex(const char* name);//通过构造函数创建
     virtual ~CPPProcessMutex();
 
     //相同name，不同的offset也算不同的mutex
-    bool init(const char* name, uint8 offset = 0);//通过init方法创建
+    bool init(const char* name);//通过init方法创建
+    void uninit(bool destroy = false);//destroy=true将从系统删除此Mutex，其它进程使用此命名的Mutex下的API会立即返回
 
-    void lock();
-    int trylock(int timeout_ms);
-    void unlock();
+    int lock();
+    int trylock();
+    int unlock();
+protected:
+    process_mutex_t mutex;
 };
 
-class COM_EXPORT CPPProcessCondition : public CPPProcessSem
+class COM_EXPORT CPPProcessCondition
 {
 public:
     CPPProcessCondition();
-    CPPProcessCondition(const char* name, uint8 offset = 0);//通过构造函数创建
+    CPPProcessCondition(const char* name);//通过构造函数创建
     virtual ~CPPProcessCondition();
 
+    //相同name，不同的offset也算不同的cond
+    bool init(const char* name);//通过init方法创建
+    void uninit(bool destroy = false);//destroy=true将从系统删除此Condition，其它进程使用此命名的Condition下的API会立即返回
+
+    int wait(int timeout_ms = 0);
     int notifyOne();
     int notifyAll();
+private:
+    process_cond_t cond;
 };
 
 class COM_EXPORT CPPShareMemoryV

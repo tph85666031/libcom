@@ -51,15 +51,23 @@ union semun
 #include "com_log.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-#define PROCESS_SEM_VALID(x)      (x!=NULL)
-#define PROCESS_MEM_VALID(x)      (x!=NULL)
-#define PROCESS_SEM_DEFAULT_VALUE (NULL)
-#define PROCESS_MEM_DEFAULT_VALUE (NULL)
+#define PROCESS_SEM_VALID(x)        (x!=NULL)
+#define PROCESS_MUTEX_VALID(x)      (x!=NULL)
+#define PROCESS_COND_VALID(x)       (x!=NULL)
+#define PROCESS_MEM_VALID(x)        (x!=NULL)
+#define PROCESS_SEM_DEFAULT_VALUE   (NULL)
+#define PROCESS_MUTEX_DEFAULT_VALUE (NULL)
+#define PROCESS_COND_DEFAULT_VALUE   (NULL)
+#define PROCESS_MEM_DEFAULT_VALUE   (NULL)
 #else
-#define PROCESS_SEM_VALID(x)      (x>=0)
-#define PROCESS_MEM_VALID(x)      (x>=0)
-#define PROCESS_SEM_DEFAULT_VALUE (-1)
-#define PROCESS_MEM_DEFAULT_VALUE (-1)
+#define PROCESS_SEM_VALID(x)        (x>=0)
+#define PROCESS_MUTEX_VALID(x)      (x>=0)
+#define PROCESS_COND_VALID(x)       (x>=0)
+#define PROCESS_MEM_VALID(x)        (x>=0)
+#define PROCESS_SEM_DEFAULT_VALUE   (-1)
+#define PROCESS_MUTEX_DEFAULT_VALUE (-1)
+#define PROCESS_COND_DEFAULT_VALUE  (-1)
+#define PROCESS_MEM_DEFAULT_VALUE   (-1)
 #endif
 
 ProcInfo::ProcInfo()
@@ -1159,10 +1167,10 @@ CPPProcessSem::CPPProcessSem()
     sem = PROCESS_SEM_DEFAULT_VALUE;
 }
 
-CPPProcessSem::CPPProcessSem(const char* name, uint8 offset, int init_val)
+CPPProcessSem::CPPProcessSem(const char* name, int init_val)
 {
     sem = PROCESS_SEM_DEFAULT_VALUE;
-    init(name, offset, init_val);
+    init(name, init_val);
 }
 
 CPPProcessSem::~CPPProcessSem()
@@ -1170,20 +1178,20 @@ CPPProcessSem::~CPPProcessSem()
     uninit();
 }
 
-bool CPPProcessSem::init(const char* name, uint8 offset, int init_val)
+bool CPPProcessSem::init(const char* name, int init_val)
 {
 #if __linux__ == 1 || defined(__APPLE__)
-    key_t key = ftok(name, offset);
+    key_t key = ftok(name, 0);
     if(key == -1)
     {
-        key = (com_crc32((uint8*)name, strlen(name)) + offset) & 0x7FFFFFFF;
+        key = com_crc32((uint8*)name, strlen(name)) & 0x7FFFFFFF;
         LOG_D("failed to create key, use crc32 value instead,key=0x%x", key);
     }
-    int flag = 0666;
+    int flag = 0644;
     sem = semget(key, 1, flag);
     if(sem >= 0)
     {
-        LOG_I("%s:%d already created", name, offset);
+        LOG_I("%s already created", name);
         return true;
     }
     flag |= IPC_CREAT;
@@ -1200,7 +1208,7 @@ bool CPPProcessSem::init(const char* name, uint8 offset, int init_val)
     {
         return false;
     }
-    std::wstring str_name = com_wstring_format(L"%s_%d", com_wstring_from_utf8(CPPBytes(name)).c_str(), offset);
+    std::wstring str_name = com_wstring_from_utf8(CPPBytes(name));
     process_sem_t handle = OpenSemaphoreW(SEMAPHORE_ALL_ACCESS, true, str_name.c_str());
     if(handle == NULL)
     {
@@ -1211,14 +1219,17 @@ bool CPPProcessSem::init(const char* name, uint8 offset, int init_val)
 #endif
 }
 
-void CPPProcessSem::uninit()
+void CPPProcessSem::uninit(bool destroy)
 {
     if(PROCESS_SEM_VALID(sem) == false)
     {
         return;
     }
 #if __linux__ == 1 || defined(__APPLE__)
-    semctl(sem, 0, IPC_RMID);
+    if(destroy)
+    {
+        semctl(sem, 0, IPC_RMID);
+    }
 #elif defined(_WIN32) || defined(_WIN64)
     CloseHandle(sem);
 #endif
@@ -1346,80 +1357,183 @@ int CPPProcessSem::wait(int timeout_ms)
 
 CPPProcessMutex::CPPProcessMutex()
 {
+    mutex = PROCESS_MUTEX_DEFAULT_VALUE;
 }
 
-CPPProcessMutex::CPPProcessMutex(const char* name, uint8 offset)
+CPPProcessMutex::CPPProcessMutex(const char* name)
 {
-    CPPProcessSem::init(name, offset, 1);
+    mutex = PROCESS_MUTEX_DEFAULT_VALUE;
+    init(name);
 }
 
 CPPProcessMutex::~CPPProcessMutex()
 {
+    uninit();
 }
 
-bool CPPProcessMutex::init(const char* name, uint8 offset)
-{
-    return CPPProcessSem::init(name, offset, 1);
-}
-
-void CPPProcessMutex::lock()
-{
-    wait(0);
-}
-
-int CPPProcessMutex::trylock(int timeout_ms)
-{
-    return wait(timeout_ms);
-}
-
-void CPPProcessMutex::unlock()
-{
-    post();
-}
-
-CPPProcessCondition::CPPProcessCondition()
-{
-}
-
-CPPProcessCondition::CPPProcessCondition(const char* name, uint8 offset)
-{
-    CPPProcessSem::init(name, offset, -1);
-}
-
-CPPProcessCondition::~CPPProcessCondition()
-{
-}
-
-int CPPProcessCondition::notifyOne()
+bool CPPProcessMutex::init(const char* name)
 {
 #if __linux__ == 1 || defined(__APPLE__)
-    int count = semctl(sem, 0, GETNCNT);
-    if(count <= 0)
+    key_t key = ftok(name, 0);
+    if(key == -1)
     {
-        return 0;
+        key = com_crc32((uint8*)name, strlen(name)) & 0x7FFFFFFF;
+        LOG_D("failed to create key, use crc32 value instead,key=0x%x", key);
     }
-#else
+    int flag = 0644;
+    mutex = semget(key, 1, flag);
+    if(mutex >= 0)
+    {
+        LOG_I("%s already created", name);
+        return true;
+    }
+    flag |= IPC_CREAT;
+    mutex = semget(key, 1, flag);
+    union semun arg;
+    arg.val = 1;
+    semctl(mutex, 0, SETVAL, arg);
+    return (mutex >= 0);
+#elif defined(_WIN32) || defined(_WIN64)
+    if(name == NULL)
+    {
+        return false;
+    }
+    std::wstring str_name = com_wstring_format(L"%s_%d", com_wstring_from_utf8(CPPBytes(name)).c_str(), offset);
+    process_mutex_t handle = OpenMutexW(MUTEX_ALL_ACCESS, true, str_name.c_str());
+    if(handle == NULL)
+    {
+        handle = CreateMutexW(NULL, str_name.c_str());
+    }
+    mutex = handle;
+    return (mutex != NULL);
 #endif
-    return post();
 }
 
-int CPPProcessCondition::notifyAll()
+void CPPProcessMutex::uninit(bool destroy)
 {
-    if(PROCESS_SEM_VALID(sem) == false)
+    if(PROCESS_MUTEX_VALID(mutex) == false)
+    {
+        return;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    if(destroy)
+    {
+        semctl(mutex, 0, IPC_RMID);
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    CloseHandle(mutex);
+#endif
+    mutex = PROCESS_MUTEX_DEFAULT_VALUE;
+}
+
+int CPPProcessMutex::lock()
+{
+    if(PROCESS_SEM_VALID(mutex) == false)
     {
         return -1;
     }
 #if __linux__ == 1 || defined(__APPLE__)
-    int count = semctl(sem, 0, GETNCNT);
-    if(count <= 0)
+    struct sembuf buf;
+    buf.sem_num = 0;
+    buf.sem_op = -1;
+    buf.sem_flg = SEM_UNDO;
+
+    int ret = semop(mutex, &buf, 1);
+    int err_no = errno;
+
+    if(ret == 0)
     {
         return 0;
     }
+    else if(err_no == EAGAIN)
+    {
+        return -2;
+    }
+    else if(err_no == EIDRM)
+    {
+        return -3;
+    }
+    else
+    {
+        return -1;
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    int ret = WaitForSingleObject(mutex, INFINITE);
+    if(ret == WAIT_OBJECT_0)
+    {
+        return 0;
+    }
+    else if(ret == WAIT_TIMEOUT)
+    {
+        return -2;
+    }
+    else
+    {
+        return GetLastError();
+    }
+#endif
+}
+
+int CPPProcessMutex::trylock()
+{
+    if(PROCESS_MUTEX_VALID(mutex) == false)
+    {
+        return -1;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
     struct sembuf buf;
     buf.sem_num = 0;
-    buf.sem_op = count;
+    buf.sem_op = -1;
+    buf.sem_flg = SEM_UNDO | IPC_NOWAIT;
+
+    int ret = semop(mutex, &buf, 1);
+    int err_no = errno;
+
+    if(ret == 0)
+    {
+        return 0;
+    }
+    else if(err_no == EAGAIN)
+    {
+        return -2;
+    }
+    else if(err_no == EIDRM)
+    {
+        return -3;
+    }
+    else
+    {
+        return -1;
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    int ret = WaitForSingleObject(mutex, 0);
+    if(ret == WAIT_OBJECT_0)
+    {
+        return 0;
+    }
+    else if(ret == WAIT_TIMEOUT)
+    {
+        return -2;
+    }
+    else
+    {
+        return GetLastError();
+    }
+#endif
+}
+
+int CPPProcessMutex::unlock()
+{
+    if(PROCESS_MUTEX_VALID(mutex) == false)
+    {
+        return -1;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    struct sembuf buf;
+    buf.sem_num = 0;
+    buf.sem_op = 1;
     buf.sem_flg = SEM_UNDO;
-    int ret = semop(sem, &buf, 1);
+    int ret = semop(mutex, &buf, 1);
     if(ret == 0)
     {
         return 0;
@@ -1433,7 +1547,229 @@ int CPPProcessCondition::notifyAll()
         return -1;
     }
 #elif defined(_WIN32) || defined(_WIN64)
-    if(ReleaseSemaphore(sem, 1, NULL) == false)
+    if(ReleaseMutex(mutex) == false)
+    {
+        return -1;
+    }
+    return 0;
+#endif
+}
+
+CPPProcessCondition::CPPProcessCondition()
+{
+}
+
+CPPProcessCondition::CPPProcessCondition(const char* name)
+{
+    init(name);
+}
+
+CPPProcessCondition::~CPPProcessCondition()
+{
+}
+
+bool CPPProcessCondition::init(const char* name)
+{
+#if __linux__ == 1 || defined(__APPLE__)
+    key_t key = ftok(name, 0);
+    if(key == -1)
+    {
+        key = com_crc32((uint8*)name, strlen(name)) & 0x7FFFFFFF;
+        LOG_D("failed to create key, use crc32 value instead,key=0x%x", key);
+    }
+    int flag = 0644;
+    cond = semget(key, 1, flag);
+    if(cond >= 0)
+    {
+        LOG_I("%s already created", name);
+        return true;
+    }
+    flag |= IPC_CREAT;
+    cond = semget(key, 1, flag);
+    return (cond >= 0);
+#elif defined(_WIN32) || defined(_WIN64)
+    if(name == NULL)
+    {
+        return false;
+    }
+    std::wstring str_name = com_wstring_format(L"%s_%d", com_wstring_from_utf8(CPPBytes(name)).c_str(), offset);
+    process_cond_t handle = OpenEventW(EVENT_ALL_ACCESS, true, str_name.c_str());
+    if(handle == NULL)
+    {
+        handle = CreateEventW(NULL, str_name.c_str());
+    }
+    cond = handle;
+    return (cond != NULL);
+#endif
+}
+
+void CPPProcessCondition::uninit(bool destroy)
+{
+    if(PROCESS_COND_VALID(cond) == false)
+    {
+        return;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    if(destroy)
+    {
+        semctl(cond, 0, IPC_RMID);
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    CloseHandle(cond);
+#endif
+    cond = PROCESS_COND_DEFAULT_VALUE;
+}
+
+int CPPProcessCondition::wait(int timeout_ms)
+{
+    if(PROCESS_COND_VALID(cond) == false)
+    {
+        return -1;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    struct sembuf buf;
+    buf.sem_num = 0;
+    buf.sem_op = -1;
+    buf.sem_flg = SEM_UNDO;
+
+    int ret = 0;
+    int err_no = 0;
+    if(timeout_ms <= 0)
+    {
+        ret = semop(cond, &buf, 1);
+        err_no = errno;
+    }
+    else
+    {
+#if __linux__ == 1
+        //semtimedop使用相对时间
+        struct timespec ts;
+        memset(&ts, 0, sizeof(struct timespec));
+        ts.tv_nsec = ((int64)timeout_ms % 1000) * 1000 * 1000;
+        ts.tv_sec = timeout_ms / 1000;
+        ret = semtimedop(cond, &buf, 1, &ts);
+        err_no = errno;
+#elif defined(__APPLE__)
+        int wait_ms = 100;
+        buf.sem_flg |= IPC_NOWAIT;
+        while(timeout_ms > 0)
+        {
+            ret = semop(cond, &buf, 1);
+            err_no = errno;
+
+            if(ret == 0 || err_no != EAGAIN)
+            {
+                break;
+            }
+
+            // 会修改errno 为 timeout
+            com_sleep_ms(wait_ms);
+            timeout_ms -= wait_ms;
+        }
+#endif
+    }
+
+    if(ret == 0)
+    {
+        return 0;
+    }
+    else if(err_no == EAGAIN)
+    {
+        return -2;
+    }
+    else if(err_no == EIDRM)
+    {
+        return -3;
+    }
+    else
+    {
+        return -1;
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    if(timeout_ms <= 0)
+    {
+        timeout_ms = INFINITE;
+    }
+    int ret = WaitForSingleObject(cond, timeout_ms);
+    if(ret == WAIT_OBJECT_0)
+    {
+        return 0;
+    }
+    else if(ret == WAIT_TIMEOUT)
+    {
+        return -2;
+    }
+    else
+    {
+        return GetLastError();
+    }
+#endif
+}
+
+int CPPProcessCondition::notifyOne()
+{
+    if(PROCESS_COND_VALID(cond) == false)
+    {
+        return -1;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    int count = semctl(cond, 0, GETNCNT);
+    if(count <= 0)
+    {
+        return 0;
+    }
+    struct sembuf buf;
+    buf.sem_num = 0;
+    buf.sem_op = 1;
+    buf.sem_flg = SEM_UNDO;
+    int ret = semop(cond, &buf, 1);
+    if(ret == 0)
+    {
+        return 0;
+    }
+    else if(errno == EIDRM)
+    {
+        return -3;
+    }
+    else
+    {
+        return -1;
+    }
+#else
+#endif
+}
+
+int CPPProcessCondition::notifyAll()
+{
+    if(PROCESS_COND_VALID(cond) == false)
+    {
+        return -1;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    int count = semctl(cond, 0, GETNCNT);
+    if(count <= 0)
+    {
+        return 0;
+    }
+    struct sembuf buf;
+    buf.sem_num = 0;
+    buf.sem_op = count;
+    buf.sem_flg = SEM_UNDO;
+    int ret = semop(cond, &buf, 1);
+    if(ret == 0)
+    {
+        return 0;
+    }
+    else if(errno == EIDRM)
+    {
+        return -3;
+    }
+    else
+    {
+        return -1;
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    if(ReleaseSemaphore(cond, 1, NULL) == false)
     {
         return -1;
     }

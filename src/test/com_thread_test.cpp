@@ -112,6 +112,11 @@ void com_thread_unit_test_suit(void** state)
     LOG_I("process_sem_a post=%d", process_sem_a.post());
     LOG_I("process_sem_b wait timeout=%d", process_sem_b.wait(1000));
 
+    process_sem_b.uninit();
+    LOG_I("process_sem_a wait=%d [after process_sem_b uninit]", process_sem_a.wait());
+    LOG_I("process_sem_a wait timeut=%d [after process_sem_b uninit]", process_sem_a.wait(1000));
+    LOG_I("process_sem_a post=%d [after process_sem_b uninit]", process_sem_a.post());
+    
     process_sem_a.uninit();
     LOG_I("process_sem_b wait=%d [after process_sem_a uninit]", process_sem_b.wait());
     LOG_I("process_sem_b wait timeut=%d [after process_sem_a uninit]", process_sem_b.wait(1000));
