@@ -1428,7 +1428,7 @@ void CPPProcessMutex::uninit(bool destroy)
 
 int CPPProcessMutex::lock()
 {
-    if(PROCESS_SEM_VALID(mutex) == false)
+    if(PROCESS_MUTEX_VALID(mutex) == false)
     {
         return -1;
     }

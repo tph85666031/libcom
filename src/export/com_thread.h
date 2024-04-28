@@ -206,7 +206,7 @@ public:
 
     //相同name，不同的offset也算不同的sem
     bool init(const char* name, int init_val = 0);//通过init方法创建
-    void uninit(bool destroy = false);//destroy=true将从系统删除此Sem，其它进程使用此命名的Sem下的API会立即返回
+    void uninit(bool destroy = false);//destroy=true将从系统删除此Sem，(非WIn系统下)其它进程使用此命名的Sem下的API会立即返回
     int post();
     int wait(int timeout_ms = 0);
 protected:

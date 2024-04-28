@@ -54,8 +54,11 @@ void com_thread_unit_test_suit(void** state)
     else if(com_string_equal(getenv("CMD"), "mutex"))
     {
         CPPProcessMutex m("m1");
-        LOG_I("try_lock=%d", m.trylock());
-        m.lock();
+        if(m.trylock() != 0)
+        {
+            LOG_I("try lock failed");
+            m.lock();
+        }
 
         com_sleep_s(atoi(getenv("SLEEP")));
         m.unlock();
