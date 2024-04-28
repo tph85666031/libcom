@@ -67,7 +67,7 @@ CMUnitTest test_cases_com_lib[] =
     cmocka_unit_test(com_sync_unit_test_suit),
     cmocka_unit_test(com_socket_stringipc_unit_test_suit)
 #else
-    cmocka_unit_test(com_base_unit_test_suit)
+    cmocka_unit_test(com_thread_unit_test_suit)
 #endif
 };
 

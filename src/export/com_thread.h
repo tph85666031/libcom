@@ -205,7 +205,7 @@ public:
     void uninit();
     int post();
     int wait(int timeout_ms = 0);
-private:
+protected:
     process_sem_t sem;
 };
 
@@ -218,11 +218,21 @@ public:
 
     //相同name，不同的offset也算不同的mutex
     bool init(const char* name, uint8 offset = 0);//通过init方法创建
-    void uninit();
 
     void lock();
     int trylock(int timeout_ms);
     void unlock();
+};
+
+class COM_EXPORT CPPProcessCondition : public CPPProcessSem
+{
+public:
+    CPPProcessCondition();
+    CPPProcessCondition(const char* name, uint8 offset = 0);//通过构造函数创建
+    virtual ~CPPProcessCondition();
+
+    int notifyOne();
+    int notifyAll();
 };
 
 class COM_EXPORT CPPShareMemoryV

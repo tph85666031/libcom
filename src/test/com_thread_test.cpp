@@ -29,6 +29,13 @@ static void thread_cpp_test(int val1, int val2)
     return;
 }
 
+static void thread_process_condition_test(int index, CPPProcessCondition* cond)
+{
+    cond->wait();
+    LOG_I("%d done", index);
+    return;
+}
+
 void com_thread_unit_test_suit(void** state)
 {
     LOG_I("current process path=%s", com_process_get_path().c_str());
@@ -109,5 +116,23 @@ void com_thread_unit_test_suit(void** state)
     LOG_I("process_sem_b wait=%d [after process_sem_a uninit]", process_sem_b.wait());
     LOG_I("process_sem_b wait timeut=%d [after process_sem_a uninit]", process_sem_b.wait(1000));
     LOG_I("process_sem_b post=%d [after process_sem_a uninit]", process_sem_b.post());
+
+
+    CPPProcessCondition cond("process_condition");
+    for(int i = 0; i < 10; i++)
+    {
+        std::thread t(thread_process_condition_test, i, &cond);
+        t.detach();
+    }
+    //com_sleep_s(1);
+    //cond.notifyAll();
+    for(int i = 0; i < 15; i++)
+    {
+        com_sleep_s(1);
+        LOG_I("notify one");
+        cond.notifyOne();
+    }
+    //cond.notifyAll();
+    com_sleep_s(3);
 }
 

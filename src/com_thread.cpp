@@ -1177,12 +1177,13 @@ bool CPPProcessSem::init(const char* name, uint8 offset, int init_val)
     if(key == -1)
     {
         key = (com_crc32((uint8*)name, strlen(name)) + offset) & 0x7FFFFFFF;
-        LOG_W("failed to create key, use crc32 value instead,key=0x%x", key);
+        LOG_D("failed to create key, use crc32 value instead,key=0x%x", key);
     }
     int flag = 0666;
     sem = semget(key, 1, flag);
     if(sem >= 0)
     {
+        LOG_I("%s:%d already created", name, offset);
         return true;
     }
     flag |= IPC_CREAT;
@@ -1199,11 +1200,11 @@ bool CPPProcessSem::init(const char* name, uint8 offset, int init_val)
     {
         return false;
     }
-    std::string str_name = com_string_format("%s_%d", name, offset);
-    process_sem_t handle = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, true, str_name.c_str());
+    std::wstring str_name = com_wstring_format(L"%s_%d", com_wstring_from_utf8(CPPBytes(name)).c_str(), offset);
+    process_sem_t handle = OpenSemaphoreW(SEMAPHORE_ALL_ACCESS, true, str_name.c_str());
     if(handle == NULL)
     {
-        handle = CreateSemaphoreA(NULL, init_val, 1, str_name.c_str());
+        handle = CreateSemaphoreW(NULL, init_val, 1, str_name.c_str());
     }
     sem = handle;
     return (sem != NULL);
@@ -1267,11 +1268,7 @@ int CPPProcessSem::wait(int timeout_ms)
     struct sembuf buf;
     buf.sem_num = 0;
     buf.sem_op = -1;
-#if defined(__APPLE__)
-    buf.sem_flg = SEM_UNDO | IPC_NOWAIT;
-#else
     buf.sem_flg = SEM_UNDO;
-#endif
 
     int ret = 0;
     int err_no = 0;
@@ -1280,9 +1277,9 @@ int CPPProcessSem::wait(int timeout_ms)
         ret = semop(sem, &buf, 1);
         err_no = errno;
     }
-#if __linux__ == 1
     else
     {
+#if __linux__ == 1
         //semtimedop使用相对时间
         struct timespec ts;
         memset(&ts, 0, sizeof(struct timespec));
@@ -1290,14 +1287,11 @@ int CPPProcessSem::wait(int timeout_ms)
         ts.tv_sec = timeout_ms / 1000;
         ret = semtimedop(sem, &buf, 1, &ts);
         err_no = errno;
-    }
-#endif
-#if defined(__APPLE__)
-    else
-    {
+#elif defined(__APPLE__)
+        int wait_ms = 100;
+        buf.sem_flg |= IPC_NOWAIT;
         while(timeout_ms > 0)
         {
-
             ret = semop(sem, &buf, 1);
             err_no = errno;
 
@@ -1306,13 +1300,12 @@ int CPPProcessSem::wait(int timeout_ms)
                 break;
             }
 
-            int wait_ms = 100;
             // 会修改errno 为 timeout
             com_sleep_ms(wait_ms);
             timeout_ms -= wait_ms;
         }
-    }
 #endif
+    }
 
     if(ret == 0)
     {
@@ -1369,11 +1362,6 @@ bool CPPProcessMutex::init(const char* name, uint8 offset)
     return CPPProcessSem::init(name, offset, 1);
 }
 
-void CPPProcessMutex::uninit()
-{
-    CPPProcessSem::uninit();
-}
-
 void CPPProcessMutex::lock()
 {
     wait(0);
@@ -1387,6 +1375,70 @@ int CPPProcessMutex::trylock(int timeout_ms)
 void CPPProcessMutex::unlock()
 {
     post();
+}
+
+CPPProcessCondition::CPPProcessCondition()
+{
+}
+
+CPPProcessCondition::CPPProcessCondition(const char* name, uint8 offset)
+{
+    CPPProcessSem::init(name, offset, -1);
+}
+
+CPPProcessCondition::~CPPProcessCondition()
+{
+}
+
+int CPPProcessCondition::notifyOne()
+{
+#if __linux__ == 1 || defined(__APPLE__)
+    int count = semctl(sem, 0, GETNCNT);
+    if(count <= 0)
+    {
+        return 0;
+    }
+#else
+#endif
+    return post();
+}
+
+int CPPProcessCondition::notifyAll()
+{
+    if(PROCESS_SEM_VALID(sem) == false)
+    {
+        return -1;
+    }
+#if __linux__ == 1 || defined(__APPLE__)
+    int count = semctl(sem, 0, GETNCNT);
+    if(count <= 0)
+    {
+        return 0;
+    }
+    struct sembuf buf;
+    buf.sem_num = 0;
+    buf.sem_op = count;
+    buf.sem_flg = SEM_UNDO;
+    int ret = semop(sem, &buf, 1);
+    if(ret == 0)
+    {
+        return 0;
+    }
+    else if(errno == EIDRM)
+    {
+        return -3;
+    }
+    else
+    {
+        return -1;
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    if(ReleaseSemaphore(sem, 1, NULL) == false)
+    {
+        return -1;
+    }
+    return 0;
+#endif
 }
 
 CPPShareMemoryV::CPPShareMemoryV()
