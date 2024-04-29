@@ -6,6 +6,7 @@
 #include <execinfo.h>
 #include <sys/signalfd.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
 #endif
 #include "com_base.h"
 #include "com_stack.h"
@@ -240,6 +241,17 @@ static void stack_signal_function(int sig, siginfo_t* info, void* context)
         case SIGTTIN:
             LOG_I("SIGTTIN system will exist");
             exit(sig);
+            break;
+        case SIGCHLD:
+            LOG_I("SIGCHLD,recycle the child process");
+            do
+            {
+                if(waitpid(-1, NULL, WNOHANG) <= 0)
+                {
+                    break;
+                }
+            }
+            while(true);
             break;
 #endif
         case SIGUSR1:

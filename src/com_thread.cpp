@@ -57,7 +57,7 @@ union semun
 #define PROCESS_MEM_VALID(x)        (x!=NULL)
 #define PROCESS_SEM_DEFAULT_VALUE   (NULL)
 #define PROCESS_MUTEX_DEFAULT_VALUE (NULL)
-#define PROCESS_COND_DEFAULT_VALUE   (NULL)
+#define PROCESS_COND_DEFAULT_VALUE  (NULL)
 #define PROCESS_MEM_DEFAULT_VALUE   (NULL)
 #else
 #define PROCESS_SEM_VALID(x)        (x>=0)
@@ -166,14 +166,20 @@ int com_process_create(const char* app, std::vector<std::string> args)
     return pi.dwProcessId;
 #else
     //屏蔽SIGCHLD信号防止出现僵尸进程
+    sigset_t sig_pocess_mask;
     struct sigaction sig_action_old;
+    sigset_t sig_pocess_mask_old;
     memset(&sig_action_old, 0, sizeof(sig_action_old));
     sigaction(SIGCHLD, NULL, &sig_action_old);
+    sigemptyset(&sig_pocess_mask);
+    sigaddset(&sig_pocess_mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &sig_pocess_mask, &sig_pocess_mask_old);
     signal(SIGCHLD, SIG_IGN);
     int ret = fork();
     if(ret != 0)
     {
         sigaction(SIGCHLD, &sig_action_old, NULL);
+        sigprocmask(SIG_SETMASK, &sig_pocess_mask_old, NULL);
         return ret;
     }
 
