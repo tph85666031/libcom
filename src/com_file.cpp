@@ -1056,6 +1056,19 @@ bool com_file_seek_head(FILE* file)
     return (fseek(file, 0L, SEEK_SET) == 0);
 }
 
+bool com_file_seek_head(int fd)
+{
+    if(fd < 0)
+    {
+        return false;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    return (_lseek64(fd, 0L, SEEK_SET) != -1);
+#else
+    return (lseek64(fd, 0L, SEEK_SET) != -1);
+#endif
+}
+
 bool com_file_seek_tail(FILE* file)
 {
     if(file == NULL)
@@ -1065,6 +1078,19 @@ bool com_file_seek_tail(FILE* file)
     return (fseek(file, 0L, SEEK_END) == 0);
 }
 
+bool com_file_seek_tail(int fd)
+{
+    if(fd < 0)
+    {
+        return false;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    return (_lseek64(fd, 0L, SEEK_END) != -1);
+#else
+    return (lseek64(fd, 0L, SEEK_END) != -1);
+#endif
+}
+
 bool com_file_seek_step(FILE* file, int64 pos)
 {
     if(file == NULL)
@@ -1072,6 +1098,19 @@ bool com_file_seek_step(FILE* file, int64 pos)
         return false;
     }
     return (fseek(file, pos, SEEK_CUR) == 0);
+}
+
+bool com_file_seek_step(int fd, int64 pos)
+{
+    if(fd < 0)
+    {
+        return false;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    return (_lseek64(fd, pos, SEEK_CUR) != -1);
+#else
+    return (lseek64(fd, pos, SEEK_CUR) != -1);
+#endif
 }
 
 bool com_file_seek_set(FILE* file, int64 pos)
@@ -1090,6 +1129,33 @@ bool com_file_seek_set(FILE* file, int64 pos)
     }
 }
 
+bool com_file_seek_set(int fd, int64 pos)
+{
+    if(fd < 0)
+    {
+        return false;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    if(pos >= 0)
+    {
+        return (_lseek64(fd, pos, SEEK_SET) != -1);
+    }
+    else
+    {
+        return (_lseek64(fd, pos, SEEK_END) != -1);
+    }
+#else
+    if(pos >= 0)
+    {
+        return (lseek64(fd, pos, SEEK_SET) != -1);
+    }
+    else
+    {
+        return (lseek64(fd, pos, SEEK_END) != -1);
+    }
+#endif
+}
+
 int64 com_file_seek_get(FILE* file)
 {
     if(file == NULL)
@@ -1097,6 +1163,19 @@ int64 com_file_seek_get(FILE* file)
         return -1;
     }
     return ftell(file);
+}
+
+int64 com_file_seek_get(int fd)
+{
+    if(fd < 0)
+    {
+        return -1;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    return _lseek64(fd, 0, SEEK_CUR);
+#else
+    return lseek64(fd, 0, SEEK_CUR);
+#endif
 }
 
 bool com_file_exist(const char* file_path)
@@ -1148,7 +1227,7 @@ CPPBytes com_file_read(const char* file, int size, int64 offset)
     {
         return CPPBytes();
     }
-    if(offset > 0)
+    if(offset >= 0)
     {
         com_file_seek_set(fp, offset);
     }
@@ -1159,11 +1238,18 @@ CPPBytes com_file_read(const char* file, int size, int64 offset)
     for(size_t i = 0; i < size / sizeof(buf); i++)
     {
         int ret = com_file_read(fp, buf, sizeof(buf));
+        if(ret <= 0)
+        {
+            break;
+        }
         data.append(buf, ret);
     }
 
-    int ret = com_file_read(fp, buf, size % sizeof(buf));
-    data.append(buf, ret);
+    if(size % sizeof(buf))
+    {
+        int ret = com_file_read(fp, buf, size % sizeof(buf));
+        data.append(buf, ret);
+    }
 
     com_file_close(fp);
     return data;
@@ -1182,11 +1268,47 @@ CPPBytes com_file_read(FILE* file, int size)
     for(size_t i = 0; i < size / sizeof(buf); i++)
     {
         int ret = com_file_read(file, buf, sizeof(buf));
+        if(ret <= 0)
+        {
+            break;
+        }
         data.append(buf, ret);
     }
 
-    int ret = com_file_read(file, buf, size % sizeof(buf));
-    data.append(buf, ret);
+    if(size % sizeof(buf))
+    {
+        int ret = com_file_read(file, buf, size % sizeof(buf));
+        data.append(buf, ret);
+    }
+
+    return data;
+}
+
+CPPBytes com_file_read(int fd, int size)
+{
+    if(fd < 0 || size <= 0)
+    {
+        return CPPBytes();
+    }
+
+    CPPBytes data;
+    uint8 buf[1024];
+
+    for(size_t i = 0; i < size / sizeof(buf); i++)
+    {
+        int ret = com_file_read(fd, buf, sizeof(buf));
+        if(ret <= 0)
+        {
+            break;
+        }
+        data.append(buf, ret);
+    }
+
+    if(size % sizeof(buf))
+    {
+        int ret = com_file_read(fd, buf, size % sizeof(buf));
+        data.append(buf, ret);
+    }
 
     return data;
 }
@@ -1195,7 +1317,7 @@ int64 com_file_read(FILE* file, void* buf, int64 size)
 {
     if(file == NULL || buf == NULL || size <= 0)
     {
-        LOG_E("arg incorrect");
+        LOG_E("arg incorrect,file=%p,buf=%p,size=%lld", file, buf, size);
         return -1;
     }
     int64 size_readed = 0;
@@ -1228,6 +1350,37 @@ int64 com_file_read(FILE* file, void* buf, int64 size)
     }
     while(feof(file) == 0 && ferror(file) == 0 && size_readed < size);
 #endif
+
+    return size_readed;
+}
+
+int64 com_file_read(int fd, void* buf, int64 size)
+{
+    if(fd < 0 || buf == NULL || size <= 0)
+    {
+        LOG_E("arg incorrect");
+        return -1;
+    }
+    int64 size_readed = 0;
+
+    do
+    {
+        int ret = read(fd, (uint8*)buf + size_readed, size - size_readed);
+        if(ret < 0)
+        {
+            LOG_E("read error,fd=%d,size_readed=%lld,errno=%d", fd, size_readed, errno);
+            return -1;
+        }
+        else if(ret == 0)
+        {
+            break;
+        }
+        else
+        {
+            size_readed += ret;
+        }
+    }
+    while(size_readed < size);
 
     return size_readed;
 }
@@ -1298,7 +1451,7 @@ CPPBytes com_file_read_until(FILE* file, std::function<bool(uint8)> func)
 int64 com_file_find(const char* file, const char* key, int64 offset)
 {
     FILE* fp = com_file_open(file, "rb");
-    if(offset > 0)
+    if(offset >= 0)
     {
         com_file_seek_set(fp, offset);
     }
@@ -1310,7 +1463,7 @@ int64 com_file_find(const char* file, const char* key, int64 offset)
 int64 com_file_find(const char* file, const uint8* key, int key_size, int64 offset)
 {
     FILE* fp = com_file_open(file, "rb");
-    if(offset > 0)
+    if(offset >= 0)
     {
         com_file_seek_set(fp, offset);
     }
@@ -1489,7 +1642,7 @@ CPPBytes com_file_readall(const char* file_path, int64 offset)
     {
         return bytes;
     }
-    if(offset > 0)
+    if(offset >= 0)
     {
         com_file_seek_set(file, offset);
     }
@@ -1500,6 +1653,30 @@ CPPBytes com_file_readall(const char* file_path, int64 offset)
         bytes.append(buf, size);
     }
     com_file_close(file);
+    return bytes;
+}
+
+CPPBytes com_file_readall(int fd, int64 offset)
+{
+    if(fd < 0)
+    {
+        return CPPBytes();
+    }
+    if(offset >= 0)
+    {
+#if defined(_WIN32) || defined(_WIN64)
+        _lseek64(fd, offset, SEEK_SET);
+#else
+        lseek64(fd, offset, SEEK_SET);
+#endif
+    }
+    uint8 buf[1024];
+    int size = 0;
+    CPPBytes bytes;
+    while((size = com_file_read(fd, buf, sizeof(buf))) > 0)
+    {
+        bytes.append(buf, size);
+    }
     return bytes;
 }
 

@@ -861,6 +861,7 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
     {
         return;
     }
+    std::queue<Message> queue_local;
     std::thread::id tid = std::this_thread::get_id();
     while(poll->thread_mgr_running)
     {
@@ -887,9 +888,7 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
         }
 
         //更新线程状态为执行中
-
         poll->mutex_threads.lock();
-
         if(poll->threads.count(tid) > 0)
         {
             THREAD_POLL_INFO& des = poll->threads[tid];
@@ -900,16 +899,20 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
 
         //继续获取数据进行处理
         poll->mutex_msgs.lock();
-        if(poll->msgs.empty())
+        int count = 0;
+        while(poll->msgs.empty() == false && count < poll->queue_size_per_thread)
         {
-            poll->mutex_msgs.unlock();
-            continue;
+            queue_local.push(std::move(poll->msgs.front()));
+            poll->msgs.pop();
         }
-        Message msg = std::move(poll->msgs.front());
-        poll->msgs.pop();
         poll->mutex_msgs.unlock();
-        poll->threadPoolRunner(msg);
 
+        while(poll->thread_mgr_running && queue_local.empty() == false)
+        {
+            Message msg = std::move(queue_local.front());
+            queue_local.pop();
+            poll->threadPoolRunner(msg);
+        }
     }
 
     //本线程退出，设置标记为退出
@@ -1114,7 +1117,6 @@ void ThreadPool::stopThreadPool(bool force)
     if(thread_mgr.joinable())
     {
         thread_mgr.join();
-
     }
 }
 
@@ -1126,17 +1128,6 @@ bool ThreadPool::pushPoolMessage(Message&& msg)
         return false;
     }
     mutex_msgs.lock();
-    int count = max_thread_count * 10000;
-    if(count < 1000)
-    {
-        count = 1000;
-    }
-    if((int)msgs.size() > count)
-    {
-        mutex_msgs.unlock();
-        LOG_W("thread pool queue is full");
-        return false;
-    }
     msgs.push(msg);
     mutex_msgs.unlock();
     condition.notifyOne();
@@ -1151,17 +1142,6 @@ bool ThreadPool::pushPoolMessage(const Message& msg)
         return false;
     }
     mutex_msgs.lock();
-    int count = max_thread_count * 10000;
-    if(count < 1000)
-    {
-        count = 1000;
-    }
-    if((int)msgs.size() > count)
-    {
-        mutex_msgs.unlock();
-        LOG_W("thread pool queue is full");
-        return false;
-    }
     msgs.push(msg);
     mutex_msgs.unlock();
     condition.notifyOne();

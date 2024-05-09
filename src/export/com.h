@@ -25,6 +25,7 @@
 #include "com_test.h"
 #include "com_xml.h"
 #include "com_sync.h"
+#include "com_itp_log.h"
 
 #include "CJsonObject.h"
 #include "sqlite3.h"

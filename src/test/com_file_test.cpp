@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "com_file.h"
 #include "com_log.h"
 #include "com_test.h"
@@ -6,6 +9,10 @@ void com_file_unit_test_suit(void** state)
 {
     CPPBytes bytes = com_file_readall(PATH_TO_LOCAL(com_get_bin_path() + com_get_bin_name()).c_str());
     ASSERT_FALSE(bytes.empty());
+    int fd_x = open(PATH_TO_LOCAL(com_get_bin_path() + com_get_bin_name()).c_str(), O_RDONLY);
+    CPPBytes bytes_bak = com_file_readall(fd_x);
+    ASSERT_TRUE(bytes == bytes_bak);
+    close(fd_x);
 
     com_dir_create(PATH_TO_LOCAL("./1").c_str());
     ASSERT_INT_EQUAL(com_file_type(PATH_TO_LOCAL("./1").c_str()), FILE_TYPE_DIR);
