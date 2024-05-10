@@ -2,7 +2,6 @@
 #define __COM_H__
 
 #include "com_base.h"
-#include "com_cache.h"
 #include "com_config.h"
 #include "com_crc.h"
 #include "com_sqlite.h"

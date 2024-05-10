@@ -729,7 +729,7 @@ Socket::~Socket()
 
 void Socket::setHost(const char* host)
 {
-    AutoMutex a(mutxe);
+    std::lock_guard<std::mutex> lck(mutxe);
     if(host != NULL)
     {
         this->host = host;
@@ -748,7 +748,7 @@ void Socket::setSocketfd(int fd)
 
 void Socket::setInterface(const char* interface_name)
 {
-    AutoMutex a(mutxe);
+    std::lock_guard<std::mutex> lck(mutxe);
     if(interface_name != NULL)
     {
         this->interface_name = interface_name;
@@ -757,7 +757,7 @@ void Socket::setInterface(const char* interface_name)
 
 std::string Socket::getHost()
 {
-    AutoMutex a(mutxe);
+    std::lock_guard<std::mutex> lck(mutxe);
     return host.c_str();
 }
 
@@ -773,7 +773,7 @@ int Socket::getSocketfd()
 
 std::string Socket::getInterface()
 {
-    AutoMutex a(mutxe);
+    std::lock_guard<std::mutex> lck(mutxe);
     return interface_name;
 }
 

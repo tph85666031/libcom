@@ -62,7 +62,7 @@ private:
     std::thread thread_timer_loop;
     std::vector<CPPTimer> timers;
     std::atomic<bool> running_loop = {false};
-    CPPMutex mutex_timers{"mutex_timers"};
+    std::mutex mutex_timers;
     std::atomic<uint32> message_id = {0xFFFFFFFF};
 };
 

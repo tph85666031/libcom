@@ -25,11 +25,6 @@ static int mock_test(int* val_a, int* val_b, int val_c)
     return ret;
 }
 
-static void auto_mutex_test()
-{
-    AutoMutex a(mutex_test);
-}
-
 static CPPBytes bytearray_test(uint8* data, int dataSize)
 {
     CPPBytes bytes;
@@ -389,10 +384,6 @@ void com_base_unit_test_suit(void** state)
     com_stack_init();
 
     TIME_COST();
-    Mutex* mutex = com_mutex_create("mutex_ut");
-    ASSERT_NOT_NULL(mutex);
-    ASSERT_TRUE(com_mutex_lock(mutex));
-    com_mutex_destroy(mutex);
 
     std::vector<int> array_a;
     array_a.push_back(1);
@@ -442,7 +433,6 @@ void com_base_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(val, 0x123456);
     void* p2 = com_number_to_ptr(val);
     ASSERT_PTR_EQUAL(p2, (void*)0x123456);
-    auto_mutex_test();
 
     std::vector<std::string> vals = com_string_split("a,b,c", ",");
     ASSERT_INT_EQUAL(vals.size(), 3);

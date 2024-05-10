@@ -76,7 +76,7 @@ protected:
     std::atomic<int> socketfd;
     std::string interface_name;
 private:
-    CPPMutex mutxe;
+    std::mutex mutxe;
     std::string host;
 };
 

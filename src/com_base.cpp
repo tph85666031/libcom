@@ -1798,146 +1798,6 @@ bool com_sem_destroy(Sem* sem)
     return true;
 }
 
-bool com_mutex_init(Mutex* mutex, const char* name)
-{
-    if(mutex == NULL)
-    {
-        return false;
-    }
-    if(name == NULL)
-    {
-        name = "Unknown";
-    }
-    mutex->name = name;
-#if defined(_WIN32) || defined(_WIN64)
-    mutex->handle = CreateSemaphore(NULL, 1, 1, NULL);
-#else
-    if(pthread_mutex_init(&mutex->handle, NULL) != 0)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-#endif
-    return true;
-}
-
-bool com_mutex_uninit(Mutex* mutex)
-{
-    if(mutex == NULL)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    if(mutex->handle != NULL)
-    {
-        CloseHandle(mutex->handle);
-    }
-#else
-    pthread_mutex_destroy(&mutex->handle);
-#endif
-    return true;
-}
-
-Mutex* com_mutex_create(const char* name)
-{
-    if(name == NULL)
-    {
-        name = "Unknown";
-    }
-    Mutex* mutex = new Mutex();
-    mutex->name = name;
-#if defined(_WIN32) || defined(_WIN64)
-    mutex->handle = CreateSemaphore(NULL, 1, 1, NULL);
-#else
-    if(pthread_mutex_init(&mutex->handle, NULL) != 0)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        delete mutex;
-        mutex = NULL;
-    }
-#endif
-    return mutex;
-}
-
-bool com_mutex_destroy(Mutex* mutex)
-{
-    if(mutex == NULL)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    if(mutex->handle != NULL)
-    {
-        CloseHandle(mutex->handle);
-    }
-#else
-    pthread_mutex_destroy(&mutex->handle);
-#endif
-    delete mutex;
-    return true;
-}
-
-bool com_mutex_lock(Mutex* mutex)
-{
-    if(mutex == NULL)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-    int ret = -1;
-#ifdef __DEBUG_MUTEX__
-    LOG_D("mutex=%s thread=%s LOCKED", mutex->name, com_thread_get_name().c_str());
-#endif
-#if defined(_WIN32) || defined(_WIN64)
-    if(mutex->handle == NULL)
-    {
-        LOG_E("mutex->handle is NULL");
-        return false;
-    }
-    ret = WaitForSingleObject(mutex->handle, INFINITE);
-#else
-    ret = pthread_mutex_lock(&mutex->handle);
-#endif
-    if(ret != 0)
-    {
-        LOG_E("pthread_mutex_lock lock failed,ret=%d", ret);
-        return false;
-    }
-    return true;
-}
-
-bool com_mutex_unlock(Mutex* mutex)
-{
-    if(mutex == NULL)
-    {
-        LOG_E("%s:%d failed", __FUNC__, __LINE__);
-        return false;
-    }
-    int ret = -1;
-#if defined(_WIN32) || defined(_WIN64)
-    if(mutex->handle == NULL)
-    {
-        LOG_E("mutex->handle is NULL");
-        return false;
-    }
-    ret = ReleaseSemaphore(mutex->handle, 1, NULL);
-#else
-    ret = pthread_mutex_unlock(&mutex->handle);
-#endif
-    if(ret != 0)
-    {
-        LOG_E("pthread_mutex_lock lock failed, ret=%d", ret);
-        return false;
-    }
-#ifdef __DEBUG_MUTEX__
-    LOG_D("mutex=%s thread=%s UNLOCKED",
-          mutex->name, com_thread_get_name().c_str());
-#endif
-    return true;
-}
-
 double com_cycle_perimeter(double diameter)
 {
     return diameter * COM_PI / 180.0;
@@ -2911,45 +2771,6 @@ std::mutex* CPPMutex::getMutex()
     return &mutex;
 }
 
-AutoMutex::AutoMutex(Mutex* mutex)
-{
-    this->mutex_cpp = NULL;
-    this->mutex_c = mutex;
-    com_mutex_lock(this->mutex_c);
-}
-
-AutoMutex::AutoMutex(std::mutex* mutex)
-{
-    this->mutex_c = NULL;
-    this->mutex_cpp = mutex;
-    if(this->mutex_cpp != NULL)
-    {
-        this->mutex_cpp->lock();
-    }
-}
-
-AutoMutex::AutoMutex(CPPMutex& mutex)
-{
-    this->mutex_c = NULL;
-    this->mutex_cpp = mutex.getMutex();
-    if(this->mutex_cpp != NULL)
-    {
-        this->mutex_cpp->lock();
-    }
-}
-
-AutoMutex::~AutoMutex()
-{
-    if(this->mutex_c != NULL)
-    {
-        com_mutex_unlock(this->mutex_c);
-    }
-    if(this->mutex_cpp != NULL)
-    {
-        mutex_cpp->unlock();
-    }
-}
-
 CPPSem::CPPSem(const char* name)
 {
     com_sem_init(&sem, name);
@@ -2962,11 +2783,10 @@ CPPSem::~CPPSem()
 
 void CPPSem::setName(const char* name)
 {
-    if(name == NULL)
+    if(name != NULL)
     {
-        return;
+        sem.name = name;
     }
-    sem.name = name;
 }
 
 const char* CPPSem::getName()
@@ -2998,7 +2818,10 @@ CPPCondition::~CPPCondition()
 
 void CPPCondition::setName(const char* name)
 {
-    this->name = name;
+    if(name != NULL)
+    {
+        this->name = name;
+    }
 }
 
 const char* CPPCondition::getName()
@@ -3035,6 +2858,94 @@ bool CPPCondition::wait(int timeout_ms)
         condition.wait(lock);
     }
     return true;
+}
+
+CPPLock::CPPLock(const char* name)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    InitializeSRWLock(&lock);
+#else
+    if(pthread_rwlock_init(&lock, NULL) != 0)
+    {
+        LOG_E("failed");
+    }
+#endif
+    setName(name);
+}
+
+CPPLock::~CPPLock()
+{
+#if defined(_WIN32) || defined(_WIN64)
+#else
+    pthread_rwlock_destroy(&lock);
+#endif
+}
+
+void CPPLock::setName(const char* name)
+{
+    if(name != NULL)
+    {
+        this->name = name;
+    }
+}
+
+const char* CPPLock::getName()
+{
+    return this->name.c_str();
+}
+
+void CPPLock::lock_r()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    AcquireSRWLockShared(&lock);//min Windows Vista
+#else
+    pthread_rwlock_rdlock(&lock);
+#endif
+}
+
+void CPPLock::lock_w()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    AcquireSRWLockExclusive(&lock);//min Windows Vista
+#else
+    pthread_rwlock_wrlock(&lock);
+#endif
+}
+
+bool CPPLock::trylock_r()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return TryAcquireSRWLockShared(&lock);//min Windows 7
+#else
+    return (pthread_rwlock_tryrdlock(&lock) == 0);
+#endif
+}
+
+bool CPPLock::trylock_w()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return TryAcquireSRWLockExclusive(&lock);//min Windows 7
+#else
+    return (pthread_rwlock_trywrlock(&lock) == 0);
+#endif
+}
+
+void CPPLock::unlock_r()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    ReleaseSRWLockShared(&lock);//min Windows Vista
+#else
+    pthread_rwlock_unlock(&lock);
+#endif
+}
+
+void CPPLock::unlock_w()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    ReleaseSRWLockExclusive(&lock);//min Windows Vista
+#else
+    pthread_rwlock_unlock(&lock);
+#endif
 }
 
 Message::Message()

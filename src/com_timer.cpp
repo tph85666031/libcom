@@ -136,7 +136,7 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
 
 bool CPPTimerManager::isTimerExist(std::string uuid)
 {
-    AutoMutex a(mutex_timers);
+    std::lock_guard<std::mutex> lck(mutex_timers);
     for(size_t i = 0; i < timers.size(); i++)
     {
         if(timers[i].uuid == uuid)

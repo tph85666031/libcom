@@ -254,23 +254,6 @@ void com_file_unit_test_suit(void** state)
     //LOG_I("val=%s", val.toString().c_str());
 
     com_file_close(file);
-
-    com_file_create(PATH_TO_LOCAL("./1.lck").c_str());
-    FILE* f_lck = com_file_open(PATH_TO_LOCAL("./1.lck").c_str(), "r");
-    ASSERT_NOT_NULL(f_lck);
-#if 0
-    ASSERT_TRUE(com_file_lock(f_lck));
-    LOG_I("file locked");
-    com_sleep_s(10);
-    ASSERT_TRUE(com_file_unlock(f_lck));
-    ASSERT_TRUE(com_file_lock(f_lck, true));
-    LOG_I("file locked for read only");
-    com_sleep_s(10);
-    ASSERT_TRUE(com_file_unlock(f_lck));
-    LOG_I("file unlocked");
-    com_sleep_s(10);
-    com_file_close(f_lck);
-    com_file_remove(PATH_TO_LOCAL("./1.lck").c_str());
-#endif
+    com_file_remove(PATH_TO_LOCAL("./1.rtf").c_str());
 }
 

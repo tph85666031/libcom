@@ -84,17 +84,6 @@ typedef unsigned long long uint64;
 #define DEPRECATED(msg)
 #endif
 
-class COM_EXPORT Mutex
-{
-public:
-    std::string name;
-#if defined(_WIN32) || defined(_WIN64)
-    void* handle = NULL;
-#else
-    pthread_mutex_t handle;
-#endif
-};
-
 class COM_EXPORT Sem
 {
 public:
@@ -105,17 +94,6 @@ public:
     sem_t handle;
 #elif defined(__APPLE__)
     dispatch_semaphore_t handle = NULL;
-#endif
-};
-
-class COM_EXPORT Condition
-{
-public:
-    std::string name;
-#if defined(_WIN32) || defined(_WIN64)
-    void* handle = NULL;
-#else
-    pthread_cond_t handle;
 #endif
 };
 
@@ -173,7 +151,7 @@ COM_EXPORT bool com_run_shell_in_thread(const char* fmt, ...) __attribute__((for
 
 COM_EXPORT void com_sleep_s(uint32 val);
 COM_EXPORT void com_sleep_ms(uint32 val);
-COM_EXPORT uint32 com_rand(uint32 min, uint32 max);
+COM_EXPORT uint32 com_rand(uint32 min, uint32 max);//[min-max]
 COM_EXPORT char* com_strncpy(char* dst, const char* src, int dst_size);
 COM_EXPORT bool com_strncmp_ignore_case(const char* str1, const char* str2, int size);
 COM_EXPORT bool com_strncmp(const char* str1, const char* str2, int size);
@@ -240,13 +218,6 @@ COM_EXPORT GPS com_gps_gcj02_to_bd09(double longitude, double latitude);
 COM_EXPORT GPS com_gps_bd09_to_gcj02(double longitude, double latitude);
 
 COM_EXPORT double com_cycle_perimeter(double diameter);
-
-COM_EXPORT bool com_mutex_init(Mutex* mutex, const char* name = "Unknown");//通过init来创建
-COM_EXPORT bool com_mutex_uninit(Mutex* mutex);//通过init创建的由uninit删除
-COM_EXPORT Mutex* com_mutex_create(const char* name = "Unknown");//通过create（malloc）来创建
-COM_EXPORT bool com_mutex_destroy(Mutex* mutex);//通过create创建的由destroy删除
-COM_EXPORT bool com_mutex_lock(Mutex* mutex);
-COM_EXPORT bool com_mutex_unlock(Mutex* mutex);
 
 COM_EXPORT bool com_sem_init(Sem* sem, const char* name = "Unknown");//通过init来创建
 COM_EXPORT bool com_sem_uninit(Sem* sem);//通过init创建的由uninit删除
@@ -391,16 +362,29 @@ private :
     std::condition_variable condition;
 };
 
-class COM_EXPORT AutoMutex
+class COM_EXPORT CPPLock
 {
 public:
-    AutoMutex(CPPMutex& mutex);
-    AutoMutex(Mutex* mutex);
-    AutoMutex(std::mutex* mutex);
-    virtual ~AutoMutex();
+    CPPLock(const char* name = "Unknown");
+    virtual ~CPPLock();
+    void setName(const char* name);
+    const char* getName();
+
+    void lock_r();
+    void lock_w();
+
+    bool trylock_r();
+    bool trylock_w();
+
+    void unlock_r();
+    void unlock_w();
 private:
-    Mutex* mutex_c = NULL;
-    std::mutex* mutex_cpp = NULL;
+    std::string name;
+#if defined(_WIN32) || defined(_WIN64)
+    SRWLock lock;
+#else
+    pthread_rwlock_t lock;
+#endif
 };
 
 class COM_EXPORT Message
@@ -448,7 +432,7 @@ public:
     void removeAll();
 
     std::vector<std::string> getAllKeys() const;
-    
+
     bool getBool(const char* key, bool default_val = false) const;
     char getChar(const char* key, char default_val = '\0') const;
     float getFloat(const char* key, float default_val = 0.0f) const;

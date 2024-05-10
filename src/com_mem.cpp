@@ -253,7 +253,7 @@ static MemDataSyncManager& GetMemDataSyncManager()
 
 bool com_mem_is_key_exist(const char* key)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.isKeyExist(key);
 }
 
@@ -410,85 +410,85 @@ void com_mem_clear()
 
 bool com_mem_get_bool(const char* key, bool default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getBool(key, default_val);
 }
 
 char com_mem_get_char(const char* key, char default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getChar(key, default_val);
 }
 
 double com_mem_get_double(const char* key, double default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getDouble(key, default_val);
 }
 
 int8 com_mem_get_int8(const char* key, int8 default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getInt8(key, default_val);
 }
 
 int16 com_mem_get_int16(const char* key, int16 default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getInt16(key, default_val);
 }
 
 int32 com_mem_get_int32(const char* key, int32 default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getInt32(key, default_val);
 }
 
 int64 com_mem_get_int64(const char* key, int64 default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getInt64(key, default_val);
 }
 
 uint8 com_mem_get_uint8(const char* key, uint8 default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getUInt8(key, default_val);
 }
 
 uint16 com_mem_get_uint16(const char* key, uint16 default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getUInt16(key, default_val);
 }
 
 uint32 com_mem_get_uint32(const char* key, uint32 default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getUInt32(key, default_val);
 }
 
 uint64 com_mem_get_uint64(const char* key, uint64 default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getUInt64(key, default_val);
 }
 
 std::string com_mem_get_string(const char* key, std::string default_val)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getString(key, default_val);
 }
 
 CPPBytes com_mem_get_bytes(const char* key)
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getBytes(key);
 }
 
 std::string com_mem_to_json()
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.toJSON();
 }
 
@@ -521,7 +521,7 @@ void com_mem_from_file(std::string file)
 
 Message com_mem_to_message()
 {
-    AutoMutex mutex(&mutex_share_mem);
+    std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg;
 }
 
