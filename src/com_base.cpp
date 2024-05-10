@@ -2863,7 +2863,8 @@ bool CPPCondition::wait(int timeout_ms)
 CPPLock::CPPLock(const char* name)
 {
 #if defined(_WIN32) || defined(_WIN64)
-    InitializeSRWLock(&lock);
+    //InitializeSRWLock(&lock);
+    LOG_E("not support");
 #else
     if(pthread_rwlock_init(&lock, NULL) != 0)
     {
@@ -2897,7 +2898,8 @@ const char* CPPLock::getName()
 void CPPLock::lock_r()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    AcquireSRWLockShared(&lock);//min Windows Vista
+    //AcquireSRWLockShared(&lock);//min Windows Vista
+    LOG_E("not support");
 #else
     pthread_rwlock_rdlock(&lock);
 #endif
@@ -2906,7 +2908,8 @@ void CPPLock::lock_r()
 void CPPLock::lock_w()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    AcquireSRWLockExclusive(&lock);//min Windows Vista
+    //AcquireSRWLockExclusive(&lock);//min Windows Vista
+    LOG_E("not support");
 #else
     pthread_rwlock_wrlock(&lock);
 #endif
@@ -2915,7 +2918,9 @@ void CPPLock::lock_w()
 bool CPPLock::trylock_r()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    return TryAcquireSRWLockShared(&lock);//min Windows 7
+    //return TryAcquireSRWLockShared(&lock);//min Windows 7
+    LOG_E("not support");
+    return false;
 #else
     return (pthread_rwlock_tryrdlock(&lock) == 0);
 #endif
@@ -2924,7 +2929,9 @@ bool CPPLock::trylock_r()
 bool CPPLock::trylock_w()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    return TryAcquireSRWLockExclusive(&lock);//min Windows 7
+    //return TryAcquireSRWLockExclusive(&lock);//min Windows 7
+    LOG_E("not support");
+    return false;
 #else
     return (pthread_rwlock_trywrlock(&lock) == 0);
 #endif
@@ -2933,7 +2940,8 @@ bool CPPLock::trylock_w()
 void CPPLock::unlock_r()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    ReleaseSRWLockShared(&lock);//min Windows Vista
+    //ReleaseSRWLockShared(&lock);//min Windows Vista
+    LOG_E("not support");
 #else
     pthread_rwlock_unlock(&lock);
 #endif
@@ -2942,7 +2950,8 @@ void CPPLock::unlock_r()
 void CPPLock::unlock_w()
 {
 #if defined(_WIN32) || defined(_WIN64)
-    ReleaseSRWLockExclusive(&lock);//min Windows Vista
+    //ReleaseSRWLockExclusive(&lock);//min Windows Vista
+    LOG_E("not support");
 #else
     pthread_rwlock_unlock(&lock);
 #endif

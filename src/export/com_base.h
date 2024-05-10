@@ -381,7 +381,7 @@ public:
 private:
     std::string name;
 #if defined(_WIN32) || defined(_WIN64)
-    SRWLock lock;
+    //SRWLock lock;
 #else
     pthread_rwlock_t lock;
 #endif
