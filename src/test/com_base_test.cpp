@@ -635,6 +635,50 @@ void com_base_json_unit_test_suit(void** state)
     ASSERT_STR_EQUAL(address3.c_str(), "address3");
 }
 
+void com_base_lock_unit_test_suit(void** state)
+{
+    std::list<std::thread> t;
+    int thread_count = 10;
+    int loop_count = 32 * 1024 * 1024;
+    uint64 x = 0;
+    uint64 y = 0;
+    CPPMutex m;
+    uint64 time_begin = com_time_cpu_ms();
+    for(int i = 0; i < thread_count; i++)
+    {
+        t.push_back(std::thread([&](const int writer_ratio)->void
+        {
+            for(int j = 0; j < loop_count; j++)
+            {
+                if(j % writer_ratio)
+                {
+                    m.lock_shared();
+                    if(x != y)
+                    {
+                        LOG_E("x=%llu,y=%llu,flag=%llu", x, y, m.flag.load() & 0x00FFFFFFFF);
+                        throw std::runtime_error("test failed");
+                    }
+                    m.unlock_shared();
+                }
+                else
+                {
+                    m.lock();
+                    x++;
+                    y++;
+                    m.unlock();
+                }
+            }
+        }, 4));
+    }
+
+    for(auto& it : t)
+    {
+        it.join();
+    }
+
+    LOG_I("time cost=%lld", com_time_cpu_ms() - time_begin);
+}
+
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

@@ -46,6 +46,8 @@ static std::mutex mutex_app_path;
 #define XFOLD(c) ((flags & XFNM_CASEFOLD) ? std::tolower(c) : (c))
 #define XEOS '\0'
 
+#define LOCK_FLAG_WRITE_ACTIVE    0x8000000000000000ULL
+
 static const char* xfnmatch_rangematch(const char* pattern, int test, int flags)
 {
     char c = 0;
@@ -2731,6 +2733,7 @@ CPPMutex::CPPMutex(const char* name)
     {
         this->name = name;
     }
+    flag = 0;
 }
 
 CPPMutex::~CPPMutex()
@@ -2752,23 +2755,66 @@ const char* CPPMutex::getName()
 
 void CPPMutex::lock()
 {
-#ifdef __DEBUG_MUTEX__
-    LOG_D("mutex=%s thread=%s LOCKED", name.c_str(), com_thread_get_name().c_str());
-#endif
-    mutex.lock();
+    do
+    {
+        uint64 val = flag.load();
+        if(val != 0)
+        {
+            std::this_thread::yield();//有其它线程在读
+            continue;
+        }
+        if(flag.compare_exchange_weak(val, LOCK_FLAG_WRITE_ACTIVE))
+        {
+            break;
+        }
+    }
+    while(true);
 }
 
 void CPPMutex::unlock()
 {
-    mutex.unlock();
-#ifdef __DEBUG_MUTEX__
-    LOG_D("mutex=%s thread=%s UNLOCKED", name.c_str(), com_thread_get_name().c_str());
-#endif
+    do
+    {
+        uint64 val = flag.load();
+        //compare_exchange_weak允许有概率性失败,此处需要重试
+        if(flag.compare_exchange_weak(val, 0))
+        {
+            break;
+        }
+    }
+    while(true);
 }
 
-std::mutex* CPPMutex::getMutex()
+void CPPMutex::lock_shared()
 {
-    return &mutex;
+    do
+    {
+        uint64 val = flag.load();
+        if(val & LOCK_FLAG_WRITE_ACTIVE) //有线程在写
+        {
+            std::this_thread::yield();
+            continue;
+        }
+
+        if(flag.compare_exchange_weak(val, val + 1))
+        {
+            break;
+        }
+    }
+    while(true);
+}
+
+void CPPMutex::unlock_shared()
+{
+    do
+    {
+        uint64 val = flag.load();
+        if(flag.compare_exchange_weak(val, val - 1))
+        {
+            break;
+        }
+    }
+    while(true);
 }
 
 CPPSem::CPPSem(const char* name)
@@ -2858,103 +2904,6 @@ bool CPPCondition::wait(int timeout_ms)
         condition.wait(lock);
     }
     return true;
-}
-
-CPPLock::CPPLock(const char* name)
-{
-#if defined(_WIN32) || defined(_WIN64)
-    //InitializeSRWLock(&lock);
-    LOG_E("not support");
-#else
-    if(pthread_rwlock_init(&lock, NULL) != 0)
-    {
-        LOG_E("failed");
-    }
-#endif
-    setName(name);
-}
-
-CPPLock::~CPPLock()
-{
-#if defined(_WIN32) || defined(_WIN64)
-#else
-    pthread_rwlock_destroy(&lock);
-#endif
-}
-
-void CPPLock::setName(const char* name)
-{
-    if(name != NULL)
-    {
-        this->name = name;
-    }
-}
-
-const char* CPPLock::getName()
-{
-    return this->name.c_str();
-}
-
-void CPPLock::lock_r()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    //AcquireSRWLockShared(&lock);//min Windows Vista
-    LOG_E("not support");
-#else
-    pthread_rwlock_rdlock(&lock);
-#endif
-}
-
-void CPPLock::lock_w()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    //AcquireSRWLockExclusive(&lock);//min Windows Vista
-    LOG_E("not support");
-#else
-    pthread_rwlock_wrlock(&lock);
-#endif
-}
-
-bool CPPLock::trylock_r()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    //return TryAcquireSRWLockShared(&lock);//min Windows 7
-    LOG_E("not support");
-    return false;
-#else
-    return (pthread_rwlock_tryrdlock(&lock) == 0);
-#endif
-}
-
-bool CPPLock::trylock_w()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    //return TryAcquireSRWLockExclusive(&lock);//min Windows 7
-    LOG_E("not support");
-    return false;
-#else
-    return (pthread_rwlock_trywrlock(&lock) == 0);
-#endif
-}
-
-void CPPLock::unlock_r()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    //ReleaseSRWLockShared(&lock);//min Windows Vista
-    LOG_E("not support");
-#else
-    pthread_rwlock_unlock(&lock);
-#endif
-}
-
-void CPPLock::unlock_w()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    //ReleaseSRWLockExclusive(&lock);//min Windows Vista
-    LOG_E("not support");
-#else
-    pthread_rwlock_unlock(&lock);
-#endif
 }
 
 Message::Message()

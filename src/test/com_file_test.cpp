@@ -249,5 +249,6 @@ void com_file_unit_test_suit(void** state)
 
     com_file_close(file);
     com_file_remove(PATH_TO_LOCAL("./1.rtf").c_str());
+    com_dir_remove("./1");
 }
 

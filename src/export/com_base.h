@@ -327,10 +327,11 @@ public:
     const char* getName();
     void lock();
     void unlock();
-    std::mutex* getMutex();
-private :
+    void lock_shared();
+    void unlock_shared();
+public :
     std::string name;
-    std::mutex mutex;
+    std::atomic<uint64> flag;
 };
 
 class COM_EXPORT CPPSem
@@ -360,31 +361,6 @@ private :
     std::string name;
     std::mutex mutex_cv;
     std::condition_variable condition;
-};
-
-class COM_EXPORT CPPLock
-{
-public:
-    CPPLock(const char* name = "Unknown");
-    virtual ~CPPLock();
-    void setName(const char* name);
-    const char* getName();
-
-    void lock_r();
-    void lock_w();
-
-    bool trylock_r();
-    bool trylock_w();
-
-    void unlock_r();
-    void unlock_w();
-private:
-    std::string name;
-#if defined(_WIN32) || defined(_WIN64)
-    //SRWLock lock;
-#else
-    pthread_rwlock_t lock;
-#endif
 };
 
 class COM_EXPORT Message

@@ -8,6 +8,7 @@ extern void com_base_gps_unit_test_suit(void** state);
 extern void com_base_bytearray_unit_test_suit(void** state);
 extern void com_base_message_unit_test_suit(void** state);
 extern void com_base_json_unit_test_suit(void** state);
+extern void com_base_lock_unit_test_suit(void** state);
 extern void com_cache_unit_test_suit(void** state);
 extern void com_thread_unit_test_suit(void** state);
 extern void com_socket_unit_test_suit(void** state);
@@ -68,7 +69,7 @@ CMUnitTest test_cases_com_lib[] =
     cmocka_unit_test(com_sync_unit_test_suit),
     cmocka_unit_test(com_socket_stringipc_unit_test_suit)
 #else
-    cmocka_unit_test(com_file_unit_test_suit)
+    cmocka_unit_test(com_base_lock_unit_test_suit)
 #endif
 };
 
