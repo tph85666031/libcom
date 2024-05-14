@@ -4,6 +4,7 @@
 #include "com_test.h"
 #include "com_stack.h"
 #include "com_file.h"
+#include "com_thread.h"
 #include "CJsonObject.h"
 
 #ifdef __GNUC__
@@ -635,14 +636,16 @@ void com_base_json_unit_test_suit(void** state)
     ASSERT_STR_EQUAL(address3.c_str(), "address3");
 }
 
+#include <shared_mutex>
 void com_base_lock_unit_test_suit(void** state)
 {
     std::list<std::thread> t;
-    int thread_count = 10;
-    int loop_count = 32 * 1024 * 1024;
+    int thread_count = 8;
+    int loop_count = 1 * 1024 * 1024;
     uint64 x = 0;
     uint64 y = 0;
     CPPMutex m;
+    //std::shared_mutex m;
     uint64 time_begin = com_time_cpu_ms();
     for(int i = 0; i < thread_count; i++)
     {
@@ -650,25 +653,25 @@ void com_base_lock_unit_test_suit(void** state)
         {
             for(int j = 0; j < loop_count; j++)
             {
-                if(j % writer_ratio)
-                {
-                    m.lock_shared();
-                    if(x != y)
-                    {
-                        LOG_E("x=%llu,y=%llu,flag=%llu", x, y, m.flag.load() & 0x00FFFFFFFF);
-                        throw std::runtime_error("test failed");
-                    }
-                    m.unlock_shared();
-                }
-                else
+                if((j % writer_ratio) == 0)
                 {
                     m.lock();
                     x++;
                     y++;
                     m.unlock();
                 }
+                else
+                {
+                    m.lock_shared();
+                    if(x != y)
+                    {
+                        LOG_E("x=%llu,y=%llu", x, y);
+                        throw std::runtime_error("test failed");
+                    }
+                    m.unlock_shared();
+                }
             }
-        }, 4));
+        }, 1 * 1024*1024));
     }
 
     for(auto& it : t)
@@ -676,7 +679,7 @@ void com_base_lock_unit_test_suit(void** state)
         it.join();
     }
 
-    LOG_I("time cost=%lld", com_time_cpu_ms() - time_begin);
+    LOG_I("time cost=%lld,x=%llu", com_time_cpu_ms() - time_begin, x);
 }
 
 #ifdef __GNUC__

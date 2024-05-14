@@ -46,7 +46,8 @@ static std::mutex mutex_app_path;
 #define XFOLD(c) ((flags & XFNM_CASEFOLD) ? std::tolower(c) : (c))
 #define XEOS '\0'
 
-#define LOCK_FLAG_WRITE_ACTIVE    0x8000000000000000ULL
+#define LOCK_FLAG_READ_ACTIVE     0x8000000000000000
+#define LOCK_FLAG_WRITE_ACTIVE    0x4000000000000000
 
 static const char* xfnmatch_rangematch(const char* pattern, int test, int flags)
 {
@@ -2755,15 +2756,15 @@ const char* CPPMutex::getName()
 
 void CPPMutex::lock()
 {
+    uint64 val = flag.load();
     do
     {
-        uint64 val = flag.load();
         if(val != 0)
         {
-            std::this_thread::yield();//有其它线程在读
-            continue;
+            std::this_thread::yield();//有其它线程在读写
+            val = flag.load();
         }
-        if(flag.compare_exchange_weak(val, LOCK_FLAG_WRITE_ACTIVE))
+        else if(flag.compare_exchange_weak(val, LOCK_FLAG_WRITE_ACTIVE))
         {
             break;
         }
@@ -2773,6 +2774,7 @@ void CPPMutex::lock()
 
 void CPPMutex::unlock()
 {
+#if 0
     do
     {
         uint64 val = flag.load();
@@ -2783,20 +2785,21 @@ void CPPMutex::unlock()
         }
     }
     while(true);
+#endif
+    flag = 0;
 }
 
 void CPPMutex::lock_shared()
 {
+    uint64 val = flag.load();
     do
     {
-        uint64 val = flag.load();
         if(val & LOCK_FLAG_WRITE_ACTIVE) //有线程在写
         {
             std::this_thread::yield();
-            continue;
+            val = flag.load();
         }
-
-        if(flag.compare_exchange_weak(val, val + 1))
+        else if(flag.compare_exchange_weak(val, val + 1))
         {
             break;
         }
@@ -2806,15 +2809,7 @@ void CPPMutex::lock_shared()
 
 void CPPMutex::unlock_shared()
 {
-    do
-    {
-        uint64 val = flag.load();
-        if(flag.compare_exchange_weak(val, val - 1))
-        {
-            break;
-        }
-    }
-    while(true);
+    flag--;
 }
 
 CPPSem::CPPSem(const char* name)
