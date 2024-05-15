@@ -637,7 +637,9 @@ void com_base_json_unit_test_suit(void** state)
 }
 
 #include <shared_mutex>
+#if _linux__==1
 #include <sys/resource.h>
+#endif
 template<class T>
 void lock_test(T& m, int thread_count, int loop_count, int writer_ratio)
 {
@@ -645,8 +647,10 @@ void lock_test(T& m, int thread_count, int loop_count, int writer_ratio)
     uint64 y = 0;
     std::list<std::thread> t;
     uint64 time_begin = com_time_cpu_ms();
+#if _linux__==1
     struct rusage r_begin;
     getrusage(RUSAGE_SELF, &r_begin);
+#endif
     for(int i = 0; i < thread_count; i++)
     {
         t.push_back(std::thread([&]()->void
@@ -679,11 +683,16 @@ void lock_test(T& m, int thread_count, int loop_count, int writer_ratio)
         it.join();
     }
     t.clear();
+#if _linux__==1
     struct rusage r_end;
     getrusage(RUSAGE_SELF, &r_end);
     double ru = r_end.ru_utime.tv_sec + (double)r_end.ru_utime.tv_usec / 100000 - r_begin.ru_utime.tv_sec - (double)r_begin.ru_utime.tv_usec / 1000000;
     double rs = r_end.ru_stime.tv_sec + (double)r_end.ru_stime.tv_usec / 100000 - r_begin.ru_stime.tv_sec - (double)r_begin.ru_stime.tv_usec / 1000000;
-    printf("%-16s  %8d  %.4fs u:%.4f s:%.4f %10lld\n", typeid(m).name(), writer_ratio, (double)(com_time_cpu_ms() - time_begin) / 1000, ru, rs, x);
+#else
+    double ru = -1;
+    double rs = -1;
+#endif
+    printf("%-20s  %8d  %.4fs u:%.4f s:%.4f %10lld\n", typeid(m).name(), writer_ratio, (double)(com_time_cpu_ms() - time_begin) / 1000, ru, rs, x);
 }
 
 void com_base_lock_unit_test_suit(void** state)
@@ -699,6 +708,8 @@ void com_base_lock_unit_test_suit(void** state)
         lock_test(m2, thread_count, loop_count, i);
         printf("\n");
     }
+
+    LOG_I("size=%lld", com_file_size("d:\\Downloads\\private_key"));
 }
 
 #ifdef __GNUC__
