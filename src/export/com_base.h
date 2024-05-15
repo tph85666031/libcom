@@ -318,11 +318,11 @@ private:
     std::vector<uint8> buf;
 };
 
-class COM_EXPORT CPPMutex
+class COM_EXPORT ComMutex
 {
 public:
-    CPPMutex(const char* name = "Unknown");
-    virtual ~CPPMutex();
+    ComMutex(const char* name = "Unknown");
+    virtual ~ComMutex();
     void setName(const char* name);
     const char* getName();
     void lock();
@@ -337,8 +337,8 @@ public :
 class COM_EXPORT CPPSem
 {
 public:
-    CPPSem(const char* name = "Unknown");
-    virtual ~CPPSem();
+    ComSem(const char* name = "Unknown");
+    virtual ~ComSem();
     void setName(const char* name);
     const char* getName();
     bool post();
@@ -350,8 +350,8 @@ private :
 class COM_EXPORT CPPCondition
 {
 public:
-    CPPCondition(const char* name = "Unknown");
-    virtual ~CPPCondition();
+    ComCondition(const char* name = "Unknown");
+    virtual ~ComCondition();
     void setName(const char* name);
     const char* getName();
     bool notifyOne();

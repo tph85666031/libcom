@@ -34,9 +34,9 @@ private:
     int epoll_timeout_ms;
     std::thread thread_listener;
     std::thread thread_receiver;
-    CPPMutex mutex_clients;
+    std::mutex mutex_clients;
     std::map<int, SOCKET_CLIENT_DES> clients;
-    CPPMutex mutexfds;
+    std::mutex mutexfds;
     CPPSem semfds;
     std::deque<SOCKET_CLIENT_DES> ready_fds;
 };
@@ -71,9 +71,9 @@ private:
     int epoll_timeout_ms;
     std::thread thread_listener;
     std::thread thread_receiver;
-    CPPMutex mutex_clients;
+    std::mutex mutex_clients;
     std::map<int, SOCKET_CLIENT_DES> clients;
-    CPPMutex mutexfds;
+    ComMutex mutexfds;
     CPPSem semfds;
     std::queue<SOCKET_CLIENT_DES> fds;
 };

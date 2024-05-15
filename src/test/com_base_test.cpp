@@ -14,7 +14,7 @@
 
 using namespace std;
 
-static CPPMutex mutex_test("mutex_test_auto");
+static std::mutex mutex_test;
 
 static int mock_test(int* val_a, int* val_b, int val_c)
 {
@@ -637,19 +637,19 @@ void com_base_json_unit_test_suit(void** state)
 }
 
 #include <shared_mutex>
-void com_base_lock_unit_test_suit(void** state)
+#include <sys/resource.h>
+template<class T>
+void lock_test(T& m, int thread_count, int loop_count, int writer_ratio)
 {
-    std::list<std::thread> t;
-    int thread_count = 8;
-    int loop_count = 1 * 1024 * 1024;
     uint64 x = 0;
     uint64 y = 0;
-    CPPMutex m;
-    //std::shared_mutex m;
+    std::list<std::thread> t;
     uint64 time_begin = com_time_cpu_ms();
+    struct rusage r_begin;
+    getrusage(RUSAGE_SELF, &r_begin);
     for(int i = 0; i < thread_count; i++)
     {
-        t.push_back(std::thread([&](const int writer_ratio)->void
+        t.push_back(std::thread([&]()->void
         {
             for(int j = 0; j < loop_count; j++)
             {
@@ -671,15 +671,34 @@ void com_base_lock_unit_test_suit(void** state)
                     m.unlock_shared();
                 }
             }
-        }, 1 * 1024*1024));
+        }));
     }
 
     for(auto& it : t)
     {
         it.join();
     }
+    t.clear();
+    struct rusage r_end;
+    getrusage(RUSAGE_SELF, &r_end);
+    double ru = r_end.ru_utime.tv_sec + (double)r_end.ru_utime.tv_usec / 100000 - r_begin.ru_utime.tv_sec - (double)r_begin.ru_utime.tv_usec / 1000000;
+    double rs = r_end.ru_stime.tv_sec + (double)r_end.ru_stime.tv_usec / 100000 - r_begin.ru_stime.tv_sec - (double)r_begin.ru_stime.tv_usec / 1000000;
+    printf("%-16s  %8d  %.4fs u:%.4f s:%.4f %10lld\n", typeid(m).name(), writer_ratio, (double)(com_time_cpu_ms() - time_begin) / 1000, ru, rs, x);
+}
 
-    LOG_I("time cost=%lld,x=%llu", com_time_cpu_ms() - time_begin, x);
+void com_base_lock_unit_test_suit(void** state)
+{
+    int thread_count = 16;
+    int loop_count = 1 * 1024 * 1024;
+
+    ComMutex m1;
+    std::shared_mutex m2;
+    for(int i = 1; i < loop_count; i = i * 2)
+    {
+        lock_test(m1, thread_count, loop_count, i);
+        lock_test(m2, thread_count, loop_count, i);
+        printf("\n");
+    }
 }
 
 #ifdef __GNUC__

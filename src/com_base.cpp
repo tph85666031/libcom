@@ -46,8 +46,7 @@ static std::mutex mutex_app_path;
 #define XFOLD(c) ((flags & XFNM_CASEFOLD) ? std::tolower(c) : (c))
 #define XEOS '\0'
 
-#define LOCK_FLAG_READ_ACTIVE     0x8000000000000000
-#define LOCK_FLAG_WRITE_ACTIVE    0x4000000000000000
+#define LOCK_FLAG_WRITE_ACTIVE    0x8000000000000000LLU
 
 static const char* xfnmatch_rangematch(const char* pattern, int test, int flags)
 {
@@ -2728,7 +2727,7 @@ CPPBytes CPPBytes::FromHexString(const char* hex_str)
     return com_hexstring_to_bytes(hex_str);
 }
 
-CPPMutex::CPPMutex(const char* name)
+ComMutex::ComMutex(const char* name)
 {
     if(name != NULL)
     {
@@ -2737,11 +2736,11 @@ CPPMutex::CPPMutex(const char* name)
     flag = 0;
 }
 
-CPPMutex::~CPPMutex()
+ComMutex::~ComMutex()
 {
 }
 
-void CPPMutex::setName(const char* name)
+void ComMutex::setName(const char* name)
 {
     if(name != NULL)
     {
@@ -2749,12 +2748,12 @@ void CPPMutex::setName(const char* name)
     }
 }
 
-const char* CPPMutex::getName()
+const char* ComMutex::getName()
 {
     return name.c_str();
 }
 
-void CPPMutex::lock()
+void ComMutex::lock()
 {
     uint64 val = flag.load();
     do
@@ -2772,42 +2771,22 @@ void CPPMutex::lock()
     while(true);
 }
 
-void CPPMutex::unlock()
-{
-#if 0
-    do
-    {
-        uint64 val = flag.load();
-        //compare_exchange_weak允许有概率性失败,此处需要重试
-        if(flag.compare_exchange_weak(val, 0))
-        {
-            break;
-        }
-    }
-    while(true);
-#endif
-    flag = 0;
-}
-
-void CPPMutex::lock_shared()
+void ComMutex::unlock()
 {
     uint64 val = flag.load();
-    do
-    {
-        if(val & LOCK_FLAG_WRITE_ACTIVE) //有线程在写
-        {
-            std::this_thread::yield();
-            val = flag.load();
-        }
-        else if(flag.compare_exchange_weak(val, val + 1))
-        {
-            break;
-        }
-    }
-    while(true);
+    while(!flag.compare_exchange_weak(val, val & (~LOCK_FLAG_WRITE_ACTIVE)));
 }
 
-void CPPMutex::unlock_shared()
+void ComMutex::lock_shared()
+{
+    flag++;
+    while(flag & LOCK_FLAG_WRITE_ACTIVE)//有线程在写
+    {
+        std::this_thread::yield();
+    }
+}
+
+void ComMutex::unlock_shared()
 {
     flag--;
 }

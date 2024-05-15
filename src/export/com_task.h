@@ -58,10 +58,10 @@ private:
 private:
     std::string name;
     std::thread thread_runner;
-    CPPMutex mutex_msgs = {"TASK:mutex_msgs"};
+    std::mutex mutex_msgs;
     std::queue<Message> msgs;
     std::atomic<bool> running;
-    CPPMutex mutex_listeners = {"TASK:mutex_listeners"};
+    std::mutex mutex_listeners;
     std::map<uint32, uint32> listeners;
     CPPCondition condition = {"TASK:condition"};
     std::atomic<bool> protect_mode = {false};
@@ -127,7 +127,7 @@ public:
         return task;
     };
 private:
-    CPPMutex mutex_tasks = {"TaskManager:mutex_tasks"};
+    std::mutex mutex_tasks;
     std::map<std::string, Task*> tasks;
 };
 

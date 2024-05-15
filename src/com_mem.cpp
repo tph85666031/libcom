@@ -231,11 +231,11 @@ private:
     std::thread thread_runner;
     std::atomic<bool> running = {false};
 
-    CPPMutex mutex_hooks;
+    std::mutex mutex_hooks;
     std::map<std::string, std::set<MemDataCallbackItem>> hooks_cb;
     std::map<std::string, std::set<std::string>> hooks_task;
 
-    CPPMutex mutex_keys;
+    std::mutex mutex_keys;
     CPPSem sem_keys = {"sem_mem"};
     std::queue<MemDataSyncItem> keys;
 
