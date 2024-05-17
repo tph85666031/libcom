@@ -321,7 +321,7 @@ private:
 class COM_EXPORT ComMutex
 {
 public:
-    ComMutex(const char* name = "Unknown");
+    ComMutex(const char* name = NULL);
     virtual ~ComMutex();
     void setName(const char* name);
     const char* getName();
@@ -337,7 +337,7 @@ public :
 class COM_EXPORT CPPSem
 {
 public:
-    CPPSem(const char* name = "Unknown");
+    CPPSem(const char* name = NULL);
     virtual ~CPPSem();
     void setName(const char* name);
     const char* getName();
@@ -350,7 +350,7 @@ private :
 class COM_EXPORT CPPCondition
 {
 public:
-    CPPCondition(const char* name = "Unknown");
+    CPPCondition(const char* name = NULL);
     virtual ~CPPCondition();
     void setName(const char* name);
     const char* getName();

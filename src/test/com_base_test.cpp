@@ -637,7 +637,7 @@ void com_base_json_unit_test_suit(void** state)
 }
 
 #include <shared_mutex>
-#if _linux__==1
+#if __linux__==1
 #include <sys/resource.h>
 #endif
 template<class T>
@@ -647,7 +647,7 @@ void lock_test(T& m, int thread_count, int loop_count, int writer_ratio)
     uint64 y = 0;
     std::list<std::thread> t;
     uint64 time_begin = com_time_cpu_ms();
-#if _linux__==1
+#if __linux__==1
     struct rusage r_begin;
     getrusage(RUSAGE_SELF, &r_begin);
 #endif
@@ -683,7 +683,7 @@ void lock_test(T& m, int thread_count, int loop_count, int writer_ratio)
         it.join();
     }
     t.clear();
-#if _linux__==1
+#if __linux__==1
     struct rusage r_end;
     getrusage(RUSAGE_SELF, &r_end);
     double ru = r_end.ru_utime.tv_sec + (double)r_end.ru_utime.tv_usec / 100000 - r_begin.ru_utime.tv_sec - (double)r_begin.ru_utime.tv_usec / 1000000;
@@ -697,19 +697,17 @@ void lock_test(T& m, int thread_count, int loop_count, int writer_ratio)
 
 void com_base_lock_unit_test_suit(void** state)
 {
-    int thread_count = 16;
+    int thread_count = 32;
     int loop_count = 1 * 1024 * 1024;
 
     ComMutex m1;
-    std::shared_mutex m2;
+    //std::shared_mutex m2;
     for(int i = 1; i < loop_count; i = i * 2)
     {
         lock_test(m1, thread_count, loop_count, i);
-        lock_test(m2, thread_count, loop_count, i);
+        //lock_test(m2, thread_count, loop_count, i);
         printf("\n");
     }
-
-    LOG_I("size=%lld", com_file_size("d:\\Downloads\\private_key"));
 }
 
 #ifdef __GNUC__
