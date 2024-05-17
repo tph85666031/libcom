@@ -688,16 +688,26 @@ int64 com_file_size(int fd)
     }
     unsigned long filesize = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat statbuff;
-    if(_fstat(fd, &statbuff) == 0)
+    struct _stat64 statbuff;
+    int ret = _fstat64(fd, &statbuff);
+    if(ret == 0)
     {
         filesize = statbuff.st_size;
     }
+    else
+    {
+        LOG_E("failed to get file size,ret=%d,errno=%d", ret, errno);
+    }
 #else
     struct stat statbuff;
-    if(fstat(fd, &statbuff) == 0)
+    int ret = fstat(fd, &statbuff);
+    if(ret == 0)
     {
         filesize = statbuff.st_size;
+    }
+    else
+    {
+        LOG_E("failed to get file size,ret=%d,errno=%d", ret, errno);
     }
 #endif
     return filesize;
@@ -720,16 +730,26 @@ int64 com_file_size(const char* file_path)
     }
     unsigned long filesize = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat statbuff;
-    if(_wstat(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
+    struct __stat64 statbuff;
+    int ret = _wstat64(com_wstring_from_utf8(file_path).c_str(), &statbuff);
+    if(ret == 0)
     {
         filesize = statbuff.st_size;
     }
+    else
+    {
+        LOG_E("failed to get file size,ret=%d,errno=%d", ret, errno);
+    }
 #else
     struct stat statbuff;
-    if(stat(file_path, &statbuff) == 0)
+    int ret = stat(file_path, &statbuff);
+    if(ret == 0)
     {
         filesize = statbuff.st_size;
+    }
+    else
+    {
+        LOG_E("failed to get file size,ret=%d,errno=%d", ret, errno);
     }
 #endif
     return filesize;
@@ -751,6 +771,7 @@ uint64 com_file_get_id(const char* file_path)
     BY_HANDLE_FILE_INFORMATION info;
     if(GetFileInformationByHandle(fp, &info) == false)
     {
+        CloseHandle(fp);
         return 0;
     }
     inode = ((uint64)info.nFileIndexHigh) << 32 | info.nFileIndexLow;
@@ -777,8 +798,8 @@ uint32 com_file_get_change_time(const char* file_path)
     }
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat statbuff;
-    if(_wstat(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
+    struct _stat64 statbuff;
+    if(_wstat64(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_ctime;
     }
@@ -800,8 +821,8 @@ uint32 com_file_get_modify_time(const char* file_path)
     }
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat statbuff;
-    if(_wstat(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
+    struct _stat64 statbuff;
+    if(_wstat64(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_mtime;
     }
@@ -823,8 +844,8 @@ uint32 com_file_get_access_time(const char* file_path)
     }
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat statbuff;
-    if(_wstat(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
+    struct _stat64 statbuff;
+    if(_wstat64(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
     {
         timestamp = statbuff.st_atime;
     }
