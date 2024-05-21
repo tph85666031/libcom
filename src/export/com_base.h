@@ -317,7 +317,7 @@ public:
 private:
     std::vector<uint8> buf;
 };
-//typedef ComBytes DEPRECATED("Use ComBytes instead") CPPBytes;
+typedef ComBytes DEPRECATED("Use ComBytes instead") CPPBytes;
 
 class COM_EXPORT ComMutex
 {
@@ -347,7 +347,7 @@ public:
 private :
     Sem sem;
 };
-//typedef ComSem DEPRECATED("Use ComSem instead") CPPSem;
+typedef ComSem DEPRECATED("Use ComSem instead") CPPSem;
 
 class COM_EXPORT ComCondition
 {
@@ -364,7 +364,7 @@ private :
     std::mutex mutex_cv;
     std::condition_variable condition;
 };
-//typedef ComCondition DEPRECATED("Use ComCondition instead") CPPCondition;
+typedef ComCondition DEPRECATED("Use ComCondition instead") CPPCondition;
 
 class COM_EXPORT Message
 {

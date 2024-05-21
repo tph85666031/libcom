@@ -26,7 +26,7 @@ public:
 private:
     COMMD5_CTX ctx;
 };
-//typedef ComMD5 DEPRECATED("Use ComMD5 instead") CPPMD5;
+typedef ComMD5 DEPRECATED("Use ComMD5 instead") CPPMD5;
 
 #endif /* __COM_MD5_H__ */
 

@@ -40,7 +40,7 @@ private:
     bool repeat = false;
     std::string uuid;
 };
-//typedef ComTimer DEPRECATED("Use ComTimer instead") CPPTimer;
+typedef ComTimer DEPRECATED("Use ComTimer instead") CPPTimer;
 
 class COM_EXPORT ComTimerManager : public ThreadPool
 {
@@ -66,7 +66,7 @@ private:
     std::mutex mutex_timers;
     std::atomic<uint32> message_id = {0xFFFFFFFF};
 };
-//typedef ComTimerManager DEPRECATED("Use ComTimerManager instead") CPPTimerManager;
+typedef ComTimerManager DEPRECATED("Use ComTimerManager instead") CPPTimerManager;
 
 COM_EXPORT ComTimerManager& GetTimerManager();
 

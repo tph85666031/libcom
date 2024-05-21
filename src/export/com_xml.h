@@ -42,7 +42,7 @@ private:
     void* ctx;
     std::string file;
 };
-//typedef ComXmlParser DEPRECATED("Use ComXmlParser instead") CPPXmlParser;
+typedef ComXmlParser DEPRECATED("Use ComXmlParser instead") CPPXmlParser;
 
 COM_EXPORT std::string com_plist_to_json(const std::string& xml_content);
 COM_EXPORT std::string com_plist_to_json(const char* xml_content);

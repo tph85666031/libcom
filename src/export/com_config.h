@@ -57,6 +57,6 @@ private:
     CSimpleIniA ini;
     std::string file_config;
 };
-//typedef ComConfig DEPRECATED("Use ComConfig instead") CPPConfig;
+typedef ComConfig DEPRECATED("Use ComConfig instead") CPPConfig;
 
 #endif /* __COM_CONFIG_H__ */
