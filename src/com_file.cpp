@@ -574,7 +574,7 @@ int com_file_type(const char* file)
     WIN32_FILE_ATTRIBUTE_DATA attr = {0};
     if(GetFileAttributesExW(com_wstring_from_utf8(file).c_str(), GetFileExInfoStandard, &attr) == false)
     {
-        return FILE_TYPE_UNKNOWN;
+        return FILE_TYPE_NOT_EXIST;
     }
 
     if(attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
@@ -1910,7 +1910,9 @@ bool com_file_remove(const char* file_name)
     }
     int ret = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    ret = _wremove(com_wstring_from_utf8(file_name).c_str());
+    std::wstring file_name_wstr = com_wstring_from_utf8(file_name);
+    SetFileAttributesW(file_name_wstr.c_str(), FILE_ATTRIBUTE_NORMAL);
+    ret = DeleteFileW(file_name_wstr.c_str());
 #else
     ret = remove(file_name);
 #endif
