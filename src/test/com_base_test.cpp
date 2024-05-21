@@ -714,6 +714,15 @@ void com_base_lock_unit_test_suit(void** state)
     LOG_I("size=%lld", size);
     size = com_file_size(".\\out\\com.exe");
     LOG_I("size=%lld", size);
+    LOG_I("type=%d", com_file_type(".\\out\\com.exe"));
+    FILE* f = com_file_open(".\\out\\com.exe","rb");
+    LOG_I("type=%d", com_file_type(f));
+    com_file_close(f);
+
+    LOG_I("type=%d", com_file_type(".\\out\\"));
+    f = com_file_open(".\\out\\","rb");
+    LOG_I("type=%d", com_file_type(f));
+    com_file_close(f);
 #endif
 }
 

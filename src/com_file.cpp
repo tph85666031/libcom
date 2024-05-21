@@ -570,24 +570,18 @@ int com_file_type(const char* file)
         return FILE_TYPE_NOT_EXIST;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat buf;
-    int ret = _wstat(com_wstring_from_utf8(file).c_str(), &buf);
-    if(0 != ret)
+    //_stat may has errno=132 error
+    WIN32_FILE_ATTRIBUTE_DATA attr = {0};
+    if(GetFileAttributesExW(com_wstring_from_utf8(CPPBytes(file)).c_str(), GetFileExInfoStandard, &attr) == false)
     {
-        if(errno == ENOENT)
-        {
-            return FILE_TYPE_NOT_EXIST;
-        }
         return FILE_TYPE_UNKNOWN;
     }
-    if(buf.st_mode & S_IFDIR)
+
+    if(attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
     {
         return FILE_TYPE_DIR;
     }
-    if(buf.st_mode & S_IFREG)
-    {
-        return FILE_TYPE_FILE;
-    }
+    return FILE_TYPE_FILE;
 #else
     struct stat buf;
     int ret = stat(file, &buf);
@@ -626,24 +620,17 @@ int com_file_type(int fd)
         return FILE_TYPE_UNKNOWN;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat buf;
-    int ret = _fstat(fd, &buf);
-    if(0 != ret)
+    //_fstat may has errno=132 error
+    BY_HANDLE_FILE_INFORMATION info = {0};
+    if(GetFileInformationByHandle((HANDLE)_get_osfhandle(fd), &info) == false)
     {
-        if(errno == ENOENT)
-        {
-            return FILE_TYPE_NOT_EXIST;
-        }
         return FILE_TYPE_UNKNOWN;
     }
-    if(buf.st_mode & S_IFDIR)
+    if(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
     {
         return FILE_TYPE_DIR;
     }
-    if(buf.st_mode & S_IFREG)
-    {
-        return FILE_TYPE_FILE;
-    }
+    return FILE_TYPE_FILE;
 #else
     struct stat buf;
     int ret = fstat(fd, &buf);
@@ -726,11 +713,10 @@ int64 com_file_size(const char* file_path)
     unsigned long filesize = 0;
 #if defined(_WIN32) || defined(_WIN64)
     //_stat may has errno=132 error
-    WIN32_FILE_ATTRIBUTE_DATA attr;
-    int ret = GetFileAttributesExW(com_wstring_from_utf8(CPPBytes(file_path)).c_str(), GetFileExInfoStandard, &attr);
-    if(ret == 0)
+    WIN32_FILE_ATTRIBUTE_DATA attr = {0};
+    if(GetFileAttributesExW(com_wstring_from_utf8(CPPBytes(file_path)).c_str(), GetFileExInfoStandard, &attr) == false)
     {
-        LOG_E("failed to get file size,file=%s,ret=%d,errno=%d", file_path, ret, errno);
+        LOG_E("failed to get file size,file=%s,errno=%d", file_path, errno);
         return -1;
     }
     return ((int64)attr.nFileSizeHigh << 32) + attr.nFileSizeLow;
@@ -2197,24 +2183,26 @@ FileDetail::FileDetail(const char* path) : FilePath(path)
     parse(path);
     this->path = path;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat buf;
-    int ret = _wstat(com_wstring_from_utf8(path).c_str(), &buf);
-    if(0 != ret)
+    //_stat may has errno=132 error
+    WIN32_FILE_ATTRIBUTE_DATA attr = {0};
+    if(GetFileAttributesExW(com_wstring_from_utf8(CPPBytes(path)).c_str(), GetFileExInfoStandard, &attr) == false)
     {
-        if(errno == ENOENT)
-        {
-            type = FILE_TYPE_NOT_EXIST;
-        }
+        type = FILE_TYPE_NOT_EXIST;
         return;
     }
-    if(buf.st_mode & S_IFDIR)
+
+    if(attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
     {
         type = FILE_TYPE_DIR;
     }
-    else if(buf.st_mode & S_IFREG)
+    else
     {
         type = FILE_TYPE_FILE;
     }
+    size = ((int64)attr.nFileSizeHigh << 32) + attr.nFileSizeLow;
+    time_change_s = (((int64)attr.ftCreationTime.dwHighDateTime << 32) + attr.ftCreationTime.dwLowDateTime) / 100000000;
+    time_access_s = (((int64)attr.ftLastAccessTime.dwHighDateTime << 32) + attr.ftLastAccessTime.dwLowDateTime) / 100000000;
+    time_modify_s = (((int64)attr.ftLastWriteTime.dwHighDateTime << 32) + attr.ftLastWriteTime.dwLowDateTime) / 100000000;
 #else
     struct stat buf;
     int ret = stat(this->path.c_str(), &buf);
@@ -2242,11 +2230,11 @@ FileDetail::FileDetail(const char* path) : FilePath(path)
     {
         type = FILE_TYPE_SOCK;
     }
-#endif
     size = buf.st_size;
     time_change_s = buf.st_ctime;
     time_access_s = buf.st_atime;
     time_modify_s = buf.st_mtime;
+#endif
     return;
 }
 
