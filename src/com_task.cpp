@@ -242,16 +242,16 @@ void TaskManager::sendMessage(const char* task_name_wildcard, const Message& msg
     return;
 }
 
-CPPBytes TaskManager::sendMessageAndWait(const std::string& task_name, Message& msg, int timeout_ms)
+ComBytes TaskManager::sendMessageAndWait(const std::string& task_name, Message& msg, int timeout_ms)
 {
     return sendMessageAndWait(task_name.c_str(), msg, timeout_ms);
 }
 
-CPPBytes TaskManager::sendMessageAndWait(const char* task_name, Message& msg, int timeout_ms)
+ComBytes TaskManager::sendMessageAndWait(const char* task_name, Message& msg, int timeout_ms)
 {
     if(task_name == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
 
     mutex_tasks.lock();
@@ -276,7 +276,7 @@ CPPBytes TaskManager::sendMessageAndWait(const char* task_name, Message& msg, in
     mutex_tasks.unlock();
     if(found == false)
     {
-        return CPPBytes();
+        return ComBytes();
     }
     return GetSyncManager().getAdapter("com_task").syncWait(uuid, timeout_ms);
 }

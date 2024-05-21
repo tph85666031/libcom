@@ -163,13 +163,13 @@ static void md5_transform(unsigned int state[4], unsigned char block[64])
     state[3] += d;
 }
 
-static void md5_init(CPPMD5_CTX* context)
+static void md5_init(COMMD5_CTX* context)
 {
     if(context == NULL)
     {
         return;
     }
-    memset(context, 0, sizeof(CPPMD5_CTX));
+    memset(context, 0, sizeof(COMMD5_CTX));
     context->count[0] = 0;
     context->count[1] = 0;
     context->state[0] = 0x67452301;
@@ -178,7 +178,7 @@ static void md5_init(CPPMD5_CTX* context)
     context->state[3] = 0x10325476;
 }
 
-static void md5_update(CPPMD5_CTX* context, unsigned char* input, unsigned int inputlen)
+static void md5_update(COMMD5_CTX* context, unsigned char* input, unsigned int inputlen)
 {
     unsigned int i = 0;
     unsigned int index = 0;
@@ -213,7 +213,7 @@ static void md5_update(CPPMD5_CTX* context, unsigned char* input, unsigned int i
     memcpy(&context->buffer[index], &input[i], inputlen - i);
 }
 
-static void md5_final(CPPMD5_CTX* context, unsigned char digest[CPPMD5_SIZE])
+static void md5_final(COMMD5_CTX* context, unsigned char digest[COMMD5_SIZE])
 {
     unsigned int index = 0, padlen = 0;
     unsigned char bits[8];
@@ -223,19 +223,19 @@ static void md5_final(CPPMD5_CTX* context, unsigned char digest[CPPMD5_SIZE])
     md5_encode(bits, context->count, 8);
     md5_update(context, PADDING, padlen);
     md5_update(context, bits, 8);
-    md5_encode(digest, context->state, CPPMD5_SIZE);
+    md5_encode(digest, context->state, COMMD5_SIZE);
 }
 
-CPPMD5::CPPMD5()
+ComMD5::ComMD5()
 {
     md5_init(&ctx);
 }
 
-CPPMD5::~CPPMD5()
+ComMD5::~ComMD5()
 {
 }
 
-void CPPMD5::append(const void* data, int data_size)
+void ComMD5::append(const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -244,7 +244,7 @@ void CPPMD5::append(const void* data, int data_size)
     md5_update(&ctx, (unsigned char*)data, data_size);
 }
 
-void CPPMD5::appendFile(const char* file_path, int64 offset, int64 size)
+void ComMD5::appendFile(const char* file_path, int64 offset, int64 size)
 {
     if(file_path == NULL || size < -1 || offset < 0)
     {
@@ -285,25 +285,25 @@ void CPPMD5::appendFile(const char* file_path, int64 offset, int64 size)
     return;
 }
 
-CPPBytes CPPMD5::finish()
+ComBytes ComMD5::finish()
 {
-    unsigned char data[CPPMD5_SIZE];
+    unsigned char data[COMMD5_SIZE];
     memset(data, 0, sizeof(data));
     md5_final(&ctx, data);
     md5_init(&ctx);
-    return CPPBytes(data, sizeof(data));
+    return ComBytes(data, sizeof(data));
 }
 
-CPPBytes CPPMD5::Digest(const void* data, int data_size)
+ComBytes ComMD5::Digest(const void* data, int data_size)
 {
-    CPPMD5 md5;
+    ComMD5 md5;
     md5.append(data, data_size);
     return md5.finish();
 }
 
-CPPBytes CPPMD5::Digest(const char* file_path)
+ComBytes ComMD5::Digest(const char* file_path)
 {
-    CPPMD5 md5;
+    ComMD5 md5;
     md5.appendFile(file_path);
     return md5.finish();
 }

@@ -702,14 +702,14 @@ bool CJsonObject::Get(const std::string& strKey, const char* charArray) const
     return false;
 }
 
-bool CJsonObject::Get(const std::string& strKey, CPPBytes& bytes) const
+bool CJsonObject::Get(const std::string& strKey, ComBytes& bytes) const
 {
     std::string value;
     if(Get(strKey, value) == false)
     {
         return false;
     }
-    bytes = CPPBytes::FromHexString(value.c_str());
+    bytes = ComBytes::FromHexString(value.c_str());
     return true;
 }
 
@@ -1601,7 +1601,7 @@ bool CJsonObject::Add(const std::string& strKey, double dValue)
     return(true);
 }
 
-bool CJsonObject::Add(const std::string& strKey, const CPPBytes& bytes)
+bool CJsonObject::Add(const std::string& strKey, const ComBytes& bytes)
 {
     return Add(strKey, bytes.toHexString());
 }
@@ -3047,7 +3047,7 @@ bool CJsonObject::Add(double dValue)
     return(true);
 }
 
-bool CJsonObject::Add(const CPPBytes& bytes)
+bool CJsonObject::Add(const ComBytes& bytes)
 {
     return Add(bytes.toHexString());
 }

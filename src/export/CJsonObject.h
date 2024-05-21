@@ -76,7 +76,7 @@ public:     // method of ordinary json object
     bool Get(const std::string& strKey, CJsonObject& oJsonObject) const;
     bool Get(const std::string& strKey, char* charArray) const;
     bool Get(const std::string& strKey, const char* charArray) const;
-    bool Get(const std::string& strKey, CPPBytes& bytes) const;
+    bool Get(const std::string& strKey, ComBytes& bytes) const;
     bool Get(const std::string& strKey, std::string& strValue) const;
     bool Get(const std::string& strKey, char& iValue) const;
     bool Get(const std::string& strKey, int8& iValue) const;
@@ -250,7 +250,7 @@ public:     // method of ordinary json object
     bool Add(const std::string& strKey, const bool bValue);
     bool Add(const std::string& strKey, float fValue);
     bool Add(const std::string& strKey, double dValue);
-    bool Add(const std::string& strKey, const CPPBytes& bytes);
+    bool Add(const std::string& strKey, const ComBytes& bytes);
     template<class T>
     bool Add(const std::string& strKey, const std::vector<T>& list)
     {
@@ -396,7 +396,7 @@ public:     // method of json array
     bool Add(const bool bValue);
     bool Add(float fValue);
     bool Add(double dValue);
-    bool Add(const CPPBytes& bytes);
+    bool Add(const ComBytes& bytes);
     template<typename T, std::string (T::*)(bool) const = &T::toJson>
     bool Add(const T& value)
     {

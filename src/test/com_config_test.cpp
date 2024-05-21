@@ -42,8 +42,8 @@ void com_config_unit_test_suit(void** state)
     com_file_writef(file, "empty=\n");
     com_file_flush(file);
     com_file_close(file);
-    CPPConfig configx("测试配置文件.ini");
-    CPPConfig config = configx;
+    ComConfig configx("测试配置文件.ini");
+    ComConfig config = configx;
     ASSERT_FALSE(config.isSectionExist(NULL));
     ASSERT_TRUE(config.isSectionExist("GROUP_1"));
     ASSERT_TRUE(config.isSectionExist("GROUP_2"));
@@ -98,7 +98,7 @@ void com_config_unit_test_suit(void** state)
     ASSERT_STR_EQUAL("/1/2/3", com_path_dir("/1/2/3/4.txt").c_str());
 #endif
 
-    CPPConfig config2("测试配置文件2.ini");
+    ComConfig config2("测试配置文件2.ini");
     config2.set("hhh", "abc", 3);
     config2.set("hhh", "abcd", 4);
     config2.set(NULL, "abcde", 5);

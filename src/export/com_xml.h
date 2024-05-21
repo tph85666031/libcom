@@ -3,16 +3,16 @@
 
 #include "com_base.h"
 
-class COM_EXPORT CPPXmlParser
+class COM_EXPORT ComXmlParser
 {
 public:
-    CPPXmlParser();
-    CPPXmlParser(const char* file);
-    CPPXmlParser(const CPPBytes& content);
-    virtual ~CPPXmlParser();
+    ComXmlParser();
+    ComXmlParser(const char* file);
+    ComXmlParser(const ComBytes& content);
+    virtual ~ComXmlParser();
 
     bool load(const char* file);
-    bool load(const CPPBytes& content);
+    bool load(const ComBytes& content);
     bool save();
     bool saveAs(const char* file);
 
@@ -42,6 +42,7 @@ private:
     void* ctx;
     std::string file;
 };
+//typedef ComXmlParser DEPRECATED("Use ComXmlParser instead") CPPXmlParser;
 
 COM_EXPORT std::string com_plist_to_json(const std::string& xml_content);
 COM_EXPORT std::string com_plist_to_json(const char* xml_content);

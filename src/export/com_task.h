@@ -63,7 +63,7 @@ private:
     std::atomic<bool> running;
     std::mutex mutex_listeners;
     std::map<uint32, uint32> listeners;
-    CPPCondition condition = {"TASK:condition"};
+    ComCondition condition = {"TASK:condition"};
     std::atomic<bool> protect_mode = {false};
 };
 
@@ -77,8 +77,8 @@ public:
     void destroyTask(const char* task_name_wildcard);
     void destroyTask(const std::string& task_name_wildcard);
     void destroyTaskAll();
-    CPPBytes sendMessageAndWait(const char* task_name, Message& msg, int timeout_ms = 1000);
-    CPPBytes sendMessageAndWait(const std::string& task_name, Message& msg, int timeout_ms = 1000);
+    ComBytes sendMessageAndWait(const char* task_name, Message& msg, int timeout_ms = 1000);
+    ComBytes sendMessageAndWait(const std::string& task_name, Message& msg, int timeout_ms = 1000);
     void sendMessage(const char* task_name_wildcard, const Message& msg);
     void sendMessage(const std::string& task_name_wildcard, const Message& msg);
     void sendBroadcastMessage(const Message& msg);

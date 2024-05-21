@@ -6,22 +6,22 @@
 
 typedef void (*fc_timer)(uint8 id, void* ctx);
 
-class COM_EXPORT CPPTimer
+class COM_EXPORT ComTimer
 {
-    friend class CPPTimerManager;
+    friend class ComTimerManager;
 public:
-    CPPTimer();
-    CPPTimer(uint8 id, const std::string& task_name);
-    CPPTimer(uint8 id, const char* task_name);
-    CPPTimer(uint8 id, fc_timer fc, void* ctx);
-    virtual ~CPPTimer();
+    ComTimer();
+    ComTimer(uint8 id, const std::string& task_name);
+    ComTimer(uint8 id, const char* task_name);
+    ComTimer(uint8 id, fc_timer fc, void* ctx);
+    virtual ~ComTimer();
 
-    CPPTimer& setType(const char* task_name);
-    CPPTimer& setType(const std::string& task_name);
-    CPPTimer& setType(fc_timer fc, void* ctx);
-    CPPTimer& setID(uint8 id);
-    CPPTimer& setInterval(int interval_ms);
-    CPPTimer& setRepeat(bool repeat);
+    ComTimer& setType(const char* task_name);
+    ComTimer& setType(const std::string& task_name);
+    ComTimer& setType(fc_timer fc, void* ctx);
+    ComTimer& setID(uint8 id);
+    ComTimer& setInterval(int interval_ms);
+    ComTimer& setRepeat(bool repeat);
     bool start();
     void stop();
     bool restart();
@@ -40,32 +40,34 @@ private:
     bool repeat = false;
     std::string uuid;
 };
+//typedef ComTimer DEPRECATED("Use ComTimer instead") CPPTimer;
 
-class COM_EXPORT CPPTimerManager : public ThreadPool
+class COM_EXPORT ComTimerManager : public ThreadPool
 {
-    friend class CPPTimer;
+    friend class ComTimer;
 public:
-    CPPTimerManager();
-    virtual ~CPPTimerManager();
+    ComTimerManager();
+    virtual ~ComTimerManager();
     
     void setMessageID(uint32 id);
     uint32 getMessageID();
     void stopTimerManager();
 private:
-    void updateTimer(CPPTimer& timer);
+    void updateTimer(ComTimer& timer);
     void removeTimer(std::string uuid);
     bool isTimerExist(std::string uuid);
     void startTimerManager();
     void threadPoolRunner(Message& msg);
-    static void ThreadTimerLoop(CPPTimerManager* manager);
+    static void ThreadTimerLoop(ComTimerManager* manager);
 private:
     std::thread thread_timer_loop;
-    std::vector<CPPTimer> timers;
+    std::vector<ComTimer> timers;
     std::atomic<bool> running_loop = {false};
     std::mutex mutex_timers;
     std::atomic<uint32> message_id = {0xFFFFFFFF};
 };
+//typedef ComTimerManager DEPRECATED("Use ComTimerManager instead") CPPTimerManager;
 
-COM_EXPORT CPPTimerManager& GetTimerManager();
+COM_EXPORT ComTimerManager& GetTimerManager();
 
 #endif /* __COM_TIMER_H__ */

@@ -87,7 +87,7 @@ COM_EXPORT int com_sqlite_bind(void* stmt, int pos, float val);
 COM_EXPORT int com_sqlite_bind(void* stmt, int pos, const char* val);
 COM_EXPORT int com_sqlite_bind(void* stmt, int pos, const std::string& val);
 COM_EXPORT int com_sqlite_bind(void* stmt, int pos, const uint8* data, int data_size);
-COM_EXPORT int com_sqlite_bind(void* stmt, int pos, CPPBytes& bytes);
+COM_EXPORT int com_sqlite_bind(void* stmt, int pos, ComBytes& bytes);
 COM_EXPORT int com_sqlite_step(void* stmt);
 COM_EXPORT int com_sqlite_reset(void* stmt);
 COM_EXPORT int com_sqlite_finalize(void* stmt);
@@ -104,6 +104,6 @@ COM_EXPORT int64 com_sqlite_column_int64(void* stmt, int pos);
 COM_EXPORT uint64 com_sqlite_column_uint64(void* stmt, int pos);
 COM_EXPORT float com_sqlite_column_float(void* stmt, int pos);
 COM_EXPORT double com_sqlite_column_double(void* stmt, int pos);
-COM_EXPORT CPPBytes com_sqlite_column_bytes(void* stmt, int pos);
+COM_EXPORT ComBytes com_sqlite_column_bytes(void* stmt, int pos);
 
 #endif /* __COM_SQLITE_H__ */

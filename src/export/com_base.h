@@ -79,7 +79,7 @@ typedef unsigned long long uint64;
 #if GCC_VERSION_AT_LEAST(3,1)
 #define DEPRECATED(msg) __attribute__((deprecated(msg)))
 #elif defined(_MSC_VER)
-#define DEPRECATED(msg) __declspec(deprecated)
+#define DEPRECATED(msg) __declspec(deprecated(msg))
 #else
 #define DEPRECATED(msg)
 #endif
@@ -272,39 +272,39 @@ COM_EXPORT int com_gcd(int x, int y, T...ns)
 #define MACRO_CONCAT(x,y)
 #endif
 
-class COM_EXPORT CPPBytes
+class COM_EXPORT ComBytes
 {
 public:
-    CPPBytes();
-    CPPBytes(const char* data);
-    CPPBytes(const std::string& data);
-    CPPBytes(const char* data, int data_size);
-    CPPBytes(const uint8* data, int data_size);
-    CPPBytes(const CPPBytes& bytes);
-    CPPBytes(CPPBytes&& bytes);
-    CPPBytes(int reserve_size);
-    virtual ~CPPBytes();
-    CPPBytes& operator=(const CPPBytes& bytes);
-    CPPBytes& operator=(CPPBytes&& bytes);
-    CPPBytes& operator+(uint8 val);
-    CPPBytes& operator+=(uint8 val);
-    bool operator==(CPPBytes& bytes);
-    bool operator!=(CPPBytes& bytes);
+    ComBytes();
+    ComBytes(const char* data);
+    ComBytes(const std::string& data);
+    ComBytes(const char* data, int data_size);
+    ComBytes(const uint8* data, int data_size);
+    ComBytes(const ComBytes& bytes);
+    ComBytes(ComBytes&& bytes);
+    ComBytes(int reserve_size);
+    virtual ~ComBytes();
+    ComBytes& operator=(const ComBytes& bytes);
+    ComBytes& operator=(ComBytes&& bytes);
+    ComBytes& operator+(uint8 val);
+    ComBytes& operator+=(uint8 val);
+    bool operator==(ComBytes& bytes);
+    bool operator!=(ComBytes& bytes);
     void reserve(int size);
     void clear();
     bool empty() const;
     uint8* getData();
     const uint8* getData() const;
     int getDataSize() const;
-    CPPBytes& append(uint8 val);
-    CPPBytes& append(const uint8* data, int data_size);
-    CPPBytes& append(const char* data);
-    CPPBytes& append(const std::string& data);
-    CPPBytes& append(const CPPBytes& bytes);
-    CPPBytes& insert(int pos, uint8 val);
-    CPPBytes& insert(int pos, const uint8* data, int data_size);
-    CPPBytes& insert(int pos, const char* data);
-    CPPBytes& insert(int pos, CPPBytes& bytes);
+    ComBytes& append(uint8 val);
+    ComBytes& append(const uint8* data, int data_size);
+    ComBytes& append(const char* data);
+    ComBytes& append(const std::string& data);
+    ComBytes& append(const ComBytes& bytes);
+    ComBytes& insert(int pos, uint8 val);
+    ComBytes& insert(int pos, const uint8* data, int data_size);
+    ComBytes& insert(int pos, const char* data);
+    ComBytes& insert(int pos, ComBytes& bytes);
     uint8 getAt(int pos) const;
     void setAt(int pos, uint8 val);
     void removeAt(int pos);
@@ -313,10 +313,11 @@ public:
     bool toFile(const char* file);
     std::string toString() const;
     std::string toHexString(bool upper = false) const;
-    static CPPBytes FromHexString(const char* hex_str);
+    static ComBytes FromHexString(const char* hex_str);
 private:
     std::vector<uint8> buf;
 };
+//typedef ComBytes DEPRECATED("Use ComBytes instead") CPPBytes;
 
 class COM_EXPORT ComMutex
 {
@@ -334,11 +335,11 @@ public :
     std::atomic<uint64> flag;
 };
 
-class COM_EXPORT CPPSem
+class COM_EXPORT ComSem
 {
 public:
-    CPPSem(const char* name = NULL);
-    virtual ~CPPSem();
+    ComSem(const char* name = NULL);
+    virtual ~ComSem();
     void setName(const char* name);
     const char* getName();
     bool post();
@@ -346,12 +347,13 @@ public:
 private :
     Sem sem;
 };
+//typedef ComSem DEPRECATED("Use ComSem instead") CPPSem;
 
-class COM_EXPORT CPPCondition
+class COM_EXPORT ComCondition
 {
 public:
-    CPPCondition(const char* name = NULL);
-    virtual ~CPPCondition();
+    ComCondition(const char* name = NULL);
+    virtual ~ComCondition();
     void setName(const char* name);
     const char* getName();
     bool notifyOne();
@@ -362,6 +364,7 @@ private :
     std::mutex mutex_cv;
     std::condition_variable condition;
 };
+//typedef ComCondition DEPRECATED("Use ComCondition instead") CPPCondition;
 
 class COM_EXPORT Message
 {
@@ -398,7 +401,7 @@ public:
     Message& set(const char* key, const std::string& val);
     Message& set(const char* key, const char* val);
     Message& set(const char* key, const uint8* val, int val_size);
-    Message& set(const char* key, const CPPBytes& bytes);
+    Message& set(const char* key, const ComBytes& bytes);
     Message& set(const char* key, const std::vector<std::string>& array);
     Message& set(const char* key, const Message& msg);
 
@@ -426,7 +429,7 @@ public:
     std::vector<std::string> getStringArray(const char* key) const;
     Message getMessage(const char* key) const;
     std::string getString(const char* key, std::string default_val = std::string()) const;
-    CPPBytes getBytes(const char* key) const;
+    ComBytes getBytes(const char* key) const;
     uint8* getBytes(const char* key, int& size);
 
     std::string toJSON(bool pretty_style = false) const;
@@ -502,7 +505,7 @@ public:
     ByteStreamReader(const char* buffer);
     ByteStreamReader(const std::string& buffer);
     ByteStreamReader(const uint8* buffer, int buffer_size);
-    ByteStreamReader(const CPPBytes& buffer);
+    ByteStreamReader(const ComBytes& buffer);
     virtual ~ByteStreamReader();
 
     int64 find(const char* key, int offset = 0);
@@ -511,11 +514,11 @@ public:
     int64 rfind(const uint8* key, int key_size, int offset = 0);
 
     bool readLine(std::string& line);
-    CPPBytes read(int size);
+    ComBytes read(int size);
     int read(uint8* buf, int buf_size);
-    CPPBytes readUntil(const char* key);
-    CPPBytes readUntil(const uint8* key, int key_size);
-    CPPBytes readUntil(std::function<bool(uint8)> func);
+    ComBytes readUntil(const char* key);
+    ComBytes readUntil(const uint8* key, int key_size);
+    ComBytes readUntil(std::function<bool(uint8)> func);
 
     int64 getPos();
     void setPos(int64 pos);
@@ -524,17 +527,17 @@ public:
 private:
     FILE* fp = NULL;
     bool fp_internal = false;
-    CPPBytes buffer;
+    ComBytes buffer;
     int64 buffer_pos = 0;
 };
 
-COM_EXPORT CPPBytes com_hexstring_to_bytes(const char* str);
-COM_EXPORT CPPBytes com_string_utf8_to_utf16(const CPPBytes& utf8);
-COM_EXPORT CPPBytes com_string_utf16_to_utf8(const CPPBytes& utf16);
-COM_EXPORT CPPBytes com_string_utf8_to_utf32(const CPPBytes& utf8);
-COM_EXPORT CPPBytes com_string_utf32_to_utf8(const CPPBytes& utf32);
-COM_EXPORT CPPBytes com_string_utf16_to_utf32(const CPPBytes& utf16);
-COM_EXPORT CPPBytes com_string_utf32_to_utf16(const CPPBytes& utf32);
+COM_EXPORT ComBytes com_hexstring_to_bytes(const char* str);
+COM_EXPORT ComBytes com_string_utf8_to_utf16(const ComBytes& utf8);
+COM_EXPORT ComBytes com_string_utf16_to_utf8(const ComBytes& utf16);
+COM_EXPORT ComBytes com_string_utf8_to_utf32(const ComBytes& utf8);
+COM_EXPORT ComBytes com_string_utf32_to_utf8(const ComBytes& utf32);
+COM_EXPORT ComBytes com_string_utf16_to_utf32(const ComBytes& utf16);
+COM_EXPORT ComBytes com_string_utf32_to_utf16(const ComBytes& utf32);
 COM_EXPORT std::string com_string_ansi_to_utf8(const std::string& ansi);
 COM_EXPORT std::string com_string_ansi_to_utf8(const char* ansi);
 COM_EXPORT std::string com_string_utf8_to_ansi(const std::string& utf8);
@@ -543,15 +546,15 @@ COM_EXPORT std::string com_string_utf8_to_local(const std::string& utf8);
 COM_EXPORT std::string com_string_utf8_to_local(const char* s);
 COM_EXPORT std::string com_string_local_to_utf8(const std::string& s);
 COM_EXPORT std::string com_string_local_to_utf8(const char* s);
-COM_EXPORT std::wstring com_wstring_from_utf8(const CPPBytes& utf8);
-COM_EXPORT std::wstring com_wstring_from_utf16(const CPPBytes& utf16);
-COM_EXPORT std::wstring com_wstring_from_utf32(const CPPBytes& utf32);
-COM_EXPORT CPPBytes com_wstring_to_utf8(const wchar_t* wstr);
-COM_EXPORT CPPBytes com_wstring_to_utf8(const std::wstring& wstr);
-COM_EXPORT CPPBytes com_wstring_to_utf16(const wchar_t* wstr);
-COM_EXPORT CPPBytes com_wstring_to_utf16(const std::wstring& wstr);
-COM_EXPORT CPPBytes com_wstring_to_utf32(const wchar_t* wstr);
-COM_EXPORT CPPBytes com_wstring_to_utf32(const std::wstring& wstr);
+COM_EXPORT std::wstring com_wstring_from_utf8(const ComBytes& utf8);
+COM_EXPORT std::wstring com_wstring_from_utf16(const ComBytes& utf16);
+COM_EXPORT std::wstring com_wstring_from_utf32(const ComBytes& utf32);
+COM_EXPORT ComBytes com_wstring_to_utf8(const wchar_t* wstr);
+COM_EXPORT ComBytes com_wstring_to_utf8(const std::wstring& wstr);
+COM_EXPORT ComBytes com_wstring_to_utf16(const wchar_t* wstr);
+COM_EXPORT ComBytes com_wstring_to_utf16(const std::wstring& wstr);
+COM_EXPORT ComBytes com_wstring_to_utf32(const wchar_t* wstr);
+COM_EXPORT ComBytes com_wstring_to_utf32(const std::wstring& wstr);
 
 #endif /* __COM_BASE_H__ */
 

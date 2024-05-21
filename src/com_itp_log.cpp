@@ -562,7 +562,7 @@ ITPLogReader::~ITPLogReader()
     }
 }
 
-void ITPLogReader::read(CPPBytes& data, int tlv_count)
+void ITPLogReader::read(ComBytes& data, int tlv_count)
 {
     if(data.empty())
     {
@@ -594,7 +594,7 @@ void ITPLogReader::ThreadReader(ITPLogReader* ctx)
         return;
     }
 
-    CPPBytes data;
+    ComBytes data;
     int tlv_count = 0;
     while(ctx->thread_reader_running)
     {

@@ -3,29 +3,30 @@
 
 #include "com_base.h"
 
-#define CPPMD5_SIZE        16
+#define COMMD5_SIZE        16
 
 typedef struct
 {
     unsigned int count[2];
     unsigned int state[4];
     unsigned char buffer[64];
-} CPPMD5_CTX;
+} COMMD5_CTX;
 
-class COM_EXPORT CPPMD5
+class COM_EXPORT ComMD5
 {
 public:
-    CPPMD5();
-    virtual ~CPPMD5();
+    ComMD5();
+    virtual ~ComMD5();
     void append(const void* data, int data_size);
     void appendFile(const char* file_path, int64 offset = 0, int64 size = -1);
-    CPPBytes finish();
+    ComBytes finish();
 
-    static CPPBytes Digest(const void* data, int data_size);
-    static CPPBytes Digest(const char* file_path);
+    static ComBytes Digest(const void* data, int data_size);
+    static ComBytes Digest(const char* file_path);
 private:
-    CPPMD5_CTX ctx;
+    COMMD5_CTX ctx;
 };
+//typedef ComMD5 DEPRECATED("Use ComMD5 instead") CPPMD5;
 
 #endif /* __COM_MD5_H__ */
 

@@ -5,7 +5,7 @@
 
 void com_file_unit_test_suit(void** state)
 {
-    CPPBytes bytes = com_file_readall(PATH_TO_LOCAL(com_get_bin_path() + com_get_bin_name()).c_str());
+    ComBytes bytes = com_file_readall(PATH_TO_LOCAL(com_get_bin_path() + com_get_bin_name()).c_str());
     ASSERT_FALSE(bytes.empty());
 
     com_dir_create(PATH_TO_LOCAL("./1").c_str());
@@ -213,7 +213,7 @@ void com_file_unit_test_suit(void** state)
     LOG_I("pos=%lld", pos);
 
     file = com_file_open("./1.rtf", "rb");
-    CPPBytes val = com_file_read_until(file, [](uint8 val)
+    ComBytes val = com_file_read_until(file, [](uint8 val)
     {
         return val == '9';
     });

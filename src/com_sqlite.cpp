@@ -526,7 +526,7 @@ int com_sqlite_bind(void* stmt, int pos, const uint8* data, int data_size)
     return sqlite3_bind_blob((sqlite3_stmt*)stmt, pos, data, data_size, SQLITE_STATIC);
 }
 
-int com_sqlite_bind(void* stmt, int pos, CPPBytes& bytes)
+int com_sqlite_bind(void* stmt, int pos, ComBytes& bytes)
 {
     if(stmt == NULL || pos < 0)
     {
@@ -638,20 +638,20 @@ double com_sqlite_column_double(void* stmt, int pos)
     return sqlite3_column_double((sqlite3_stmt*)stmt, pos);
 }
 
-CPPBytes com_sqlite_column_bytes(void* stmt, int pos)
+ComBytes com_sqlite_column_bytes(void* stmt, int pos)
 {
     int size = sqlite3_column_bytes((sqlite3_stmt*)stmt, pos);
     if(size <= 0)
     {
-        return CPPBytes();
+        return ComBytes();
     }
     const void* val = sqlite3_column_blob((sqlite3_stmt*)stmt, pos);
     if(val == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
 
-    return CPPBytes((const uint8*)val, size);
+    return ComBytes((const uint8*)val, size);
 }
 
 DBQuery::DBQuery(const void* sqlite_fd, const char* sql)

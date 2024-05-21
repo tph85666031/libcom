@@ -44,7 +44,7 @@ public:
     int64 getLatestInfoAsNumber(const char* group, const char* key, int64 default_val = 0);
     double getLatestInfoAsDouble(const char* group, const char* key, double default_val = 0);
     bool getLatestInfoAsBool(const char* group, const char* key, bool default_val = false);
-    CPPBytes getLatestInfoAsBytes(const char* group, const char* key);
+    ComBytes getLatestInfoAsBytes(const char* group, const char* key);
 
     httplib::Server& getHttpServer();
     bool isHttpServerRunning();
@@ -63,7 +63,7 @@ private:
 
     std::atomic<bool> thread_controller_running = {false};
     std::thread thread_controller;
-    CPPSem sem;
+    ComSem sem;
 
     httplib::Server http_server;
     std::atomic<bool> http_server_running = {false};

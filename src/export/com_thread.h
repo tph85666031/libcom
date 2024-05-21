@@ -102,7 +102,7 @@ private:
     std::map<std::thread::id, THREAD_POLL_INFO> threads;
     std::mutex mutex_msgs;
     std::mutex mutex_threads;
-    CPPCondition condition;
+    ComCondition condition;
     std::atomic<int> min_thread_count;
     std::atomic<int> max_thread_count;
     std::atomic<int> queue_size_per_thread;
@@ -191,18 +191,18 @@ private:
 private:
     std::mutex mutex_msgs;
     std::queue<T> msgs;
-    CPPCondition condition;
+    ComCondition condition;
 
     std::thread thread_runner;
     std::atomic<bool> thread_runner_running = {false};
 };
 
-class COM_EXPORT CPPProcessSem
+class COM_EXPORT ComProcessSem
 {
 public:
-    CPPProcessSem();
-    CPPProcessSem(const char* name, int init_val = 0);//通过构造函数创建
-    virtual ~CPPProcessSem();
+    ComProcessSem();
+    ComProcessSem(const char* name, int init_val = 0);//通过构造函数创建
+    virtual ~ComProcessSem();
 
     //相同name，不同的offset也算不同的sem
     bool init(const char* name, int init_val = 0);//通过init方法创建
@@ -212,13 +212,14 @@ public:
 protected:
     process_sem_t sem;
 };
+//typedef ComProcessSem DEPRECATED("Use ComProcessSem instead") CPPProcessSem;
 
-class COM_EXPORT CPPProcessMutex
+class COM_EXPORT ComProcessMutex
 {
 public:
-    CPPProcessMutex();
-    CPPProcessMutex(const char* name);//通过构造函数创建
-    virtual ~CPPProcessMutex();
+    ComProcessMutex();
+    ComProcessMutex(const char* name);//通过构造函数创建
+    virtual ~ComProcessMutex();
 
     //相同name，不同的offset也算不同的mutex
     bool init(const char* name);//通过init方法创建
@@ -230,13 +231,14 @@ public:
 protected:
     process_mutex_t mutex;
 };
+//typedef ComProcessMutex DEPRECATED("Use ComProcessMutex instead") CPPProcessMutex;
 
-class COM_EXPORT CPPProcessCondition
+class COM_EXPORT ComProcessCondition
 {
 public:
-    CPPProcessCondition();
-    CPPProcessCondition(const char* name);//通过构造函数创建
-    virtual ~CPPProcessCondition();
+    ComProcessCondition();
+    ComProcessCondition(const char* name);//通过构造函数创建
+    virtual ~ComProcessCondition();
 
     //相同name，不同的offset也算不同的cond
     bool init(const char* name);//通过init方法创建
@@ -248,13 +250,14 @@ public:
 private:
     process_cond_t cond;
 };
+//typedef ComProcessCondition DEPRECATED("Use ComProcessCondition instead") CPPProcessCondition;
 
-class COM_EXPORT CPPShareMemoryV
+class COM_EXPORT ComShareMemoryV
 {
 public:
-    CPPShareMemoryV();
-    CPPShareMemoryV(const char* name, int size);//通过构造函数创建
-    virtual ~CPPShareMemoryV();
+    ComShareMemoryV();
+    ComShareMemoryV(const char* name, int size);//通过构造函数创建
+    virtual ~ComShareMemoryV();
 
     void* init(const char* name, int size);//通过init方法创建
     void uninit();
@@ -263,13 +266,14 @@ private:
     process_share_mem_t mem;
     void* msg;
 };
+//typedef ComShareMemoryV DEPRECATED("Use ComShareMemoryV instead") CPPShareMemoryV;
 
-class COM_EXPORT CPPShareMemoryMap
+class COM_EXPORT ComShareMemoryMap
 {
 public:
-    CPPShareMemoryMap();
-    CPPShareMemoryMap(const char* name, int size);//通过构造函数创建
-    virtual ~CPPShareMemoryMap();
+    ComShareMemoryMap();
+    ComShareMemoryMap(const char* name, int size);//通过构造函数创建
+    virtual ~ComShareMemoryMap();
     void* init(const char* name, int size);//通过init方法创建
     void uninit();
     void* getAddr();
@@ -278,6 +282,7 @@ private:
     int msg_size;
     void* msg;
 };
+//typedef ComShareMemoryMap DEPRECATED("Use ComShareMemoryMap instead") CPPShareMemoryMap;
 
 #endif /* __COM_THREAD_H__ */
 

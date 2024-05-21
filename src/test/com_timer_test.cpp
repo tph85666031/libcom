@@ -35,16 +35,16 @@ void com_timer_unit_test_suit(void** state)
 {
     com_log_set_level("DEBUG");
     GetTaskManager().createTask<TimerTestTask>("timer_test_task");
-    CPPTimer t1(1, "timer_test_task");
+    ComTimer t1(1, "timer_test_task");
     t1.setInterval(1000).setRepeat(true);
     t1.start();
 
-    CPPTimer t2(2, test_timer_callback, NULL);
+    ComTimer t2(2, test_timer_callback, NULL);
     t2.setInterval(100).setRepeat(true);
     t2.start();
     ASSERT_TRUE(t2.isStarted());
 
-    CPPTimer t3(3, test_timer_callback, NULL);
+    ComTimer t3(3, test_timer_callback, NULL);
     t3.setInterval(100).setRepeat(true);
     t3.start();
     ASSERT_TRUE(t3.isStarted());

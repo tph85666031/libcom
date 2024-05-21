@@ -7,25 +7,25 @@
 
 #define TIMER_INTERVAL_MIN_MS 100
 
-CPPTimerManager& GetTimerManager()
+ComTimerManager& GetTimerManager()
 {
-    static CPPTimerManager timer_manager;
+    static ComTimerManager timer_manager;
     return timer_manager;
 }
 
-CPPTimerManager::CPPTimerManager()
+ComTimerManager::ComTimerManager()
 {
     setThreadsCount(1, 10).setQueueSize(10);
     startTimerManager();
 }
 
-CPPTimerManager::~CPPTimerManager()
+ComTimerManager::~ComTimerManager()
 {
     LOG_I("called");
     stopTimerManager();
 }
 
-void CPPTimerManager::startTimerManager()
+void ComTimerManager::startTimerManager()
 {
     LOG_I("called");
     stopTimerManager();
@@ -34,7 +34,7 @@ void CPPTimerManager::startTimerManager()
     startThreadPool();
 }
 
-void CPPTimerManager::stopTimerManager()
+void ComTimerManager::stopTimerManager()
 {
     LOG_I("called");
     running_loop = false;
@@ -45,7 +45,7 @@ void CPPTimerManager::stopTimerManager()
     stopThreadPool(true);
 }
 
-void CPPTimerManager::threadPoolRunner(Message& msg)
+void ComTimerManager::threadPoolRunner(Message& msg)
 {
     uint8 id  = msg.getUInt8("id", 0);
     fc_timer fc = (fc_timer)msg.getPtr("fc");
@@ -56,7 +56,7 @@ void CPPTimerManager::threadPoolRunner(Message& msg)
     }
 }
 
-void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
+void ComTimerManager::ThreadTimerLoop(ComTimerManager* manager)
 {
     LOG_I("running...");
     std::vector<Message> timeout_msgs;
@@ -68,10 +68,10 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
         time_start = com_time_cpu_ms();
         timeout_msgs.clear();
         manager->mutex_timers.lock();
-        std::vector<CPPTimer>::iterator it;
+        std::vector<ComTimer>::iterator it;
         for(it = manager->timers.begin(); it != manager->timers.end();)
         {
-            CPPTimer timer = *it;
+            ComTimer timer = *it;
             timer.interval_ms -= TIMER_INTERVAL_MIN_MS;
             if(timer.interval_ms > 0)
             {
@@ -134,7 +134,7 @@ void CPPTimerManager::ThreadTimerLoop(CPPTimerManager* manager)
     return;
 }
 
-bool CPPTimerManager::isTimerExist(std::string uuid)
+bool ComTimerManager::isTimerExist(std::string uuid)
 {
     std::lock_guard<std::mutex> lck(mutex_timers);
     for(size_t i = 0; i < timers.size(); i++)
@@ -147,7 +147,7 @@ bool CPPTimerManager::isTimerExist(std::string uuid)
     return false;
 }
 
-void CPPTimerManager::removeTimer(std::string uuid)
+void ComTimerManager::removeTimer(std::string uuid)
 {
     mutex_timers.lock();
     for(size_t i = 0; i < timers.size(); i++)
@@ -162,7 +162,7 @@ void CPPTimerManager::removeTimer(std::string uuid)
     return;
 }
 
-void CPPTimerManager::updateTimer(CPPTimer& timer)
+void ComTimerManager::updateTimer(ComTimer& timer)
 {
     mutex_timers.lock();
     for(size_t i = 0; i < timers.size(); i++)
@@ -179,22 +179,22 @@ void CPPTimerManager::updateTimer(CPPTimer& timer)
     return;
 }
 
-void CPPTimerManager::setMessageID(uint32 id)
+void ComTimerManager::setMessageID(uint32 id)
 {
     this->message_id = id;
 }
 
-uint32 CPPTimerManager::getMessageID()
+uint32 ComTimerManager::getMessageID()
 {
     return message_id;
 }
 
-CPPTimer::CPPTimer()
+ComTimer::ComTimer()
 {
     uuid = com_uuid_generator();
 }
 
-CPPTimer::CPPTimer(uint8 id, const std::string& task_name)
+ComTimer::ComTimer(uint8 id, const std::string& task_name)
 {
     this->id = id;
     this->task_name = task_name;
@@ -202,7 +202,7 @@ CPPTimer::CPPTimer(uint8 id, const std::string& task_name)
 }
 
 
-CPPTimer::CPPTimer(uint8 id, const char* task_name)
+ComTimer::ComTimer(uint8 id, const char* task_name)
 {
     if(task_name != NULL)
     {
@@ -212,7 +212,7 @@ CPPTimer::CPPTimer(uint8 id, const char* task_name)
     uuid = com_uuid_generator();
 }
 
-CPPTimer::CPPTimer(uint8 id, fc_timer fc, void* ctx)
+ComTimer::ComTimer(uint8 id, fc_timer fc, void* ctx)
 {
     this->id = id;
     this->fc = fc;
@@ -220,28 +220,28 @@ CPPTimer::CPPTimer(uint8 id, fc_timer fc, void* ctx)
     uuid = com_uuid_generator();
 }
 
-CPPTimer::~CPPTimer()
+ComTimer::~ComTimer()
 {
 }
 
-uint8 CPPTimer::getID()
+uint8 ComTimer::getID()
 {
     return this->id;
 }
 
-int CPPTimer::getInterval()
+int ComTimer::getInterval()
 {
     return this->interval_set_ms;
 }
 
-CPPTimer& CPPTimer::setType(const std::string& task_name)
+ComTimer& ComTimer::setType(const std::string& task_name)
 {
     this->task_name = task_name;
     uuid = com_uuid_generator();
     return *this;
 }
 
-CPPTimer& CPPTimer::setType(const char* task_name)
+ComTimer& ComTimer::setType(const char* task_name)
 {
     if(task_name != NULL)
     {
@@ -251,7 +251,7 @@ CPPTimer& CPPTimer::setType(const char* task_name)
     return *this;
 }
 
-CPPTimer& CPPTimer::setType(fc_timer fc, void* ctx)
+ComTimer& ComTimer::setType(fc_timer fc, void* ctx)
 {
     this->fc = fc;
     this->ctx = ctx;
@@ -259,25 +259,25 @@ CPPTimer& CPPTimer::setType(fc_timer fc, void* ctx)
     return *this;
 }
 
-CPPTimer& CPPTimer::setID(uint8 id)
+ComTimer& ComTimer::setID(uint8 id)
 {
     this->id = id;
     return *this;
 }
 
-CPPTimer& CPPTimer::setInterval(int interval_ms)
+ComTimer& ComTimer::setInterval(int interval_ms)
 {
     this->interval_set_ms = interval_ms;
     return *this;
 }
 
-CPPTimer& CPPTimer::setRepeat(bool repeat)
+ComTimer& ComTimer::setRepeat(bool repeat)
 {
     this->repeat = repeat;
     return *this;
 }
 
-bool CPPTimer::start()
+bool ComTimer::start()
 {
     LOG_D("timer start, uuid=%s", uuid.c_str());
     if(interval_set_ms <= 0 || id == 0)
@@ -294,7 +294,7 @@ bool CPPTimer::start()
     return true;
 }
 
-void CPPTimer::stop()
+void ComTimer::stop()
 {
     if(GetTimerManager().isTimerExist(this->uuid))
     {
@@ -303,17 +303,17 @@ void CPPTimer::stop()
     }
 }
 
-bool CPPTimer::restart()
+bool ComTimer::restart()
 {
     return start();
 }
 
-bool CPPTimer::isStarted()
+bool ComTimer::isStarted()
 {
     return GetTimerManager().isTimerExist(this->uuid);
 }
 
-bool CPPTimer::isRepeat()
+bool ComTimer::isRepeat()
 {
     return repeat;
 }

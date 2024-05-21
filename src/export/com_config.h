@@ -6,15 +6,15 @@
 #include "SimpleIni.h"
 
 //注意:能读取无GROUP的ini文件，但不能存储无GROUP的数据到文件
-class COM_EXPORT CPPConfig
+class COM_EXPORT ComConfig
 {
 public:
-    CPPConfig();
-    CPPConfig(const char* file);
-    CPPConfig(const CPPConfig& config);
-    virtual ~CPPConfig();
+    ComConfig();
+    ComConfig(const char* file);
+    ComConfig(const ComConfig& config);
+    virtual ~ComConfig();
 
-    CPPConfig& operator=(const CPPConfig& config);
+    ComConfig& operator=(const ComConfig& config);
     
     bool load(const char* file);
     bool loadFromString(const char* value);
@@ -57,5 +57,6 @@ private:
     CSimpleIniA ini;
     std::string file_config;
 };
+//typedef ComConfig DEPRECATED("Use ComConfig instead") CPPConfig;
 
 #endif /* __COM_CONFIG_H__ */

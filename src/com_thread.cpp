@@ -155,7 +155,7 @@ int com_process_create(const char* app, std::vector<std::string> args)
         val += " " + args[i];
     }
 
-    std::wstring val_w = com_wstring_from_utf8(CPPBytes(val));
+    std::wstring val_w = com_wstring_from_utf8(ComBytes(val));
     std::vector<wchar_t> cmd;
     cmd.assign(val_w.begin(), val_w.end());
     cmd.push_back(L'\0');
@@ -1148,23 +1148,23 @@ bool ThreadPool::pushPoolMessage(const Message& msg)
     return true;
 }
 
-CPPProcessSem::CPPProcessSem()
+ComProcessSem::ComProcessSem()
 {
     sem = PROCESS_SEM_DEFAULT_VALUE;
 }
 
-CPPProcessSem::CPPProcessSem(const char* name, int init_val)
+ComProcessSem::ComProcessSem(const char* name, int init_val)
 {
     sem = PROCESS_SEM_DEFAULT_VALUE;
     init(name, init_val);
 }
 
-CPPProcessSem::~CPPProcessSem()
+ComProcessSem::~ComProcessSem()
 {
     uninit();
 }
 
-bool CPPProcessSem::init(const char* name, int init_val)
+bool ComProcessSem::init(const char* name, int init_val)
 {
     if(name == NULL)
     {
@@ -1194,7 +1194,7 @@ bool CPPProcessSem::init(const char* name, int init_val)
     }
     return (sem >= 0);
 #elif defined(_WIN32) || defined(_WIN64)
-    std::wstring str_name = com_wstring_from_utf8(CPPBytes(name));
+    std::wstring str_name = com_wstring_from_utf8(ComBytes(name));
     process_sem_t handle = OpenSemaphoreW(SEMAPHORE_ALL_ACCESS, true, str_name.c_str());
     if(handle == NULL)
     {
@@ -1205,7 +1205,7 @@ bool CPPProcessSem::init(const char* name, int init_val)
 #endif
 }
 
-void CPPProcessSem::uninit(bool destroy)
+void ComProcessSem::uninit(bool destroy)
 {
     if(PROCESS_SEM_VALID(sem) == false)
     {
@@ -1222,7 +1222,7 @@ void CPPProcessSem::uninit(bool destroy)
     sem = PROCESS_SEM_DEFAULT_VALUE;
 }
 
-int CPPProcessSem::post()
+int ComProcessSem::post()
 {
     if(PROCESS_SEM_VALID(sem) == false)
     {
@@ -1255,7 +1255,7 @@ int CPPProcessSem::post()
 #endif
 }
 
-int CPPProcessSem::wait(int timeout_ms)
+int ComProcessSem::wait(int timeout_ms)
 {
     if(PROCESS_SEM_VALID(sem) == false)
     {
@@ -1341,23 +1341,23 @@ int CPPProcessSem::wait(int timeout_ms)
 #endif
 }
 
-CPPProcessMutex::CPPProcessMutex()
+ComProcessMutex::ComProcessMutex()
 {
     mutex = PROCESS_MUTEX_DEFAULT_VALUE;
 }
 
-CPPProcessMutex::CPPProcessMutex(const char* name)
+ComProcessMutex::ComProcessMutex(const char* name)
 {
     mutex = PROCESS_MUTEX_DEFAULT_VALUE;
     init(name);
 }
 
-CPPProcessMutex::~CPPProcessMutex()
+ComProcessMutex::~ComProcessMutex()
 {
     uninit();
 }
 
-bool CPPProcessMutex::init(const char* name)
+bool ComProcessMutex::init(const char* name)
 {
     if(name == NULL)
     {
@@ -1384,7 +1384,7 @@ bool CPPProcessMutex::init(const char* name)
     semctl(mutex, 0, SETVAL, arg);
     return (mutex >= 0);
 #elif defined(_WIN32) || defined(_WIN64)
-    std::wstring str_name = com_wstring_from_utf8(CPPBytes(name));
+    std::wstring str_name = com_wstring_from_utf8(ComBytes(name));
     process_mutex_t handle = OpenMutexW(MUTEX_ALL_ACCESS, true, str_name.c_str());
     if(handle == NULL)
     {
@@ -1395,7 +1395,7 @@ bool CPPProcessMutex::init(const char* name)
 #endif
 }
 
-void CPPProcessMutex::uninit(bool destroy)
+void ComProcessMutex::uninit(bool destroy)
 {
     if(PROCESS_MUTEX_VALID(mutex) == false)
     {
@@ -1412,7 +1412,7 @@ void CPPProcessMutex::uninit(bool destroy)
     mutex = PROCESS_MUTEX_DEFAULT_VALUE;
 }
 
-int CPPProcessMutex::lock()
+int ComProcessMutex::lock()
 {
     if(PROCESS_MUTEX_VALID(mutex) == false)
     {
@@ -1462,7 +1462,7 @@ int CPPProcessMutex::lock()
 #endif
 }
 
-int CPPProcessMutex::trylock()
+int ComProcessMutex::trylock()
 {
     if(PROCESS_MUTEX_VALID(mutex) == false)
     {
@@ -1510,7 +1510,7 @@ int CPPProcessMutex::trylock()
 #endif
 }
 
-int CPPProcessMutex::unlock()
+int ComProcessMutex::unlock()
 {
     if(PROCESS_MUTEX_VALID(mutex) == false)
     {
@@ -1544,23 +1544,23 @@ int CPPProcessMutex::unlock()
 #endif
 }
 
-CPPProcessCondition::CPPProcessCondition()
+ComProcessCondition::ComProcessCondition()
 {
     cond = PROCESS_COND_DEFAULT_VALUE;
 }
 
-CPPProcessCondition::CPPProcessCondition(const char* name)
+ComProcessCondition::ComProcessCondition(const char* name)
 {
     cond = PROCESS_COND_DEFAULT_VALUE;
     init(name);
 }
 
-CPPProcessCondition::~CPPProcessCondition()
+ComProcessCondition::~ComProcessCondition()
 {
     uninit();
 }
 
-bool CPPProcessCondition::init(const char* name)
+bool ComProcessCondition::init(const char* name)
 {
     if(name == NULL)
     {
@@ -1584,7 +1584,7 @@ bool CPPProcessCondition::init(const char* name)
     cond = semget(key, 1, flag);
     return (cond >= 0);
 #elif defined(_WIN32) || defined(_WIN64)
-    std::wstring str_name = com_wstring_from_utf8(CPPBytes(name));
+    std::wstring str_name = com_wstring_from_utf8(ComBytes(name));
     process_cond_t handle = OpenEventW(EVENT_ALL_ACCESS, true, str_name.c_str());
     if(handle == NULL)
     {
@@ -1595,7 +1595,7 @@ bool CPPProcessCondition::init(const char* name)
 #endif
 }
 
-void CPPProcessCondition::uninit(bool destroy)
+void ComProcessCondition::uninit(bool destroy)
 {
     if(PROCESS_COND_VALID(cond) == false)
     {
@@ -1612,7 +1612,7 @@ void CPPProcessCondition::uninit(bool destroy)
     cond = PROCESS_COND_DEFAULT_VALUE;
 }
 
-int CPPProcessCondition::wait(int timeout_ms)
+int ComProcessCondition::wait(int timeout_ms)
 {
     if(PROCESS_COND_VALID(cond) == false)
     {
@@ -1699,7 +1699,7 @@ int CPPProcessCondition::wait(int timeout_ms)
 #endif
 }
 
-int CPPProcessCondition::notifyOne()
+int ComProcessCondition::notifyOne()
 {
     if(PROCESS_COND_VALID(cond) == false)
     {
@@ -1729,7 +1729,7 @@ int CPPProcessCondition::notifyOne()
         return -1;
     }
 #else
-    LOG_W("not support,will wake-up all instances, or use CPPProcessSem instead");
+    LOG_W("not support,will wake-up all instances, or use ComProcessSem instead");
     if(SetEvent(cond) == 0)
     {
         return -1;
@@ -1738,7 +1738,7 @@ int CPPProcessCondition::notifyOne()
 #endif
 }
 
-int CPPProcessCondition::notifyAll()
+int ComProcessCondition::notifyAll()
 {
     if(PROCESS_COND_VALID(cond) == false)
     {
@@ -1776,25 +1776,25 @@ int CPPProcessCondition::notifyAll()
 #endif
 }
 
-CPPShareMemoryV::CPPShareMemoryV()
+ComShareMemoryV::ComShareMemoryV()
 {
     msg = NULL;
     mem = PROCESS_MEM_DEFAULT_VALUE;
 }
 
-CPPShareMemoryV::CPPShareMemoryV(const char* name, int size)
+ComShareMemoryV::ComShareMemoryV(const char* name, int size)
 {
     msg = NULL;
     mem = PROCESS_MEM_DEFAULT_VALUE;
     init(name, size);
 }
 
-CPPShareMemoryV::~CPPShareMemoryV()
+ComShareMemoryV::~ComShareMemoryV()
 {
     uninit();
 }
 
-void* CPPShareMemoryV::init(const char* name, int size)
+void* ComShareMemoryV::init(const char* name, int size)
 {
     if(name == NULL || size <= 0)
     {
@@ -1834,7 +1834,7 @@ void* CPPShareMemoryV::init(const char* name, int size)
     return msg;
 }
 
-void CPPShareMemoryV::uninit()
+void ComShareMemoryV::uninit()
 {
 #if __linux__ == 1 || defined(__APPLE__)
     if(msg != NULL)
@@ -1859,19 +1859,19 @@ void CPPShareMemoryV::uninit()
     msg = NULL;
 }
 
-void* CPPShareMemoryV::getAddr()
+void* ComShareMemoryV::getAddr()
 {
     return msg;
 }
 
-CPPShareMemoryMap::CPPShareMemoryMap()
+ComShareMemoryMap::ComShareMemoryMap()
 {
     msg = NULL;
     msg_size = 0;
     mem = PROCESS_MEM_DEFAULT_VALUE;
 }
 
-CPPShareMemoryMap::CPPShareMemoryMap(const char* name, int size)
+ComShareMemoryMap::ComShareMemoryMap(const char* name, int size)
 {
     msg = NULL;
     msg_size = 0;
@@ -1879,12 +1879,12 @@ CPPShareMemoryMap::CPPShareMemoryMap(const char* name, int size)
     init(name, size);
 }
 
-CPPShareMemoryMap::~CPPShareMemoryMap()
+ComShareMemoryMap::~ComShareMemoryMap()
 {
     uninit();
 }
 
-void* CPPShareMemoryMap::init(const char* file, int size)
+void* ComShareMemoryMap::init(const char* file, int size)
 {
     if(file == NULL || size <= 0)
     {
@@ -1916,7 +1916,7 @@ void* CPPShareMemoryMap::init(const char* file, int size)
     return msg;
 }
 
-void CPPShareMemoryMap::uninit()
+void ComShareMemoryMap::uninit()
 {
 #if defined(_WIN32) || defined(_WIN64)
     if(msg != NULL)
@@ -1937,7 +1937,7 @@ void CPPShareMemoryMap::uninit()
     msg = NULL;
 }
 
-void* CPPShareMemoryMap::getAddr()
+void* ComShareMemoryMap::getAddr()
 {
     return msg;
 }

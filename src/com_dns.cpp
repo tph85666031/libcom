@@ -42,7 +42,7 @@ std::vector<std::string> dns_get_server_list(const char* file_dns)
     return list;
 }
 
-CPPBytes dns_query_encode(const char* domain_name, uint16 id, bool is_tcp)
+ComBytes dns_query_encode(const char* domain_name, uint16 id, bool is_tcp)
 {
     //构造DNS数据
     Serializer s;
@@ -188,7 +188,7 @@ std::string dns_via_udp(const char* domain_name, const char* interface, const ch
     }
 
     uint16 id = dns_id++;
-    CPPBytes bytes = dns_query_encode(domain_name, id, false);
+    ComBytes bytes = dns_query_encode(domain_name, id, false);
     int ret = com_socket_udp_send(socket_fd, dns_server_ip, DNS_PORT, bytes.getData(), bytes.getDataSize());
     if(ret <= 0)
     {
@@ -219,7 +219,7 @@ std::string dns_via_tcp(const char* domain_name, const char* interface, const ch
     }
 
     uint16 id = dns_id++;
-    CPPBytes bytes = dns_query_encode(domain_name, id, true);
+    ComBytes bytes = dns_query_encode(domain_name, id, true);
     int ret = com_socket_tcp_send(socket_fd, bytes.getData(), bytes.getDataSize());
     if(ret <= 0)
     {

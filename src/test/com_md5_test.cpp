@@ -5,7 +5,7 @@
 
 void com_md5_unit_test_suit(void** state)
 {
-    CPPMD5 md5;
+    ComMD5 md5;
     md5.append((uint8*)"1234567890", sizeof("1234567890") - 1);
     md5.append((uint8*)"1234567890", sizeof("1234567890") - 1);
     std::string result =  md5.finish().toHexString();
@@ -14,23 +14,23 @@ void com_md5_unit_test_suit(void** state)
     com_file_writef("./md5_test.txt", "teset value");
     md5.appendFile("./md5_test.txt");
     result =  md5.finish().toHexString();
-    ASSERT_STR_EQUAL(CPPMD5::Digest("teset value", sizeof("teset value") - 1).toHexString().c_str(), result.c_str());
+    ASSERT_STR_EQUAL(ComMD5::Digest("teset value", sizeof("teset value") - 1).toHexString().c_str(), result.c_str());
 
     md5.appendFile("./md5_test.txt", 0, 5);
     result =  md5.finish().toHexString();
-    ASSERT_STR_EQUAL(CPPMD5::Digest("teset", sizeof("teset") - 1).toHexString().c_str(), result.c_str());
+    ASSERT_STR_EQUAL(ComMD5::Digest("teset", sizeof("teset") - 1).toHexString().c_str(), result.c_str());
 
     md5.appendFile("./md5_test.txt", 1, 4);
     result =  md5.finish().toHexString();
-    ASSERT_STR_EQUAL(CPPMD5::Digest("eset", sizeof("eset") - 1).toHexString().c_str(), result.c_str());
+    ASSERT_STR_EQUAL(ComMD5::Digest("eset", sizeof("eset") - 1).toHexString().c_str(), result.c_str());
 
     md5.appendFile("./md5_test.txt", 6, 3);
     result =  md5.finish().toHexString();
-    ASSERT_STR_EQUAL(CPPMD5::Digest("val", sizeof("val") - 1).toHexString().c_str(), result.c_str());
+    ASSERT_STR_EQUAL(ComMD5::Digest("val", sizeof("val") - 1).toHexString().c_str(), result.c_str());
 
     md5.appendFile("./md5_test.txt", 6, -1);
     result =  md5.finish().toHexString();
-    ASSERT_STR_EQUAL(CPPMD5::Digest("value", sizeof("value") - 1).toHexString().c_str(), result.c_str());
+    ASSERT_STR_EQUAL(ComMD5::Digest("value", sizeof("value") - 1).toHexString().c_str(), result.c_str());
 
     com_file_remove("./md5_test.txt");
     result = md5.finish().toHexString();
@@ -46,7 +46,7 @@ void com_md5_unit_test_suit(void** state)
             continue;
         }
         std::string file = it->first;
-        std::string md5_my = CPPMD5::Digest(file.c_str()).toHexString();
+        std::string md5_my = ComMD5::Digest(file.c_str()).toHexString();
 #if defined(_WIN32) || defined(_WIN64)
         std::string val = com_run_shell_with_output("md5sum.exe %s", file.c_str());
 #else

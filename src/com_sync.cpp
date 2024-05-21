@@ -11,7 +11,7 @@ SyncMessage::SyncMessage()
 {
 }
 
-SyncMessage::SyncMessage(CPPSem* sem)
+SyncMessage::SyncMessage(ComSem* sem)
 {
     this->sem = sem;
 }
@@ -93,21 +93,21 @@ void SyncAdapter::syncCancel(uint64 uuid)
     return;
 }
 
-CPPBytes SyncAdapter::syncWait(uint64 uuid, int timeout_ms)
+ComBytes SyncAdapter::syncWait(uint64 uuid, int timeout_ms)
 {
-    CPPSem* sem = NULL;
+    ComSem* sem = NULL;
     {
         std::lock_guard<std::mutex> lck(mutex_sync_map);
         if(sync_map.count(uuid) <= 0)
         {
-            return CPPBytes();
+            return ComBytes();
         }
         SyncMessage& sync = sync_map[uuid];
         sem = sync.sem;
     }
     if(sem == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
 
     bool ret = sem->wait(timeout_ms);
@@ -116,12 +116,12 @@ CPPBytes SyncAdapter::syncWait(uint64 uuid, int timeout_ms)
         std::lock_guard<std::mutex> lck(mutex_sync_map);
         if(sync_map.count(uuid) <= 0)
         {
-            return CPPBytes();
+            return ComBytes();
         }
         if(ret == false)
         {
             sync_map.erase(uuid);
-            return CPPBytes();
+            return ComBytes();
         }
         SyncMessage sync = std::move(sync_map[uuid]);
         sync_map.erase(uuid);
@@ -129,9 +129,9 @@ CPPBytes SyncAdapter::syncWait(uint64 uuid, int timeout_ms)
     }
 }
 
-bool SyncAdapter::syncWait(uint64 uuid, CPPBytes& reply, int timeout_ms)
+bool SyncAdapter::syncWait(uint64 uuid, ComBytes& reply, int timeout_ms)
 {
-    CPPSem* sem = NULL;
+    ComSem* sem = NULL;
     {
         std::lock_guard<std::mutex> lck(mutex_sync_map);
         if(sync_map.count(uuid) <= 0)
@@ -198,7 +198,7 @@ uint64 SyncAdapter::createUUID()
     return uuid++;
 }
 
-void SyncAdapter::pushSem(CPPSem* sem)
+void SyncAdapter::pushSem(ComSem* sem)
 {
     if(sem == NULL)
     {
@@ -215,14 +215,14 @@ void SyncAdapter::pushSem(CPPSem* sem)
     }
 }
 
-CPPSem* SyncAdapter::popSem()
+ComSem* SyncAdapter::popSem()
 {
     std::lock_guard<std::mutex> lck(mutex_sem_cache);
     if(sem_cache.empty())
     {
-        return new CPPSem();
+        return new ComSem();
     }
-    CPPSem* sem = sem_cache.front();
+    ComSem* sem = sem_cache.front();
     sem_cache.pop();
     return sem;
 }
@@ -232,7 +232,7 @@ void SyncAdapter::clearSem()
     mutex_sem_cache.lock();
     while(sem_cache.empty() == false)
     {
-        CPPSem* sem = sem_cache.front();
+        ComSem* sem = sem_cache.front();
         sem_cache.pop();
         if(sem != NULL)
         {

@@ -56,7 +56,7 @@ COM_EXPORT std::vector<KVResult> com_kv_get_tail(const char* file, int count);
 
 COM_EXPORT std::vector<std::string> com_kv_get_all_keys(const char* file);
 
-COM_EXPORT CPPBytes com_kv_get_bytes(const char* file, const char* key);
+COM_EXPORT ComBytes com_kv_get_bytes(const char* file, const char* key);
 
 COM_EXPORT bool com_kv_get_string(const char* file, const char* key, char* value, int value_size);
 COM_EXPORT std::string com_kv_get_string(const char* file, const char* key, const char* default_value = NULL);

@@ -26,15 +26,15 @@ static int mock_test(int* val_a, int* val_b, int val_c)
     return ret;
 }
 
-static CPPBytes bytearray_test(uint8* data, int dataSize)
+static ComBytes bytearray_test(uint8* data, int dataSize)
 {
-    CPPBytes bytes;
+    ComBytes bytes;
     if(data == NULL || dataSize <= 0 || dataSize % 8 != 0)
     {
         return bytes;
     }
 
-    CPPBytes bytesSrc(data, dataSize);
+    ComBytes bytesSrc(data, dataSize);
     uint8 buf[8];
     for(int i = 0; i < bytesSrc.getDataSize() / 8; i++)
     {
@@ -52,7 +52,7 @@ static void thread_condition_test(void* arg)
         return;
     }
     com_sleep_ms(1000);
-    CPPCondition* condition = (CPPCondition*)arg;
+    ComCondition* condition = (ComCondition*)arg;
     LOG_D("condition start notify");
     condition->notifyAll();
     LOG_D("condition notify done");
@@ -271,17 +271,17 @@ void com_base_string_unit_test_suit(void** state)
 
     std::string str_utf8 = com_wstring_to_utf8(L"测试").toString();
     ASSERT_STR_EQUAL(com_string_utf8_to_local(str_utf8.c_str()).c_str(), "测试");
-    CPPBytes utf16 = com_string_utf8_to_utf16(CPPBytes("中文测试"));
-    CPPBytes utf32 = com_string_utf16_to_utf32(utf16);
-    CPPBytes utf8 = com_string_utf32_to_utf8(utf32);
+    ComBytes utf16 = com_string_utf8_to_utf16(ComBytes("中文测试"));
+    ComBytes utf32 = com_string_utf16_to_utf32(utf16);
+    ComBytes utf8 = com_string_utf32_to_utf8(utf32);
     ASSERT_STR_EQUAL(utf8.toString().c_str(), "中文测试");
 
-    CPPBytes utf16_2 = com_string_utf32_to_utf16(utf32);
+    ComBytes utf16_2 = com_string_utf32_to_utf16(utf32);
     ASSERT_TRUE(utf16 == utf16_2);
-    CPPBytes utf8_2 = com_string_utf16_to_utf8(utf16);
+    ComBytes utf8_2 = com_string_utf16_to_utf8(utf16);
     ASSERT_TRUE(utf8 == utf8_2);
     std::wstring wstr = com_wstring_from_utf8(utf8_2);
-    CPPBytes utf8_3 = com_wstring_to_utf8(wstr);
+    ComBytes utf8_3 = com_wstring_to_utf8(wstr);
     ASSERT_TRUE(utf8_2 == utf8_3);
 
     ASSERT_TRUE(com_string_match("123456", "123?56"));
@@ -406,7 +406,7 @@ void com_base_unit_test_suit(void** state)
     json_m.Add("map", array_m);
     LOG_I("%s", json_m.ToString().c_str());
 
-    CPPCondition condition;
+    ComCondition condition;
     std::thread thread_test(thread_condition_test, &condition);
     LOG_D("condition start wait");
     condition.wait();
@@ -483,7 +483,7 @@ void com_base_unit_test_suit(void** state)
 
     TIME_COST_SHOW();
     Message msg;
-    CPPBytes b1(10 * 1014 * 1024);
+    ComBytes b1(10 * 1014 * 1024);
     for(int i = 0; i < 1024 * 1024; i++)
     {
         b1.append((uint8*)"0123456789", 10);
@@ -491,11 +491,11 @@ void com_base_unit_test_suit(void** state)
     }
 
     TIME_COST_SHOW();
-    CPPBytes b2 = b1;
+    ComBytes b2 = b1;
     TIME_COST_SHOW();
-    CPPBytes b3 = std::move(b1);
+    ComBytes b3 = std::move(b1);
     TIME_COST_SHOW();
-    CPPBytes b4(std::move(b2));
+    ComBytes b4(std::move(b2));
     TIME_COST_SHOW();
 
     Message msg2 = msg;
@@ -519,7 +519,7 @@ void com_base_unit_test_suit(void** state)
 
 void com_base_bytearray_unit_test_suit(void** state)
 {
-    CPPBytes bytes((uint8*)"123456", 6);
+    ComBytes bytes((uint8*)"123456", 6);
 
     bytes.removeAt(1);
     ASSERT_STR_EQUAL(bytes.toString().c_str(), "13456");
@@ -533,7 +533,7 @@ void com_base_bytearray_unit_test_suit(void** state)
     ASSERT_STR_EQUAL(bytes.toString().c_str(), "345");
     LOG_D("bytes=%s\n", bytes.toString().c_str());
 
-    CPPBytes bytes1((uint8*)"123456", 6);
+    ComBytes bytes1((uint8*)"123456", 6);
     bytes1 = bytearray_test(bytes1.getData(), bytes1.getDataSize());
 }
 
@@ -558,7 +558,7 @@ void com_base_message_unit_test_suit(void** state)
     msg = Message::FromJSON(msg.toJSON());
 
     msg.reset();
-    CPPBytes bytes;
+    ComBytes bytes;
     msg.set("bytes", bytes);
 }
 

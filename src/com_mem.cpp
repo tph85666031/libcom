@@ -236,7 +236,7 @@ private:
     std::map<std::string, std::set<std::string>> hooks_task;
 
     std::mutex mutex_keys;
-    CPPSem sem_keys = {"sem_mem"};
+    ComSem sem_keys = {"sem_mem"};
     std::queue<MemDataSyncItem> keys;
 
     std::atomic<uint32> message_id = {0xFFFFFFFE};
@@ -383,7 +383,7 @@ void com_mem_set(const char* key, const uint8* val, int val_size)
     GetMemDataSyncManager().notify(key,  exist ? DATA_SYNC_UPDATED : DATA_SYNC_NEW);
 }
 
-void com_mem_set(const char* key, CPPBytes& bytes)
+void com_mem_set(const char* key, ComBytes& bytes)
 {
     mutex_share_mem.lock();
     bool exist = mem_msg.isKeyExist(key);
@@ -480,7 +480,7 @@ std::string com_mem_get_string(const char* key, std::string default_val)
     return mem_msg.getString(key, default_val);
 }
 
-CPPBytes com_mem_get_bytes(const char* key)
+ComBytes com_mem_get_bytes(const char* key)
 {
     std::lock_guard<std::mutex> lck(mutex_share_mem);
     return mem_msg.getBytes(key);
@@ -515,7 +515,7 @@ bool com_mem_to_file(std::string file)
 
 void com_mem_from_file(std::string file)
 {
-    CPPBytes bytes = com_file_readall(file.c_str());
+    ComBytes bytes = com_file_readall(file.c_str());
     com_mem_from_json(bytes.toString());
 }
 

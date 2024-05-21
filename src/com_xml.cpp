@@ -10,14 +10,14 @@ using namespace tinyxml2;
 
 #define XML_DECLARATION "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>"
 
-CPPXmlParser::CPPXmlParser()
+ComXmlParser::ComXmlParser()
 {
     static XMLDocument doc;
     doc.Parse(XML_DECLARATION);
     ctx = &doc;
 }
 
-CPPXmlParser::CPPXmlParser(const char* file)
+ComXmlParser::ComXmlParser(const char* file)
 {
     static XMLDocument doc;
     ctx = &doc;
@@ -28,18 +28,18 @@ CPPXmlParser::CPPXmlParser(const char* file)
     }
 }
 
-CPPXmlParser::CPPXmlParser(const CPPBytes& content)
+ComXmlParser::ComXmlParser(const ComBytes& content)
 {
     static XMLDocument doc;
     ctx = &doc;
     load(content);
 }
 
-CPPXmlParser::~CPPXmlParser()
+ComXmlParser::~ComXmlParser()
 {
 }
 
-bool CPPXmlParser::load(const char* file)
+bool ComXmlParser::load(const char* file)
 {
     if(file == NULL)
     {
@@ -58,7 +58,7 @@ bool CPPXmlParser::load(const char* file)
     return true;
 }
 
-bool CPPXmlParser::load(const CPPBytes& content)
+bool ComXmlParser::load(const ComBytes& content)
 {
     if(content.empty())
     {
@@ -72,12 +72,12 @@ bool CPPXmlParser::load(const CPPBytes& content)
     return true;
 }
 
-bool CPPXmlParser::save()
+bool ComXmlParser::save()
 {
     return saveAs(file.c_str());
 }
 
-bool CPPXmlParser::saveAs(const char* file)
+bool ComXmlParser::saveAs(const char* file)
 {
     if(file == NULL || file[0] == '\0')
     {
@@ -91,7 +91,7 @@ bool CPPXmlParser::saveAs(const char* file)
     return (((XMLDocument*)ctx)->SaveFile(file_str.c_str(), false) == XML_SUCCESS);
 }
 
-int64 CPPXmlParser::getTextAsNumber(const char* path, int64 default_val)
+int64 ComXmlParser::getTextAsNumber(const char* path, int64 default_val)
 {
     std::string value = getText(path);
     if(value.empty())
@@ -102,7 +102,7 @@ int64 CPPXmlParser::getTextAsNumber(const char* path, int64 default_val)
     return strtoll(value.c_str(), NULL, 10);
 }
 
-double CPPXmlParser::getTextAsDouble(const char* path, double default_val)
+double ComXmlParser::getTextAsDouble(const char* path, double default_val)
 {
     std::string value = getText(path);
     if(value.empty())
@@ -113,7 +113,7 @@ double CPPXmlParser::getTextAsDouble(const char* path, double default_val)
     return strtod(value.c_str(), NULL);
 }
 
-bool CPPXmlParser::getTextAsBool(const char* path, bool default_val)
+bool ComXmlParser::getTextAsBool(const char* path, bool default_val)
 {
     std::string value = getText(path);
     if(value.empty())
@@ -137,7 +137,7 @@ bool CPPXmlParser::getTextAsBool(const char* path, bool default_val)
     }
 }
 
-std::string CPPXmlParser::getText(const char* path)
+std::string ComXmlParser::getText(const char* path)
 {
     if(path == NULL)
     {
@@ -159,7 +159,7 @@ std::string CPPXmlParser::getText(const char* path)
     return text;
 }
 
-int64 CPPXmlParser::getAttributeAsNumber(const char* path, const char* attribute_name, int64 default_val)
+int64 ComXmlParser::getAttributeAsNumber(const char* path, const char* attribute_name, int64 default_val)
 {
     std::string value = getAttribute(path, attribute_name);
     if(value.empty())
@@ -170,7 +170,7 @@ int64 CPPXmlParser::getAttributeAsNumber(const char* path, const char* attribute
     return strtoll(value.c_str(), NULL, 10);
 }
 
-double CPPXmlParser::getAttributeAsDouble(const char* path, const char* attribute_name, double default_val)
+double ComXmlParser::getAttributeAsDouble(const char* path, const char* attribute_name, double default_val)
 {
     std::string value = getAttribute(path, attribute_name);
     if(value.empty())
@@ -181,7 +181,7 @@ double CPPXmlParser::getAttributeAsDouble(const char* path, const char* attribut
     return strtod(value.c_str(), NULL);
 }
 
-bool CPPXmlParser::getAttributeAsBool(const char* path, const char* attribute_name, bool default_val)
+bool ComXmlParser::getAttributeAsBool(const char* path, const char* attribute_name, bool default_val)
 {
     std::string value = getAttribute(path, attribute_name);
     if(value.empty())
@@ -205,7 +205,7 @@ bool CPPXmlParser::getAttributeAsBool(const char* path, const char* attribute_na
     }
 }
 
-std::string CPPXmlParser::getAttribute(const char* path, const char* attribute_name)
+std::string ComXmlParser::getAttribute(const char* path, const char* attribute_name)
 {
     if(path == NULL || attribute_name == NULL)
     {
@@ -227,7 +227,7 @@ std::string CPPXmlParser::getAttribute(const char* path, const char* attribute_n
     return value;
 }
 
-void* CPPXmlParser::getNode(const char* path)
+void* ComXmlParser::getNode(const char* path)
 {
     std::string path_str = pathRefine(path);
     if(path_str.empty())
@@ -264,7 +264,7 @@ void* CPPXmlParser::getNode(const char* path)
     return child;
 }
 
-bool CPPXmlParser::setText(const char* path, const char* value)
+bool ComXmlParser::setText(const char* path, const char* value)
 {
     if(path == NULL)
     {
@@ -289,7 +289,7 @@ bool CPPXmlParser::setText(const char* path, const char* value)
     return true;
 }
 
-bool CPPXmlParser::setAttribute(const char* path, const char* attribute_name, const char* value)
+bool ComXmlParser::setAttribute(const char* path, const char* attribute_name, const char* value)
 {
     if(path == NULL || attribute_name == NULL)
     {
@@ -314,7 +314,7 @@ bool CPPXmlParser::setAttribute(const char* path, const char* attribute_name, co
     return true;
 }
 
-bool CPPXmlParser::isNodeExists(const char* path)
+bool ComXmlParser::isNodeExists(const char* path)
 {
     if(path == NULL)
     {
@@ -329,7 +329,7 @@ bool CPPXmlParser::isNodeExists(const char* path)
     return false;
 }
 
-void* CPPXmlParser::createNode(const char* path)
+void* ComXmlParser::createNode(const char* path)
 {
     std::string path_str = pathRefine(path);
     if(path_str.empty())
@@ -388,7 +388,7 @@ void* CPPXmlParser::createNode(const char* path)
     return (void*)child;
 }
 
-std::string CPPXmlParser::pathRefine(const char* path)
+std::string ComXmlParser::pathRefine(const char* path)
 {
     if(path == NULL)
     {

@@ -454,15 +454,15 @@ std::vector<std::string> com_kv_get_all_keys(const char* file)
     return keys;
 }
 
-CPPBytes com_kv_get_bytes(const char* file, const char* key)
+ComBytes com_kv_get_bytes(const char* file, const char* key)
 {
-    CPPBytes bytes;
+    ComBytes bytes;
     if(file == NULL || key == NULL)
     {
         return bytes;
     }
     std::string buf = com_kv_get_string(file, key, NULL);
-    return CPPBytes::FromHexString(buf.c_str());
+    return ComBytes::FromHexString(buf.c_str());
 }
 
 bool com_kv_get_string(const char* file, const char* key, char* value, int value_size)

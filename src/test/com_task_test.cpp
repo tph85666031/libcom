@@ -126,7 +126,7 @@ void com_task_unit_test_suit(void** state)
     }
 
 
-    CPPBytes reply = GetTaskManager().sendMessageAndWait("task1", msg, 1000);
+    ComBytes reply = GetTaskManager().sendMessageAndWait("task1", msg, 1000);
     LOG_I("reply=%s", reply.toString().c_str());
 
     GetTaskManager().destroyTask("task1");

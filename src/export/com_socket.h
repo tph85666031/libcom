@@ -173,7 +173,7 @@ private:
 
 private:
     std::string item;
-    CPPCondition condition_queue;
+    ComCondition condition_queue;
     std::mutex mutex_queue;
     std::queue<std::string> queue;
 
@@ -198,7 +198,7 @@ private:
     static void ThreadReceiver(StringIPCClient* ctx);
     void onRecv(uint8* data, int data_size);
 private:
-    CPPCondition condition_queue;
+    ComCondition condition_queue;
     std::mutex mutex_queue;
     std::queue<std::string> queue;
 
@@ -243,7 +243,7 @@ private:
 private:
     std::map<int, std::string> vals;
 
-    CPPCondition condition_queue;
+    ComCondition condition_queue;
     std::mutex mutex_queue;
     std::queue<std::string> queue;
 

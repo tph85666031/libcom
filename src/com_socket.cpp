@@ -198,7 +198,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
     }
     else
     {
-        local_addr.sin_addr.s_addr = inet_addr(nic.ip.c_str());
+        inet_pton(AF_INET, nic.ip.c_str(), &local_addr.sin_addr.s_addr);
     }
     if(bind(socketfd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0)
     {
@@ -318,7 +318,7 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
     }
     else
     {
-        local_addr.sin_addr.s_addr = inet_addr(nic.ip.c_str());
+        inet_pton(AF_INET, nic.ip.c_str(), &local_addr.sin_addr.s_addr);
     }
 
     if(bind(socketfd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0)
@@ -513,7 +513,7 @@ uint8 com_net_get_rpfilter(const char* interface_name)
     {
         return 0xFF;
     }
-    CPPBytes bytes = com_file_readall(com_string_format("/proc/sys/net/ipv4/conf/%s/rp_filter", interface_name).c_str());
+    ComBytes bytes = com_file_readall(com_string_format("/proc/sys/net/ipv4/conf/%s/rp_filter", interface_name).c_str());
     uint8 flag = (uint8)strtoul(bytes.toString().c_str(), NULL, 10);
     if(flag != 0 && flag != 1 && flag != 2)
     {
@@ -1159,7 +1159,7 @@ bool MulticastNode::startNode()
     }
 
     struct ip_mreq mreq; // 多播地址结构体
-    mreq.imr_multiaddr.s_addr = inet_addr(getHost().c_str());
+    inet_pton(AF_INET, getHost().c_str(), &mreq.imr_multiaddr.s_addr);
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     ret = setsockopt(socketfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*)&mreq, sizeof(mreq));
     if(ret < 0)
@@ -1232,7 +1232,7 @@ void MulticastNode::ThreadRX(MulticastNode* client)
 
 void MulticastNode::onRecv(uint8* data, int data_size)
 {
-    CPPBytes bytes(data, data_size);
+    ComBytes bytes(data, data_size);
     LOG_I("received,hex=%s,size=%d", bytes.toHexString().c_str(), data_size);
 }
 
@@ -1615,7 +1615,7 @@ void StringIPCServer::onRecv(std::string& host, uint16 port, int socketfd, uint8
     {
         return;
     }
-    LOG_D("String IPC Recv Data, fd:%d data size: %d data:%s", socketfd, data_size, (char *)data);
+    LOG_D("String IPC Recv Data, fd:%d data size: %d data:%s", socketfd, data_size, (char*)data);
 
     if(vals.count(socketfd) == 0)
     {

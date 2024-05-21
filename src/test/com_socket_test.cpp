@@ -17,7 +17,7 @@ public:
     void onRecv(uint8* data, int data_size)
     {
         this->data_size += data_size;
-        CPPBytes bytes(data, data_size);
+        ComBytes bytes(data, data_size);
         //LOG_D("%s got = %s", getHost(), bytes.toHexString().c_str());
     }
     std::atomic<int> data_size;
@@ -38,7 +38,7 @@ public:
     void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
     {
         this->data_size += data_size;
-        CPPBytes bytes(data, data_size);
+        ComBytes bytes(data, data_size);
         //LOG_D("recv %s:%d = %s,data_size=%d", host, port, bytes.toString().c_str(),this->data_size.load());
     }
     std::atomic<int> data_size;
@@ -59,7 +59,7 @@ public:
     void onRecv(uint8* data, int data_size)
     {
         this->data_size += data_size;
-        CPPBytes bytes(data, data_size);
+        ComBytes bytes(data, data_size);
         //LOG_D("%s got = %s", getFileName(), bytes.toHexString().c_str());
     }
     std::atomic<int> data_size;
@@ -80,7 +80,7 @@ public:
     void onRecv(std::string& client_name, int socketfd, uint8* data, int data_size)
     {
         this->data_size += data_size;
-        CPPBytes bytes(data, data_size);
+        ComBytes bytes(data, data_size);
         LOG_D("recv %s = %s", client_name.c_str(), bytes.toString().c_str());
     }
     std::atomic<int> data_size;

@@ -23,7 +23,7 @@ public:
         uint64 uuid = 2;
         GetSyncManager().getAdapter("sync_test").syncPrepare(uuid);
         flag = uuid;//send message with uuid to other thread and wait reply
-        CPPBytes bytes;
+        ComBytes bytes;
         GetSyncManager().getAdapter("sync_test").syncWait(uuid, bytes, timeout_ms);
         return bytes.toString();
     }

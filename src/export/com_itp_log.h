@@ -497,7 +497,7 @@ public:
     virtual ~ITPLogReader();
 private:
     virtual void onMessage(uint8 type, uint64 timestamp_ms, const std::string& message);
-    void read(CPPBytes& data, int tlv_count);
+    void read(ComBytes& data, int tlv_count);
     static void ThreadReader(ITPLogReader* ctx);
 
 private:

@@ -37,7 +37,7 @@ private:
     std::mutex mutex_clients;
     std::map<int, SOCKET_CLIENT_DES> clients;
     std::mutex mutexfds;
-    CPPSem semfds;
+    ComSem semfds;
     std::deque<SOCKET_CLIENT_DES> ready_fds;
 };
 
@@ -74,7 +74,7 @@ private:
     std::mutex mutex_clients;
     std::map<int, SOCKET_CLIENT_DES> clients;
     ComMutex mutexfds;
-    CPPSem semfds;
+    ComSem semfds;
     std::queue<SOCKET_CLIENT_DES> fds;
 };
 

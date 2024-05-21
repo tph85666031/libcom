@@ -26,7 +26,7 @@ public:
     Serializer& append(const std::string val, int val_size = -1);
     Serializer& append(const char* val, int val_size = -1);
     Serializer& append(const uint8* val, int val_size);
-    Serializer& append(CPPBytes& bytes);
+    Serializer& append(ComBytes& bytes);
 
     template<class T>
     Serializer& append(const std::vector<T>& list)
@@ -116,12 +116,12 @@ public:
     int detach(std::string& val, int val_size = -1);
     int detach(char* val, int val_size);
     int detach(uint8* val, int val_size);
-    int detach(CPPBytes& bytes, int val_size);
+    int detach(ComBytes& bytes, int val_size);
 
     void clear();
     void detachReset();
     int getDetachRemainSize();
-    CPPBytes toBytes();
+    ComBytes toBytes();
 
     uint8* getData();
     int getDataSize();
@@ -215,7 +215,7 @@ void __tuple_serializer_json_decode(CJsonObject& j, std::tuple<Args...>& t, std:
 }
 
 #define META_B(...) \
-CPPBytes toBytes(){\
+ComBytes toBytes(){\
     auto __t = std::make_tuple(__VA_ARGS__);\
     Serializer __s;\
     __tuple_serializer(__s,__t);\

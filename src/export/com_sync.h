@@ -7,15 +7,15 @@ class COM_EXPORT SyncMessage final
 {
 public:
     SyncMessage();
-    SyncMessage(CPPSem* sem);
+    SyncMessage(ComSem* sem);
     SyncMessage(const SyncMessage& msg);
     SyncMessage(SyncMessage&& msg);
 
     ~SyncMessage();
     SyncMessage& operator=(const SyncMessage& msg);
     SyncMessage& operator=(SyncMessage&& msg);
-    CPPSem* sem = NULL;
-    CPPBytes data;
+    ComSem* sem = NULL;
+    ComBytes data;
 };
 
 class COM_EXPORT SyncAdapter
@@ -25,23 +25,23 @@ public:
     virtual ~SyncAdapter();
 
     void syncPrepare(uint64 uuid);
-    CPPBytes syncWait(uint64 uuid, int timeout_ms = 1000);
-    bool syncWait(uint64 uuid, CPPBytes& reply, int timeout_ms = 1000);
+    ComBytes syncWait(uint64 uuid, int timeout_ms = 1000);
+    bool syncWait(uint64 uuid, ComBytes& reply, int timeout_ms = 1000);
     bool syncPost(uint64 uuid, const void* data, int data_size);
     void syncCancel(uint64 uuid);
 
     void setSemCount(int count);
     uint64 createUUID();
 private:
-    void pushSem(CPPSem* sem);
-    CPPSem* popSem();
+    void pushSem(ComSem* sem);
+    ComSem* popSem();
     void clearSem();
 private:
     std::mutex mutex_sync_map;
     std::map<uint64, SyncMessage> sync_map;
 
     std::mutex mutex_sem_cache;
-    std::queue<CPPSem*> sem_cache;
+    std::queue<ComSem*> sem_cache;
 
     std::atomic<int> sem_cache_size_max;
     std::atomic<uint64> uuid;

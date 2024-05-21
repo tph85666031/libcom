@@ -13,12 +13,18 @@ ComBase64::~ComBase64()
 {
 }
 
+void ComBase64::show()
+{
+    printf("xxxxx\n");
+}
+
+
 bool ComBase64::IsBase64(char c)
 {
     return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string ComBase64::Encode(const CPPBytes& bytes)
+std::string ComBase64::Encode(const ComBytes& bytes)
 {
     return Encode(bytes.getData(), bytes.getDataSize());
 }
@@ -79,9 +85,9 @@ std::string ComBase64::Encode(const uint8* data, int data_size)
     return encode_data;
 }
 
-CPPBytes ComBase64::Decode(const char* base64_data)
+ComBytes ComBase64::Decode(const char* base64_data)
 {
-    CPPBytes bytes;
+    ComBytes bytes;
     if (base64_data == NULL)
     {
         return bytes;
@@ -99,7 +105,7 @@ CPPBytes ComBase64::Decode(const char* base64_data)
         base64String.append(4 - in_len % 4, '=');
     }
 
-    while (in_len-- && (base64String[in_] != '=') && isBase64(base64String[in_]))
+    while (in_len-- && (base64String[in_] != '=') && IsBase64(base64String[in_]))
     {
         char_array_4[i++] = base64String[in_];
         in_++;

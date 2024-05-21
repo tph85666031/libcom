@@ -30,7 +30,7 @@ void com_kv_unit_test_suit(void** state)
         buf[i] = i;
     }
     com_kv_set("./kv_test.db", "bytes", buf, sizeof(buf));
-    CPPBytes bytes = com_kv_get_bytes("./kv_test.db", "bytes");
+    ComBytes bytes = com_kv_get_bytes("./kv_test.db", "bytes");
     ASSERT_MEM_EQUAL(bytes.getData(), buf, sizeof(buf));
 
     bool val_bool = true;

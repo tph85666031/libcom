@@ -21,7 +21,7 @@ static void thread_cpp_test(int val1, int val2)
 {
     LOG_D("vals=%d,val2=%d", val1, val2);
     LOG_D("tid=%llu", com_thread_get_tid());
-    CPPProcessMutex mutex_a("/tmp/1.txt");
+    ComProcessMutex mutex_a("/tmp/1.txt");
     LOG_I("start lock");
     mutex_a.lock();
     LOG_I("lock done");
@@ -29,7 +29,7 @@ static void thread_cpp_test(int val1, int val2)
     return;
 }
 
-static void thread_process_condition_test(int index, CPPProcessCondition* cond)
+static void thread_process_condition_test(int index, ComProcessCondition* cond)
 {
     cond->wait();
     LOG_I("%d done", index);
@@ -40,7 +40,7 @@ void com_thread_unit_test_suit(void** state)
 {
     if(com_string_equal(getenv("CMD"), "cond"))
     {
-        CPPProcessCondition c1("c1");
+        ComProcessCondition c1("c1");
         if(com_string_equal(getenv("OP"), "wait"))
         {
             c1.wait();
@@ -53,7 +53,7 @@ void com_thread_unit_test_suit(void** state)
     }
     else if(com_string_equal(getenv("CMD"), "mutex"))
     {
-        CPPProcessMutex m("m1");
+        ComProcessMutex m("m1");
         if(m.trylock() != 0)
         {
             LOG_I("try lock failed");
@@ -66,7 +66,7 @@ void com_thread_unit_test_suit(void** state)
     }
     else if(com_string_equal(getenv("CMD"), "sem"))
     {
-        CPPProcessSem s("s1");
+        ComProcessSem s("s1");
         if(com_string_equal(getenv("OP"), "wait"))
         {
             s.wait();
@@ -113,7 +113,7 @@ void com_thread_unit_test_suit(void** state)
         pool.pushPoolMessage(msg);
     }
     pool.waitAllDone();
-    CPPProcessMutex mutex_a("/tmp/1.txt");
+    ComProcessMutex mutex_a("/tmp/1.txt");
     LOG_I("start lock");
     mutex_a.lock();
     std::thread t1(thread_cpp_test, 1, 2);
@@ -130,20 +130,20 @@ void com_thread_unit_test_suit(void** state)
     com_sleep_s(3);
 
     LOG_I("test share memory API");
-    CPPShareMemoryMap share_map_w;
+    ComShareMemoryMap share_map_w;
     ASSERT_NOT_NULL(share_map_w.init("/tmp/1.txt", 1024));
     void* buf_w = share_map_w.getAddr();
     ASSERT_NOT_NULL(buf_w);
     memcpy(buf_w, "123456", 7);
     LOG_I("buf_w=%p,content=%s", buf_w, (char*)buf_w);
 
-    CPPShareMemoryMap share_map_r;
+    ComShareMemoryMap share_map_r;
     ASSERT_NOT_NULL(share_map_r.init("/tmp/1.txt", 1024));
     void* buf_r = share_map_r.getAddr();
     LOG_I("buf_r=%p,content=%s", buf_r, (char*)buf_r);
 
-    CPPProcessSem process_sem_a("/tmp/1.txt");
-    CPPProcessSem process_sem_b("/tmp/1.txt");
+    ComProcessSem process_sem_a("/tmp/1.txt");
+    ComProcessSem process_sem_b("/tmp/1.txt");
 
     LOG_I("process_sem_a post=%d", process_sem_a.post());
     LOG_I("process_sem_b wait=%d", process_sem_b.wait());
@@ -162,7 +162,7 @@ void com_thread_unit_test_suit(void** state)
     LOG_I("process_sem_b post=%d [after process_sem_a uninit]", process_sem_b.post());
 
 
-    CPPProcessCondition cond("process_condition");
+    ComProcessCondition cond("process_condition");
     for(int i = 0; i < 10; i++)
     {
         std::thread t(thread_process_condition_test, i, &cond);

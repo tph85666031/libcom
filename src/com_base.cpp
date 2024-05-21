@@ -703,11 +703,11 @@ bool com_string_match(const char* str, const char* pattern, bool is_path)
     return (xfnmatch(pattern, str, is_path ? XFNM_PATHNAME | XFNM_NOESCAPE : XFNM_NOESCAPE) == 0);
 }
 
-CPPBytes com_string_utf8_to_utf16(const CPPBytes& utf8)
+ComBytes com_string_utf8_to_utf16(const ComBytes& utf8)
 {
     if(utf8.empty())
     {
-        return CPPBytes();
+        return ComBytes();
     }
     const UTF8* p_utf8 = utf8.getData();
     UTF16* p_utf16 = new UTF16[utf8.getDataSize()];
@@ -717,25 +717,25 @@ CPPBytes com_string_utf8_to_utf16(const CPPBytes& utf8)
     if(ret != conversionOK && ret != sourceExhausted)
     {
         delete[] p_utf16;
-        return CPPBytes();
+        return ComBytes();
     }
 
     if(p_utf16_tmp <= p_utf16)
     {
         delete[] p_utf16;
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     result.append((uint8*)p_utf16, (int)(p_utf16_tmp - p_utf16) * 2);
     delete[] p_utf16;
     return result;
 }
 
-CPPBytes com_string_utf16_to_utf8(const CPPBytes& utf16)
+ComBytes com_string_utf16_to_utf8(const ComBytes& utf16)
 {
     if(utf16.empty())
     {
-        return CPPBytes();
+        return ComBytes();
     }
     const UTF16* p_utf16 = (const UTF16*)utf16.getData();
     UTF8* p_utf8 = new UTF8[utf16.getDataSize() * 2];
@@ -745,25 +745,25 @@ CPPBytes com_string_utf16_to_utf8(const CPPBytes& utf16)
     if(ret != conversionOK && ret != sourceExhausted)
     {
         delete[] p_utf8;
-        return CPPBytes();
+        return ComBytes();
     }
 
     if(p_utf8_tmp <= p_utf8)
     {
         delete[] p_utf8;
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     result.append(p_utf8, (int)(p_utf8_tmp - p_utf8));
     delete[] p_utf8;
     return result;
 }
 
-CPPBytes com_string_utf8_to_utf32(const CPPBytes& utf8)
+ComBytes com_string_utf8_to_utf32(const ComBytes& utf8)
 {
     if(utf8.empty())
     {
-        return CPPBytes();
+        return ComBytes();
     }
     const UTF8* p_utf8 = utf8.getData();
     UTF32* p_utf32 = new UTF32[utf8.getDataSize()];
@@ -773,25 +773,25 @@ CPPBytes com_string_utf8_to_utf32(const CPPBytes& utf8)
     if(ret != conversionOK && ret != sourceExhausted)
     {
         delete[] p_utf32;
-        return CPPBytes();
+        return ComBytes();
     }
 
     if(p_utf32_tmp <= p_utf32)
     {
         delete[] p_utf32;
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     result.append((uint8*)p_utf32, (int)(p_utf32_tmp - p_utf32) * 4);
     delete[] p_utf32;
     return result;
 }
 
-CPPBytes com_string_utf32_to_utf8(const CPPBytes& utf32)
+ComBytes com_string_utf32_to_utf8(const ComBytes& utf32)
 {
     if(utf32.empty())
     {
-        return CPPBytes();
+        return ComBytes();
     }
     const UTF32* p_utf32 = (const UTF32*)utf32.getData();
     UTF8* p_utf8 = new UTF8[utf32.getDataSize()];
@@ -801,25 +801,25 @@ CPPBytes com_string_utf32_to_utf8(const CPPBytes& utf32)
     if(ret != conversionOK && ret != sourceExhausted)
     {
         delete[] p_utf8;
-        return CPPBytes();
+        return ComBytes();
     }
 
     if(p_utf8_tmp <= p_utf8)
     {
         delete[] p_utf8;
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     result.append(p_utf8, (int)(p_utf8_tmp - p_utf8));
     delete[] p_utf8;
     return result;
 }
 
-CPPBytes com_string_utf16_to_utf32(const CPPBytes& utf16)
+ComBytes com_string_utf16_to_utf32(const ComBytes& utf16)
 {
     if(utf16.empty())
     {
-        return CPPBytes();
+        return ComBytes();
     }
     const UTF16* p_utf16 = (const UTF16*)utf16.getData();
     UTF32* p_utf32 = new UTF32[utf16.getDataSize()];
@@ -829,25 +829,25 @@ CPPBytes com_string_utf16_to_utf32(const CPPBytes& utf16)
     if(ret != conversionOK && ret != sourceExhausted)
     {
         delete[] p_utf32;
-        return CPPBytes();
+        return ComBytes();
     }
 
     if(p_utf32_tmp <= p_utf32)
     {
         delete[] p_utf32;
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     result.append((uint8*)p_utf32, (int)(p_utf32_tmp - p_utf32) * 4);
     delete[] p_utf32;
     return result;
 }
 
-CPPBytes com_string_utf32_to_utf16(const CPPBytes& utf32)
+ComBytes com_string_utf32_to_utf16(const ComBytes& utf32)
 {
     if(utf32.empty())
     {
-        return CPPBytes();
+        return ComBytes();
     }
     const UTF32* p_utf32 = (const UTF32*)utf32.getData();
     UTF16* p_utf16 = new UTF16[utf32.getDataSize()];
@@ -857,15 +857,15 @@ CPPBytes com_string_utf32_to_utf16(const CPPBytes& utf32)
     if(ret != conversionOK && ret != sourceExhausted)
     {
         delete[] p_utf16;
-        return CPPBytes();
+        return ComBytes();
     }
 
     if(p_utf16_tmp <= p_utf16)
     {
         delete[] p_utf16;
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     result.append((uint8*)p_utf16, (int)(p_utf16_tmp - p_utf16) * 2);
     delete[] p_utf16;
     return result;
@@ -909,7 +909,7 @@ std::string com_string_utf8_to_ansi(const char* utf8)
         return std::string();
     }
 #if defined(_WIN32) || defined(_WIN64)
-    std::wstring wstr = com_wstring_from_utf8(CPPBytes(utf8));
+    std::wstring wstr = com_wstring_from_utf8(ComBytes(utf8));
     std::string str_ansi;
     int size = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, 0, 0, 0, 0);
     if(size > 0)
@@ -959,24 +959,24 @@ std::string com_string_local_to_utf8(const char* s)
 #endif
 }
 
-std::wstring com_wstring_from_utf8(const CPPBytes& utf8)
+std::wstring com_wstring_from_utf8(const ComBytes& utf8)
 {
     std::wstring wstr;
     if(sizeof(wchar_t) == 2)
     {
-        CPPBytes utf16 = com_string_utf8_to_utf16(utf8);
+        ComBytes utf16 = com_string_utf8_to_utf16(utf8);
         wstr.append((wchar_t*)utf16.getData(), utf16.getDataSize() / 2);
     }
     else
     {
-        CPPBytes utf32 = com_string_utf8_to_utf32(utf8);
+        ComBytes utf32 = com_string_utf8_to_utf32(utf8);
         wstr.append((wchar_t*)utf32.getData(), utf32.getDataSize() / 4);
     }
 
     return wstr;
 }
 
-std::wstring com_wstring_from_utf16(const CPPBytes& utf16)
+std::wstring com_wstring_from_utf16(const ComBytes& utf16)
 {
     std::wstring wstr;
     if(sizeof(wchar_t) == 2)
@@ -985,19 +985,19 @@ std::wstring com_wstring_from_utf16(const CPPBytes& utf16)
     }
     else
     {
-        CPPBytes utf32 = com_string_utf16_to_utf32(utf16);
+        ComBytes utf32 = com_string_utf16_to_utf32(utf16);
         wstr.append((wchar_t*)utf32.getData(), utf32.getDataSize() / 4);
     }
 
     return wstr;
 }
 
-std::wstring com_wstring_from_utf32(const CPPBytes& utf32)
+std::wstring com_wstring_from_utf32(const ComBytes& utf32)
 {
     std::wstring wstr;
     if(sizeof(wchar_t) == 2)
     {
-        CPPBytes utf16 = com_string_utf32_to_utf16(utf32);
+        ComBytes utf16 = com_string_utf32_to_utf16(utf32);
         wstr.append((wchar_t*)utf16.getData(), utf16.getDataSize() / 2);
     }
     else
@@ -1008,13 +1008,13 @@ std::wstring com_wstring_from_utf32(const CPPBytes& utf32)
     return wstr;
 }
 
-CPPBytes com_wstring_to_utf8(const wchar_t* wstr)
+ComBytes com_wstring_to_utf8(const wchar_t* wstr)
 {
     if(wstr == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
         result.append((uint8*)wstr, wcslen(wstr) * 2);
@@ -1029,9 +1029,9 @@ CPPBytes com_wstring_to_utf8(const wchar_t* wstr)
     return result;
 }
 
-CPPBytes com_wstring_to_utf8(const std::wstring& wstr)
+ComBytes com_wstring_to_utf8(const std::wstring& wstr)
 {
-    CPPBytes result;
+    ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
         result.append((uint8*)wstr.data(), wstr.length() * 2);
@@ -1046,13 +1046,13 @@ CPPBytes com_wstring_to_utf8(const std::wstring& wstr)
     return result;
 }
 
-CPPBytes com_wstring_to_utf16(const wchar_t* wstr)
+ComBytes com_wstring_to_utf16(const wchar_t* wstr)
 {
     if(wstr == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
         result.append((uint8*)wstr, wcslen(wstr) * 2);
@@ -1066,9 +1066,9 @@ CPPBytes com_wstring_to_utf16(const wchar_t* wstr)
     return result;
 }
 
-CPPBytes com_wstring_to_utf16(const std::wstring& wstr)
+ComBytes com_wstring_to_utf16(const std::wstring& wstr)
 {
-    CPPBytes result;
+    ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
         result.append((uint8*)wstr.data(), wstr.length() * 2);
@@ -1082,13 +1082,13 @@ CPPBytes com_wstring_to_utf16(const std::wstring& wstr)
     return result;
 }
 
-CPPBytes com_wstring_to_utf32(const wchar_t* wstr)
+ComBytes com_wstring_to_utf32(const wchar_t* wstr)
 {
     if(wstr == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
-    CPPBytes result;
+    ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
         result.append((uint8*)wstr, wcslen(wstr) * 2);
@@ -1102,9 +1102,9 @@ CPPBytes com_wstring_to_utf32(const wchar_t* wstr)
     return result;
 }
 
-CPPBytes com_wstring_to_utf32(const std::wstring& wstr)
+ComBytes com_wstring_to_utf32(const std::wstring& wstr)
 {
-    CPPBytes result;
+    ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
         result.append((uint8*)wstr.data(), wstr.length() * 2);
@@ -1133,9 +1133,9 @@ std::string com_bytes_to_hexstring(const uint8* data, int size)
     return result;
 }
 
-CPPBytes com_hexstring_to_bytes(const char* str)
+ComBytes com_hexstring_to_bytes(const char* str)
 {
-    CPPBytes bytes;
+    ComBytes bytes;
     if(str == NULL)
     {
         return bytes;
@@ -2118,7 +2118,7 @@ std::string com_uuid_generator()
                                         com_time_rtc_us(),
                                         com_time_cpu_us(),
                                         com_rand(0, 0xFFFFFFFF));
-    return CPPMD5::Digest(val.data(), val.size()).toHexString(false);
+    return ComMD5::Digest(val.data(), val.size()).toHexString(false);
 }
 
 //计算最大公约数
@@ -2356,12 +2356,12 @@ std::string com_user_get_language()
     return local_lang;
 }
 
-CPPBytes::CPPBytes()
+ComBytes::ComBytes()
 {
     buf.clear();
 }
 
-CPPBytes::CPPBytes(int reserve_size)
+ComBytes::ComBytes(int reserve_size)
 {
     if(reserve_size > 0)
     {
@@ -2369,7 +2369,7 @@ CPPBytes::CPPBytes(int reserve_size)
     }
 }
 
-CPPBytes::CPPBytes(const CPPBytes& bytes)
+ComBytes::ComBytes(const ComBytes& bytes)
 {
     if(this == &bytes)
     {
@@ -2378,7 +2378,7 @@ CPPBytes::CPPBytes(const CPPBytes& bytes)
     buf = bytes.buf;
 }
 
-CPPBytes::CPPBytes(CPPBytes&& bytes)
+ComBytes::ComBytes(ComBytes&& bytes)
 {
     if(this == &bytes)
     {
@@ -2387,7 +2387,7 @@ CPPBytes::CPPBytes(CPPBytes&& bytes)
     buf.swap(bytes.buf);
 }
 
-CPPBytes::CPPBytes(const uint8* data, int data_size)
+ComBytes::ComBytes(const uint8* data, int data_size)
 {
     if(data_size > 0 && data != NULL)
     {
@@ -2395,7 +2395,7 @@ CPPBytes::CPPBytes(const uint8* data, int data_size)
     }
 }
 
-CPPBytes::CPPBytes(const char* data)
+ComBytes::ComBytes(const char* data)
 {
     int len = com_string_len(data);
     if(len > 0)
@@ -2404,7 +2404,7 @@ CPPBytes::CPPBytes(const char* data)
     }
 }
 
-CPPBytes::CPPBytes(const std::string& data)
+ComBytes::ComBytes(const std::string& data)
 {
     if(data.empty() == false)
     {
@@ -2412,7 +2412,7 @@ CPPBytes::CPPBytes(const std::string& data)
     }
 }
 
-CPPBytes::CPPBytes(const char* data, int data_size)
+ComBytes::ComBytes(const char* data, int data_size)
 {
     if(data_size > 0 && data != NULL)
     {
@@ -2420,12 +2420,12 @@ CPPBytes::CPPBytes(const char* data, int data_size)
     }
 }
 
-CPPBytes::~CPPBytes()
+ComBytes::~ComBytes()
 {
     buf.clear();
 }
 
-CPPBytes& CPPBytes::operator=(const CPPBytes& bytes)
+ComBytes& ComBytes::operator=(const ComBytes& bytes)
 {
     if(this == &bytes)
     {
@@ -2435,7 +2435,7 @@ CPPBytes& CPPBytes::operator=(const CPPBytes& bytes)
     return *this;
 }
 
-CPPBytes& CPPBytes::operator=(CPPBytes&& bytes)
+ComBytes& ComBytes::operator=(ComBytes&& bytes)
 {
     if(this == &bytes)
     {
@@ -2445,19 +2445,19 @@ CPPBytes& CPPBytes::operator=(CPPBytes&& bytes)
     return *this;
 }
 
-CPPBytes& CPPBytes::operator+(uint8 val)
+ComBytes& ComBytes::operator+(uint8 val)
 {
     buf.push_back(val);
     return *this;
 }
 
-CPPBytes& CPPBytes::operator+=(uint8 val)
+ComBytes& ComBytes::operator+=(uint8 val)
 {
     buf.push_back(val);
     return *this;
 }
 
-bool CPPBytes::operator==(CPPBytes& bytes)
+bool ComBytes::operator==(ComBytes& bytes)
 {
     if(this == &bytes)
     {
@@ -2477,7 +2477,7 @@ bool CPPBytes::operator==(CPPBytes& bytes)
     return true;
 }
 
-bool CPPBytes::operator!=(CPPBytes& bytes)
+bool ComBytes::operator!=(ComBytes& bytes)
 {
     if(this == &bytes)
     {
@@ -2497,7 +2497,7 @@ bool CPPBytes::operator!=(CPPBytes& bytes)
     return false;
 }
 
-void CPPBytes::reserve(int size)
+void ComBytes::reserve(int size)
 {
     if(size > 0)
     {
@@ -2505,12 +2505,12 @@ void CPPBytes::reserve(int size)
     }
 }
 
-void CPPBytes::clear()
+void ComBytes::clear()
 {
     buf.clear();
 }
 
-uint8* CPPBytes::getData()
+uint8* ComBytes::getData()
 {
     if(empty())
     {
@@ -2519,7 +2519,7 @@ uint8* CPPBytes::getData()
     return &buf[0];
 }
 
-const uint8* CPPBytes::getData() const
+const uint8* ComBytes::getData() const
 {
     if(empty())
     {
@@ -2528,23 +2528,23 @@ const uint8* CPPBytes::getData() const
     return &buf[0];
 }
 
-int CPPBytes::getDataSize() const
+int ComBytes::getDataSize() const
 {
     return buf.size();
 }
 
-bool CPPBytes::empty() const
+bool ComBytes::empty() const
 {
     return (buf.size() <= 0);
 }
 
-CPPBytes& CPPBytes::append(uint8 val)
+ComBytes& ComBytes::append(uint8 val)
 {
     buf.push_back(val);
     return *this;
 }
 
-CPPBytes& CPPBytes::append(const uint8* data, int data_size)
+ComBytes& ComBytes::append(const uint8* data, int data_size)
 {
     if(data_size > 0 && data != NULL)
     {
@@ -2553,7 +2553,7 @@ CPPBytes& CPPBytes::append(const uint8* data, int data_size)
     return *this;
 }
 
-CPPBytes& CPPBytes::append(const char* data)
+ComBytes& ComBytes::append(const char* data)
 {
     int len = com_string_len(data);
     if(len > 0)
@@ -2563,16 +2563,16 @@ CPPBytes& CPPBytes::append(const char* data)
     return *this;
 }
 
-CPPBytes& CPPBytes::append(const std::string& data)
+ComBytes& ComBytes::append(const std::string& data)
 {
     return append((uint8*)data.data(), data.size());
 }
 
-CPPBytes& CPPBytes::append(const CPPBytes& bytes)
+ComBytes& ComBytes::append(const ComBytes& bytes)
 {
     if(this == &bytes)
     {
-        CPPBytes tmp = bytes;
+        ComBytes tmp = bytes;
         buf.insert(buf.end(), tmp.getData(), tmp.getData() + tmp.getDataSize());
     }
     else
@@ -2582,7 +2582,7 @@ CPPBytes& CPPBytes::append(const CPPBytes& bytes)
     return *this;
 }
 
-CPPBytes& CPPBytes::insert(int pos, uint8 val)
+ComBytes& ComBytes::insert(int pos, uint8 val)
 {
     if(pos < 0 || pos >= (int)buf.size())
     {
@@ -2592,7 +2592,7 @@ CPPBytes& CPPBytes::insert(int pos, uint8 val)
     return *this;
 }
 
-CPPBytes& CPPBytes::insert(int pos, const uint8* data, int data_size)
+ComBytes& ComBytes::insert(int pos, const uint8* data, int data_size)
 {
     if(pos < 0 || pos >= (int)buf.size() || data == NULL || data_size <= 0)
     {
@@ -2602,7 +2602,7 @@ CPPBytes& CPPBytes::insert(int pos, const uint8* data, int data_size)
     return *this;
 }
 
-CPPBytes& CPPBytes::insert(int pos, const char* data)
+ComBytes& ComBytes::insert(int pos, const char* data)
 {
     if(pos < 0 || pos >= (int)buf.size())
     {
@@ -2617,7 +2617,7 @@ CPPBytes& CPPBytes::insert(int pos, const char* data)
     return *this;
 }
 
-CPPBytes& CPPBytes::insert(int pos, CPPBytes& bytes)
+ComBytes& ComBytes::insert(int pos, ComBytes& bytes)
 {
     if(pos < 0 || pos >= (int)buf.size() || this == &bytes)
     {
@@ -2627,7 +2627,7 @@ CPPBytes& CPPBytes::insert(int pos, CPPBytes& bytes)
     return *this;
 }
 
-uint8 CPPBytes::getAt(int pos) const
+uint8 ComBytes::getAt(int pos) const
 {
     if(pos < 0 || pos >= (int)buf.size())
     {
@@ -2636,7 +2636,7 @@ uint8 CPPBytes::getAt(int pos) const
     return buf[pos];
 }
 
-void CPPBytes::setAt(int pos, uint8 val)
+void ComBytes::setAt(int pos, uint8 val)
 {
     if(pos < 0 || pos >= (int)buf.size())
     {
@@ -2645,7 +2645,7 @@ void CPPBytes::setAt(int pos, uint8 val)
     buf[pos] = val;
 }
 
-void CPPBytes::removeAt(int pos)
+void ComBytes::removeAt(int pos)
 {
     if(pos < 0 || pos >= (int)buf.size())
     {
@@ -2654,7 +2654,7 @@ void CPPBytes::removeAt(int pos)
     buf.erase(buf.begin() + pos);
 }
 
-void CPPBytes::removeHead(int count)
+void ComBytes::removeHead(int count)
 {
     if(count <= 0)
     {
@@ -2667,7 +2667,7 @@ void CPPBytes::removeHead(int count)
     buf.erase(buf.begin(), buf.begin() + count);
 }
 
-void CPPBytes::removeTail(int count)
+void ComBytes::removeTail(int count)
 {
     if(count <= 0)
     {
@@ -2680,7 +2680,7 @@ void CPPBytes::removeTail(int count)
     }
 }
 
-bool CPPBytes::toFile(const char* file)
+bool ComBytes::toFile(const char* file)
 {
     if(buf.size() <= 0)
     {
@@ -2698,7 +2698,7 @@ bool CPPBytes::toFile(const char* file)
     return (ret == (int)buf.size());
 }
 
-std::string CPPBytes::toString() const
+std::string ComBytes::toString() const
 {
     std::string str;
     if(buf.size() > 0)
@@ -2708,7 +2708,7 @@ std::string CPPBytes::toString() const
     return str;
 }
 
-std::string CPPBytes::toHexString(bool upper) const
+std::string ComBytes::toHexString(bool upper) const
 {
     std::string str;
     if(buf.size() > 0)
@@ -2722,7 +2722,7 @@ std::string CPPBytes::toHexString(bool upper) const
     return str;
 }
 
-CPPBytes CPPBytes::FromHexString(const char* hex_str)
+ComBytes ComBytes::FromHexString(const char* hex_str)
 {
     return com_hexstring_to_bytes(hex_str);
 }
@@ -2791,17 +2791,17 @@ void ComMutex::unlock_shared()
     flag--;
 }
 
-CPPSem::CPPSem(const char* name)
+ComSem::ComSem(const char* name)
 {
     com_sem_init(&sem, name);
 }
 
-CPPSem::~CPPSem()
+ComSem::~ComSem()
 {
     com_sem_uninit(&sem);
 }
 
-void CPPSem::setName(const char* name)
+void ComSem::setName(const char* name)
 {
     if(name != NULL)
     {
@@ -2809,22 +2809,22 @@ void CPPSem::setName(const char* name)
     }
 }
 
-const char* CPPSem::getName()
+const char* ComSem::getName()
 {
     return sem.name.c_str();
 }
 
-bool CPPSem::post()
+bool ComSem::post()
 {
     return com_sem_post(&sem);
 }
 
-bool CPPSem::wait(int timeout_ms)
+bool ComSem::wait(int timeout_ms)
 {
     return com_sem_wait(&sem, timeout_ms);
 }
 
-CPPCondition::CPPCondition(const char* name)
+ComCondition::ComCondition(const char* name)
 {
     if(name != NULL)
     {
@@ -2832,11 +2832,11 @@ CPPCondition::CPPCondition(const char* name)
     }
 }
 
-CPPCondition::~CPPCondition()
+ComCondition::~ComCondition()
 {
 }
 
-void CPPCondition::setName(const char* name)
+void ComCondition::setName(const char* name)
 {
     if(name != NULL)
     {
@@ -2844,26 +2844,26 @@ void CPPCondition::setName(const char* name)
     }
 }
 
-const char* CPPCondition::getName()
+const char* ComCondition::getName()
 {
     return name.c_str();
 }
 
-bool CPPCondition::notifyOne()
+bool ComCondition::notifyOne()
 {
     std::unique_lock<std::mutex> lock(mutex_cv);
     condition.notify_one();
     return true;
 }
 
-bool CPPCondition::notifyAll()
+bool ComCondition::notifyAll()
 {
     std::unique_lock<std::mutex> lock(mutex_cv);
     condition.notify_all();
     return true;
 }
 
-bool CPPCondition::wait(int timeout_ms)
+bool ComCondition::wait(int timeout_ms)
 {
     std::unique_lock<std::mutex> lock(mutex_cv);
     if(timeout_ms > 0)
@@ -2995,7 +2995,7 @@ Message& Message::set(const char* key, const uint8* val, int val_size)
     return *this;
 }
 
-Message& Message::set(const char* key, const CPPBytes& bytes)
+Message& Message::set(const char* key, const ComBytes& bytes)
 {
     if(key != NULL && bytes.empty() == false)
     {
@@ -3183,15 +3183,15 @@ std::string Message::getString(const char* key, std::string default_val) const
     return datas.at(key);
 }
 
-CPPBytes Message::getBytes(const char* key) const
+ComBytes Message::getBytes(const char* key) const
 {
-    CPPBytes bytes;
+    ComBytes bytes;
     if(isKeyExist(key) == false)
     {
         return bytes;
     }
     const std::string& val = datas.at(key);
-    return CPPBytes((uint8*)val.data(), val.length());
+    return ComBytes((uint8*)val.data(), val.length());
 }
 
 uint8* Message::getBytes(const char* key, int& size)
@@ -3314,7 +3314,7 @@ ByteStreamReader::ByteStreamReader(const uint8* buffer, int buffer_size)
     this->buffer.append(buffer, buffer_size);
 }
 
-ByteStreamReader::ByteStreamReader(const CPPBytes& buffer)
+ByteStreamReader::ByteStreamReader(const ComBytes& buffer)
 {
     this->buffer.append(buffer);
 }
@@ -3440,7 +3440,7 @@ bool ByteStreamReader::readLine(std::string& line)
     return (line_tmp.empty() == false);
 }
 
-CPPBytes ByteStreamReader::read(int size)
+ComBytes ByteStreamReader::read(int size)
 {
     if(fp != NULL)
     {
@@ -3449,13 +3449,13 @@ CPPBytes ByteStreamReader::read(int size)
 
     if(size <= 0 || buffer_pos < 0 || buffer_pos >= buffer.getDataSize())
     {
-        return CPPBytes();
+        return ComBytes();
     }
     if(buffer_pos + size > buffer.getDataSize())
     {
         size = buffer.getDataSize() - buffer_pos;
     }
-    CPPBytes result;
+    ComBytes result;
     result.append(buffer.getData() + buffer_pos, size);
     buffer_pos += size;
     return result;
@@ -3481,22 +3481,22 @@ int ByteStreamReader::read(uint8* buf, int buf_size)
     return buf_size;
 }
 
-CPPBytes ByteStreamReader::readUntil(const char* key)
+ComBytes ByteStreamReader::readUntil(const char* key)
 {
     return readUntil((const uint8*)key, com_string_len(key));
 }
 
-CPPBytes ByteStreamReader::readUntil(const uint8* key, int key_size)
+ComBytes ByteStreamReader::readUntil(const uint8* key, int key_size)
 {
     if(key == NULL || key_size <= 0)
     {
-        return CPPBytes();
+        return ComBytes();
     }
     if(fp != NULL)
     {
         return com_file_read_until(fp, key, key_size);
     }
-    CPPBytes result;
+    ComBytes result;
     int match_count = 0;
     while(buffer_pos >= 0 && buffer_pos < buffer.getDataSize())
     {
@@ -3518,17 +3518,17 @@ CPPBytes ByteStreamReader::readUntil(const uint8* key, int key_size)
     return result;
 }
 
-CPPBytes ByteStreamReader::readUntil(std::function<bool(uint8)> func)
+ComBytes ByteStreamReader::readUntil(std::function<bool(uint8)> func)
 {
     if(func == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
     if(fp != NULL)
     {
         return com_file_read_until(fp, func);
     }
-    CPPBytes result;
+    ComBytes result;
     while(buffer_pos >= 0 && buffer_pos < buffer.getDataSize())
     {
         uint8 val = buffer.getAt(buffer_pos++);

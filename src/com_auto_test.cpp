@@ -159,12 +159,12 @@ bool AutoTestService::getLatestInfoAsBool(const char* group, const char* key, bo
     }
 }
 
-CPPBytes AutoTestService::getLatestInfoAsBytes(const char* group, const char* key)
+ComBytes AutoTestService::getLatestInfoAsBytes(const char* group, const char* key)
 {
     std::lock_guard<std::mutex> lck(mutex_latest_info);
     if(group == NULL || key == NULL || latest_info.count(group) <= 0)
     {
-        return CPPBytes();
+        return ComBytes();
     }
     Message& msg = latest_info[group];
     return msg.getBytes(key);
@@ -295,7 +295,7 @@ void AutoTestService::initHttpController()
 
 void AutoTestService::ThreadController(AutoTestService* ctx)
 {
-    CPPConfig config;
+    ComConfig config;
     std::string app_name = com_get_bin_name();
     while(ctx->thread_controller_running)
     {

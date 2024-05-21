@@ -3,18 +3,18 @@
 #include "com_log.h"
 #include "com_config.h"
 
-CPPConfig::CPPConfig()
+ComConfig::ComConfig()
 {
     ini.SetUnicode();
 }
 
-CPPConfig::CPPConfig(const char* file)
+ComConfig::ComConfig(const char* file)
 {
     ini.SetUnicode();
     load(file);
 }
 
-CPPConfig::CPPConfig(const CPPConfig& config)
+ComConfig::ComConfig(const ComConfig& config)
 {
     if(this == &config)
     {
@@ -23,12 +23,12 @@ CPPConfig::CPPConfig(const CPPConfig& config)
     this->load(config.getConfigFile().c_str());
 }
 
-CPPConfig::~CPPConfig()
+ComConfig::~ComConfig()
 {
     ini.Reset();
 }
 
-CPPConfig& CPPConfig::operator=(const CPPConfig& config)
+ComConfig& ComConfig::operator=(const ComConfig& config)
 {
     if(this == &config)
     {
@@ -39,7 +39,7 @@ CPPConfig& CPPConfig::operator=(const CPPConfig& config)
     return *this;
 }
 
-bool CPPConfig::load(const char* file)
+bool ComConfig::load(const char* file)
 {
     if(file == NULL)
     {
@@ -56,7 +56,7 @@ bool CPPConfig::load(const char* file)
     return (ret == SI_OK);
 }
 
-bool CPPConfig::loadFromString(const char* value)
+bool ComConfig::loadFromString(const char* value)
 {
     if(value == NULL)
     {
@@ -74,12 +74,12 @@ bool CPPConfig::loadFromString(const char* value)
     return true;
 }
 
-bool CPPConfig::save()
+bool ComConfig::save()
 {
     return saveAs(file_config.c_str());
 }
 
-bool CPPConfig::saveAs(const char* config_file)
+bool ComConfig::saveAs(const char* config_file)
 {
     if(config_file == NULL || config_file[0] == '\0')
     {
@@ -94,7 +94,7 @@ bool CPPConfig::saveAs(const char* config_file)
     return (ret == SI_OK);
 }
 
-Message CPPConfig::toMessage()
+Message ComConfig::toMessage()
 {
     Message msg;
     std::vector<std::string> sections = getAllSections();
@@ -117,12 +117,12 @@ Message CPPConfig::toMessage()
     return msg;
 }
 
-std::string CPPConfig::getConfigFile() const
+std::string ComConfig::getConfigFile() const
 {
     return file_config;
 }
 
-std::string CPPConfig::getString(const char* section, const char* key, std::string default_val)
+std::string ComConfig::getString(const char* section, const char* key, std::string default_val)
 {
     if(key == NULL)
     {
@@ -142,37 +142,37 @@ std::string CPPConfig::getString(const char* section, const char* key, std::stri
     return pv;
 }
 
-int8 CPPConfig::getInt8(const char* section, const char* key, int8 default_val)
+int8 ComConfig::getInt8(const char* section, const char* key, int8 default_val)
 {
     return (int8)getInt64(section, key, (int64)default_val);
 }
 
-uint8 CPPConfig::getUInt8(const char* section, const char* key, uint8 default_val)
+uint8 ComConfig::getUInt8(const char* section, const char* key, uint8 default_val)
 {
     return (uint8)getUInt64(section, key, (uint64)default_val);
 }
 
-int16 CPPConfig::getInt16(const char* section, const char* key, int16 default_val)
+int16 ComConfig::getInt16(const char* section, const char* key, int16 default_val)
 {
     return (int16)getInt64(section, key, (int64)default_val);
 }
 
-uint16 CPPConfig::getUInt16(const char* section, const char* key, uint16 default_val)
+uint16 ComConfig::getUInt16(const char* section, const char* key, uint16 default_val)
 {
     return (uint16)getUInt64(section, key, (uint64)default_val);
 }
 
-int32 CPPConfig::getInt32(const char* section, const char* key, int32 default_val)
+int32 ComConfig::getInt32(const char* section, const char* key, int32 default_val)
 {
     return (int32)getInt64(section, key, (int64)default_val);
 }
 
-uint32 CPPConfig::getUInt32(const char* section, const char* key, uint32 default_val)
+uint32 ComConfig::getUInt32(const char* section, const char* key, uint32 default_val)
 {
     return (uint32)getUInt64(section, key, (uint64)default_val);
 }
 
-int64 CPPConfig::getInt64(const char* section, const char* key, int64 default_val)
+int64 ComConfig::getInt64(const char* section, const char* key, int64 default_val)
 {
     std::string val = getString(section, key);
     if(val.empty())
@@ -189,7 +189,7 @@ int64 CPPConfig::getInt64(const char* section, const char* key, int64 default_va
     }
 }
 
-uint64 CPPConfig::getUInt64(const char* section, const char* key, uint64 default_val)
+uint64 ComConfig::getUInt64(const char* section, const char* key, uint64 default_val)
 {
     std::string val = getString(section, key);
     if(val.empty())
@@ -206,7 +206,7 @@ uint64 CPPConfig::getUInt64(const char* section, const char* key, uint64 default
     }
 }
 
-bool CPPConfig::getBool(const char* section, const char* key, bool default_val)
+bool ComConfig::getBool(const char* section, const char* key, bool default_val)
 {
     if(key == NULL)
     {
@@ -221,7 +221,7 @@ bool CPPConfig::getBool(const char* section, const char* key, bool default_val)
     return ini.GetBoolValue(section, key, default_val);
 }
 
-float CPPConfig::getFloat(const char* section, const char* key, float default_val)
+float ComConfig::getFloat(const char* section, const char* key, float default_val)
 {
     std::string val = getString(section, key);
     if(val.empty())
@@ -231,7 +231,7 @@ float CPPConfig::getFloat(const char* section, const char* key, float default_va
     return strtof(val.c_str(), NULL);
 }
 
-double CPPConfig::getDouble(const char* section, const char* key, double default_val)
+double ComConfig::getDouble(const char* section, const char* key, double default_val)
 {
     std::string val = getString(section, key);
     if(val.empty())
@@ -241,7 +241,7 @@ double CPPConfig::getDouble(const char* section, const char* key, double default
     return strtod(val.c_str(), NULL);
 }
 
-bool CPPConfig::isSectionExist(const char* section)
+bool ComConfig::isSectionExist(const char* section)
 {
     if(section == NULL)
     {
@@ -261,13 +261,13 @@ bool CPPConfig::isSectionExist(const char* section)
     return false;
 }
 
-bool CPPConfig::isKeyExist(const char* section, const char* key)
+bool ComConfig::isKeyExist(const char* section, const char* key)
 {
     std::string val = getString(section, key);
     return (val.empty() == false);
 }
 
-std::vector<std::string> CPPConfig::getAllSections()
+std::vector<std::string> ComConfig::getAllSections()
 {
     std::vector<std::string> result;
 
@@ -284,7 +284,7 @@ std::vector<std::string> CPPConfig::getAllSections()
     return result;
 }
 
-std::vector<std::string> CPPConfig::getAllKeysBySection(const char* section)
+std::vector<std::string> ComConfig::getAllKeysBySection(const char* section)
 {
     std::vector<std::string> result;
     if(section == NULL)
@@ -307,7 +307,7 @@ std::vector<std::string> CPPConfig::getAllKeysBySection(const char* section)
     return result;
 }
 
-int CPPConfig::getSectionKeyCount(const char* section)
+int ComConfig::getSectionKeyCount(const char* section)
 {
     if(section == NULL)
     {
@@ -320,17 +320,17 @@ int CPPConfig::getSectionKeyCount(const char* section)
     return keys.size();
 }
 
-bool CPPConfig::set(const char* section, const char* key, std::string val)
+bool ComConfig::set(const char* section, const char* key, std::string val)
 {
     return set(section, key, val.c_str());
 }
 
-bool CPPConfig::set(const char* section, const char* key, char* val)
+bool ComConfig::set(const char* section, const char* key, char* val)
 {
     return set(section, key, (const char*)val);
 }
 
-bool CPPConfig::set(const char* section, const char* key, const char* val)
+bool ComConfig::set(const char* section, const char* key, const char* val)
 {
     if(key == NULL || val == NULL)
     {
@@ -347,7 +347,7 @@ bool CPPConfig::set(const char* section, const char* key, const char* val)
     return true;
 }
 
-bool CPPConfig::removeSection(const char* section)
+bool ComConfig::removeSection(const char* section)
 {
     if(section == NULL)
     {
@@ -358,7 +358,7 @@ bool CPPConfig::removeSection(const char* section)
     return true;
 }
 
-bool CPPConfig::removeItem(const char* section, const char* key)
+bool ComConfig::removeItem(const char* section, const char* key)
 {
     if(key == NULL)
     {

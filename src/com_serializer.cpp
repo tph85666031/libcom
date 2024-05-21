@@ -162,7 +162,7 @@ Serializer& Serializer::append(const std::string val, int val_size)
     return *this;
 }
 
-Serializer& Serializer::append(CPPBytes& bytes)
+Serializer& Serializer::append(ComBytes& bytes)
 {
     append(bytes.getData(), bytes.getDataSize());
     return *this;
@@ -331,7 +331,7 @@ int Serializer::detach(uint8* val, int val_size)
 }
 
 //读val_size
-int Serializer::detach(CPPBytes& bytes, int val_size)
+int Serializer::detach(ComBytes& bytes, int val_size)
 {
     if(val_size <= 0)
     {
@@ -364,9 +364,9 @@ int Serializer::getDetachRemainSize()
     return buf.size() - pos_detach;
 }
 
-CPPBytes Serializer::toBytes()
+ComBytes Serializer::toBytes()
 {
-    CPPBytes bytes(&buf[0], buf.size());
+    ComBytes bytes(&buf[0], buf.size());
     return bytes;
 }
 

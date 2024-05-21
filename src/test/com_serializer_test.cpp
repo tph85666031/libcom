@@ -8,7 +8,7 @@ typedef struct
     std::string y;
     uint8 buf[4];
 
-    META_B(x, y, CPPBytes(buf, sizeof(buf)));
+    META_B(x, y, ComBytes(buf, sizeof(buf)));
 } BB;
 
 typedef struct
@@ -123,15 +123,15 @@ typedef struct
     };
 } FF;
 
-CPPBytes getT1()
+ComBytes getT1()
 {
-    CPPBytes b;
+    ComBytes b;
     return b;
 }
 
-CPPBytes getT2()
+ComBytes getT2()
 {
-    return CPPBytes();
+    return ComBytes();
 }
 
 void tuple_serializer_test()
@@ -147,7 +147,7 @@ void tuple_serializer_test()
     c.b.buf[1] = 0xF1;
     c.b.buf[2] = 0xF2;
     c.b.buf[3] = 0xF3;
-    CPPBytes bytes = c.toBytes();
+    ComBytes bytes = c.toBytes();
     LOG_I("val=%s", bytes.toHexString(true).c_str());
     ASSERT_STR_EQUAL(bytes.toHexString(true).c_str(), "01313233000102030405060708343536005AA5373839F0F1F2F3");
     LOG_D("gg=%s", typeid((int8)c.x).name());
@@ -288,7 +288,7 @@ void com_serializer_unit_test_suit(void** state)
     ASSERT_MEM_EQUAL(val_array, oval_array, sizeof(val_array));
 
 
-    CPPBytes bytes;
+    ComBytes bytes;
     bytes.append(val_u8);
     bytes.append(val_array, sizeof(val_array));
     bytes.append(bytes);
@@ -298,7 +298,7 @@ void com_serializer_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(val_u8, *(bytes.getData() + 1 + sizeof(val_array)));
     ASSERT_MEM_EQUAL(val_array, bytes.getData() + 1 + sizeof(val_array) + 1, sizeof(val_array));
 
-    CPPBytes x((uint8*)"123", 4);
+    ComBytes x((uint8*)"123", 4);
     x.getData()[0] = '3';
     ASSERT_STR_EQUAL(x.toString().c_str(), "323");
 }

@@ -35,7 +35,7 @@ COM_EXPORT void com_mem_set(const char* key, const uint64 val);
 COM_EXPORT void com_mem_set(const char* key, const std::string& val);
 COM_EXPORT void com_mem_set(const char* key, const char* val);
 COM_EXPORT void com_mem_set(const char* key, const uint8* val, int val_size);
-COM_EXPORT void com_mem_set(const char* key, CPPBytes& bytes);
+COM_EXPORT void com_mem_set(const char* key, ComBytes& bytes);
 
 COM_EXPORT void com_mem_remove(const char* key);
 COM_EXPORT void com_mem_clear();
@@ -53,7 +53,7 @@ COM_EXPORT uint16 com_mem_get_uint16(const char* key, uint16 default_val = 0);
 COM_EXPORT uint32 com_mem_get_uint32(const char* key, uint32 default_val = 0);
 COM_EXPORT uint64 com_mem_get_uint64(const char* key, uint64 default_val = 0);
 COM_EXPORT std::string com_mem_get_string(const char* key, std::string default_val = "");
-COM_EXPORT CPPBytes com_mem_get_bytes(const char* key);
+COM_EXPORT ComBytes com_mem_get_bytes(const char* key);
 
 COM_EXPORT std::string com_mem_to_json();
 COM_EXPORT void com_mem_from_json(std::string json);

@@ -303,7 +303,7 @@ bool com_dir_create(const char* full_path)
             continue;
         }
 #if defined(_WIN32) || defined(_WIN64)
-        if(path.back() != ':' && _wmkdir(com_wstring_from_utf8(CPPBytes(path)).c_str()) != 0)
+        if(path.back() != ':' && _wmkdir(com_wstring_from_utf8(ComBytes(path)).c_str()) != 0)
         {
             LOG_W("make dir %s failed, dir may already exist", path.c_str());
             return false;
@@ -328,7 +328,7 @@ int64 com_dir_size_max(const char* dir)
     int64 total_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     int64 free_size_byte = 0;
-    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(CPPBytes(dir)).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(ComBytes(dir)).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
                            (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
@@ -359,7 +359,7 @@ int64 com_dir_size_used(const char* dir)
     int64 total_size_byte = 0;
     int64 free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(CPPBytes(dir)).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(ComBytes(dir)).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
                            (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
@@ -390,7 +390,7 @@ int64 com_dir_size_freed(const char* dir)
     int64 free_size_byte = 0;
 #if defined(_WIN32) || defined(_WIN64)
     int64 total_size_byte = 0;
-    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(CPPBytes(dir)).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
+    if(GetDiskFreeSpaceExW(com_wstring_from_utf8(ComBytes(dir)).c_str(), NULL, (ULARGE_INTEGER*)&total_size_byte,
                            (ULARGE_INTEGER*)&free_size_byte) == 0)
     {
         return -1;
@@ -420,7 +420,7 @@ int com_dir_remove(const char* dir_path)
     }
 #if defined(_WIN32) || defined(_WIN64)
     struct _wfinddata_t file_info;
-    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", com_wstring_from_utf8(CPPBytes(dir_path)).c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
+    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", com_wstring_from_utf8(ComBytes(dir_path)).c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
     if(handle == -1)
     {
         _rmdir(dir_path);
@@ -1220,23 +1220,23 @@ FILE* com_file_open(const char* file_path, const char* flag)
 #endif
 }
 
-CPPBytes com_file_read(const char* file, int size, int64 offset)
+ComBytes com_file_read(const char* file, int size, int64 offset)
 {
     if(com_string_is_empty(file) || size <= 0)
     {
-        return CPPBytes();
+        return ComBytes();
     }
     FILE* fp = com_file_open(file, "rb");
     if(fp == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
     if(offset >= 0)
     {
         com_file_seek_set(fp, offset);
     }
 
-    CPPBytes data;
+    ComBytes data;
     uint8 buf[1024];
 
     for(size_t i = 0; i < size / sizeof(buf); i++)
@@ -1259,14 +1259,14 @@ CPPBytes com_file_read(const char* file, int size, int64 offset)
     return data;
 }
 
-CPPBytes com_file_read(FILE* file, int size)
+ComBytes com_file_read(FILE* file, int size)
 {
     if(file == NULL || size <= 0)
     {
-        return CPPBytes();
+        return ComBytes();
     }
 
-    CPPBytes data;
+    ComBytes data;
     uint8 buf[1024];
 
     for(size_t i = 0; i < size / sizeof(buf); i++)
@@ -1288,14 +1288,14 @@ CPPBytes com_file_read(FILE* file, int size)
     return data;
 }
 
-CPPBytes com_file_read(int fd, int size)
+ComBytes com_file_read(int fd, int size)
 {
     if(fd < 0 || size <= 0)
     {
-        return CPPBytes();
+        return ComBytes();
     }
 
-    CPPBytes data;
+    ComBytes data;
     uint8 buf[1024];
 
     for(size_t i = 0; i < size / sizeof(buf); i++)
@@ -1369,7 +1369,11 @@ int64 com_file_read(int fd, void* buf, int64 size)
 
     do
     {
+#if defined(_WIN32) || defined(_WIN64)
+        int ret = _read(fd, (uint8*)buf + size_readed, size - size_readed);
+#else
         int ret = read(fd, (uint8*)buf + size_readed, size - size_readed);
+#endif
         if(ret < 0)
         {
             LOG_E("read error,fd=%d,size_readed=%lld,errno=%d", fd, size_readed, errno);
@@ -1389,19 +1393,19 @@ int64 com_file_read(int fd, void* buf, int64 size)
     return size_readed;
 }
 
-CPPBytes com_file_read_until(FILE* file, const char* str)
+ComBytes com_file_read_until(FILE* file, const char* str)
 {
     return com_file_read_until(file, (const uint8*)str, com_string_len(str));
 }
 
-CPPBytes com_file_read_until(FILE* file, const uint8* data, int data_size)
+ComBytes com_file_read_until(FILE* file, const uint8* data, int data_size)
 {
     if(file == NULL || data == NULL || data_size <= 0)
     {
-        return CPPBytes();
+        return ComBytes();
     }
 
-    CPPBytes result;
+    ComBytes result;
     int match_count = 0;
     uint8 val = 0;
     while(true)
@@ -1427,14 +1431,14 @@ CPPBytes com_file_read_until(FILE* file, const uint8* data, int data_size)
     return result;
 }
 
-CPPBytes com_file_read_until(FILE* file, std::function<bool(uint8)> func)
+ComBytes com_file_read_until(FILE* file, std::function<bool(uint8)> func)
 {
     if(file == NULL || func == NULL)
     {
-        return CPPBytes();
+        return ComBytes();
     }
 
-    CPPBytes result;
+    ComBytes result;
     uint8 val = 0;
     while(true)
     {
@@ -1633,14 +1637,14 @@ bool com_file_readline(FILE* file, std::string& line)
     return true;
 }
 
-CPPBytes com_file_readall(const std::string& file_path, int64 offset)
+ComBytes com_file_readall(const std::string& file_path, int64 offset)
 {
     return com_file_readall(file_path.c_str());
 }
 
-CPPBytes com_file_readall(const char* file_path, int64 offset)
+ComBytes com_file_readall(const char* file_path, int64 offset)
 {
-    CPPBytes bytes;
+    ComBytes bytes;
     FILE* file = com_file_open(file_path, "rb");
     if(file == NULL)
     {
@@ -1660,11 +1664,11 @@ CPPBytes com_file_readall(const char* file_path, int64 offset)
     return bytes;
 }
 
-CPPBytes com_file_readall(int fd, int64 offset)
+ComBytes com_file_readall(int fd, int64 offset)
 {
     if(fd < 0)
     {
-        return CPPBytes();
+        return ComBytes();
     }
     if(offset >= 0)
     {
@@ -1676,7 +1680,7 @@ CPPBytes com_file_readall(int fd, int64 offset)
     }
     uint8 buf[1024];
     int size = 0;
-    CPPBytes bytes;
+    ComBytes bytes;
     while((size = com_file_read(fd, buf, sizeof(buf))) > 0)
     {
         bytes.append(buf, size);
@@ -2190,7 +2194,7 @@ FileDetail::FileDetail(const char* path) : FilePath(path)
 #if defined(_WIN32) || defined(_WIN64)
     //_stat may has errno=132 error
     WIN32_FILE_ATTRIBUTE_DATA attr = {0};
-    if(GetFileAttributesExW(com_wstring_from_utf8(CPPBytes(path)).c_str(), GetFileExInfoStandard, &attr) == false)
+    if(GetFileAttributesExW(com_wstring_from_utf8(ComBytes(path)).c_str(), GetFileExInfoStandard, &attr) == false)
     {
         type = FILE_TYPE_NOT_EXIST;
         return;
@@ -2288,7 +2292,7 @@ bool FileDetail::setAccessTime(uint32 timestamp_s)
     struct _utimbuf buf;
     buf.actime = time_access_s;
     buf.modtime = time_modify_s;
-    _wutime(com_wstring_from_utf8(CPPBytes(path)).c_str(), &buf);
+    _wutime(com_wstring_from_utf8(ComBytes(path)).c_str(), &buf);
 #else
     struct utimbuf buf;
     buf.actime = time_access_s;
@@ -2315,7 +2319,7 @@ bool FileDetail::setModifyTime(uint32 timestamp_s)
     struct _utimbuf buf;
     buf.actime = time_access_s;
     buf.modtime = time_modify_s;
-    _wutime(com_wstring_from_utf8(CPPBytes(path)).c_str(), &buf);
+    _wutime(com_wstring_from_utf8(ComBytes(path)).c_str(), &buf);
 #else
     struct utimbuf buf;
     buf.actime = time_access_s;
@@ -2345,7 +2349,7 @@ SingleInstanceProcess::SingleInstanceProcess(const char* file_lock)
     sa.bInheritHandle = FALSE;
     sa.lpSecurityDescriptor = &sd;
 
-    fp = CreateMutexW(&sa, FALSE, com_wstring_from_utf8(CPPBytes(file)).c_str());
+    fp = CreateMutexW(&sa, FALSE, com_wstring_from_utf8(ComBytes(file)).c_str());
     if(ERROR_ALREADY_EXISTS == GetLastError())
     {
         LOG_W("process already running");

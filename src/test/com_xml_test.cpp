@@ -39,7 +39,7 @@ static const char* xml_content = "<? xml version = \"1.0\" encoding=\"utf-8\"?>"
 void com_xml_unit_test_suit(void** state)
 {
     com_file_writef("./1.xml", xml_content, strlen(xml_content));
-    CPPXmlParser parser("./1.xml");
+    ComXmlParser parser("./1.xml");
     std::string text = parser.getText("root/logging/console/enabled");
     std::string attr = parser.getAttribute("root/logging/syslog/enabled", "c");
     ASSERT_STR_EQUAL(text.c_str(), "true");
@@ -60,7 +60,7 @@ void com_xml_unit_test_suit(void** state)
     ASSERT_TRUE(parser.save());
     com_file_remove("./1.xml");
 
-    parser = CPPXmlParser();
+    parser = ComXmlParser();
     parser.setText("a/b/c/d/e/", "value_e");
     parser.setAttribute("a/b", "attr_a", "a");
     text = parser.getText("a/b/c/d/e");

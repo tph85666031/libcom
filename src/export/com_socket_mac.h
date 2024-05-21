@@ -46,7 +46,7 @@ protected:
     std::mutex mutex_clients;
     std::map<int, SOCKET_CLIENT_DES> clients;
     std::mutex mutexfds;
-    CPPSem semfds;
+    ComSem semfds;
     std::queue<SOCKET_CLIENT_DES> ready_fds;
 };
 
