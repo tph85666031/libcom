@@ -31,6 +31,120 @@
 #include "com_log.h"
 #include "com_thread.h"
 
+static bool dir_list(const char* dir_root, std::map<std::string, int>& list, const char* path_pattern, bool pattern_as_path)
+{
+    if(dir_root == NULL)
+    {
+        return false;
+    }
+
+#if defined(_WIN32) || defined(_WIN64)
+    struct _wfinddata_t file_info;
+    std::wstring dir_root_w = com_wstring_from_utf8(dir_root);
+    if(dir_root_w.back() != PATH_DELIM_WCHAR)
+    {
+        dir_root_w.append(PATH_DELIM_WSTR);
+    }
+    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", dir_root_w.c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
+    if(handle == -1)
+    {
+        return false;
+    }
+    do
+    {
+        std::string path = dir_root;
+        if(path.back() != PATH_DELIM_CHAR)
+        {
+            path.append(PATH_DELIM_STR);
+        }
+        path.append(com_wstring_to_utf8(file_info.name).toString());
+        if(file_info.attrib & _A_SUBDIR)
+        {
+            if(wcscmp(file_info.name, L".") == 0 || wcscmp(file_info.name, L"..") == 0)
+            {
+                continue;
+            }
+            if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+            {
+                list[path] = FILE_TYPE_DIR;
+            }
+            dir_list(path.c_str(), list, path_pattern, pattern_as_path);
+        }
+        else if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+        {
+            list[path] = FILE_TYPE_FILE;
+        }
+    }
+    while(_wfindnext(handle, &file_info) == 0);
+    _findclose(handle);
+    return true;
+#else
+    DIR* dir = opendir(dir_root);
+    if(dir == NULL)
+    {
+        return false;
+    }
+
+    struct dirent* ptr = NULL;
+    while((ptr = readdir(dir)) != NULL)
+    {
+#if __ANDROID__ != 1
+        if(ptr->d_name == NULL)
+        {
+            continue;
+        }
+#endif
+        std::string path = dir_root;
+        if(path.back() != '/')
+        {
+            path.append("/");
+        }
+        path.append(ptr->d_name);
+        switch(ptr->d_type)
+        {
+            case DT_DIR:
+                if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0)
+                {
+                    continue;
+                }
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_DIR;
+                }
+                com_dir_list(path.c_str(), list, path_pattern, pattern_as_path);
+                break;
+            case DT_REG:
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_FILE;
+                }
+                break;
+            case DT_SOCK:
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_SOCK;
+                }
+                break;
+            case DT_LNK:
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_LINK;
+                }
+                break;
+            default:
+                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
+                {
+                    list[path] = FILE_TYPE_UNKNOWN;
+                }
+                break;
+        }
+    }
+
+    closedir(dir);
+    return true;
+#endif
+}
+
 std::string PATH_TO_DOS(const char* path)
 {
     if(path == NULL)
@@ -392,120 +506,6 @@ void com_dir_clear(const char* dir_path)
     }
 }
 
-static bool com_dir_list(const char* dir_root, std::map<std::string, int>& list, const char* path_pattern, bool pattern_as_path)
-{
-    if(dir_root == NULL)
-    {
-        return false;
-    }
-
-#if defined(_WIN32) || defined(_WIN64)
-    struct _wfinddata_t file_info;
-    std::wstring dir_root_w = com_wstring_from_utf8(dir_root);
-    if(dir_root_w.back() != PATH_DELIM_WCHAR)
-    {
-        dir_root_w.append(PATH_DELIM_WSTR);
-    }
-    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", dir_root_w.c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
-    if(handle == -1)
-    {
-        return false;
-    }
-    do
-    {
-        std::string path = dir_root;
-        if(path.back() != PATH_DELIM_CHAR)
-        {
-            path.append(PATH_DELIM_STR);
-        }
-        path.append(com_wstring_to_utf8(file_info.name).toString());
-        if(file_info.attrib & _A_SUBDIR)
-        {
-            if(wcscmp(file_info.name, L".") == 0 || wcscmp(file_info.name, L"..") == 0)
-            {
-                continue;
-            }
-            if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-            {
-                list[path] = FILE_TYPE_DIR;
-            }
-            com_dir_list(path.c_str(), list, path_pattern, pattern_as_path);
-        }
-        else if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-        {
-            list[path] = FILE_TYPE_FILE;
-        }
-    }
-    while(_wfindnext(handle, &file_info) == 0);
-    _findclose(handle);
-    return true;
-#else
-    DIR* dir = opendir(dir_root);
-    if(dir == NULL)
-    {
-        return false;
-    }
-
-    struct dirent* ptr = NULL;
-    while((ptr = readdir(dir)) != NULL)
-    {
-#if __ANDROID__ != 1
-        if(ptr->d_name == NULL)
-        {
-            continue;
-        }
-#endif
-        std::string path = dir_root;
-        if(path.back() != '/')
-        {
-            path.append("/");
-        }
-        path.append(ptr->d_name);
-        switch(ptr->d_type)
-        {
-            case DT_DIR:
-                if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0)
-                {
-                    continue;
-                }
-                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-                {
-                    list[path] = FILE_TYPE_DIR;
-                }
-                com_dir_list(path.c_str(), list, path_pattern, pattern_as_path);
-                break;
-            case DT_REG:
-                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-                {
-                    list[path] = FILE_TYPE_FILE;
-                }
-                break;
-            case DT_SOCK:
-                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-                {
-                    list[path] = FILE_TYPE_SOCK;
-                }
-                break;
-            case DT_LNK:
-                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-                {
-                    list[path] = FILE_TYPE_LINK;
-                }
-                break;
-            default:
-                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-                {
-                    list[path] = FILE_TYPE_UNKNOWN;
-                }
-                break;
-        }
-    }
-
-    closedir(dir);
-    return true;
-#endif
-}
-
 bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool recursion)
 {
     if(dir_path == NULL || dir_path[0] == '\0')
@@ -524,8 +524,8 @@ bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool r
         if(*p == '?' || *p == '*' || *p == '[' || *p == ']')
         {
             //has pattern
-            return com_dir_list(p_delim == NULL ? "." : std::string(dir_path, (int)(p_delim - dir_path)).c_str(),
-                                list, dir_path, recursion ? false : true);
+            return dir_list(p_delim == NULL ? "." : std::string(dir_path, (int)(p_delim - dir_path)).c_str(),
+                            list, dir_path, recursion ? false : true);
         }
     }
     while(*p++);
@@ -536,7 +536,7 @@ bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool r
     }
     dir_pattern.append("*");
 
-    return com_dir_list(dir_path, list, dir_pattern.c_str(), recursion ? false : true);
+    return dir_list(dir_path, list, dir_pattern.c_str(), recursion ? false : true);
 }
 
 std::string com_path_name(const char* path)
@@ -545,16 +545,16 @@ std::string com_path_name(const char* path)
     return file_path.getName();
 }
 
-std::string com_path_suffix(const char* path)
-{
-    FilePath file_path(path);
-    return file_path.getSuffix();
-}
-
 std::string com_path_name_without_suffix(const char* path)
 {
     FilePath file_path(path);
     return file_path.getNameWithoutSuffix();
+}
+
+std::string com_path_suffix(const char* path)
+{
+    FilePath file_path(path);
+    return file_path.getSuffix();
 }
 
 std::string com_path_dir(const char* path)
@@ -572,7 +572,7 @@ int com_file_type(const char* file)
 #if defined(_WIN32) || defined(_WIN64)
     //_stat may has errno=132 error
     WIN32_FILE_ATTRIBUTE_DATA attr = {0};
-    if(GetFileAttributesExW(com_wstring_from_utf8(CPPBytes(file)).c_str(), GetFileExInfoStandard, &attr) == false)
+    if(GetFileAttributesExW(com_wstring_from_utf8(file).c_str(), GetFileExInfoStandard, &attr) == false)
     {
         return FILE_TYPE_UNKNOWN;
     }
@@ -714,7 +714,7 @@ int64 com_file_size(const char* file_path)
 #if defined(_WIN32) || defined(_WIN64)
     //_stat may has errno=132 error
     WIN32_FILE_ATTRIBUTE_DATA attr = {0};
-    if(GetFileAttributesExW(com_wstring_from_utf8(CPPBytes(file_path)).c_str(), GetFileExInfoStandard, &attr) == false)
+    if(GetFileAttributesExW(com_wstring_from_utf8(file_path).c_str(), GetFileExInfoStandard, &attr) == false)
     {
         LOG_E("failed to get file size,file=%s,errno=%d", file_path, errno);
         return -1;
@@ -778,11 +778,12 @@ uint32 com_file_get_change_time(const char* file_path)
     }
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat64 statbuff;
-    if(_wstat64(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
+    WIN32_FILE_ATTRIBUTE_DATA attr = {0};
+    if(GetFileAttributesExW(com_wstring_from_utf8(file_path).c_str(), GetFileExInfoStandard, &attr) == false)
     {
-        timestamp = statbuff.st_ctime;
+        return 0;
     }
+    timestamp = (((int64)attr.ftCreationTime.dwHighDateTime << 32) + attr.ftCreationTime.dwLowDateTime) / 100000000;
 #else
     struct stat statbuff;
     if(stat(file_path, &statbuff) == 0)
@@ -801,11 +802,12 @@ uint32 com_file_get_modify_time(const char* file_path)
     }
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat64 statbuff;
-    if(_wstat64(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
+    WIN32_FILE_ATTRIBUTE_DATA attr = {0};
+    if(GetFileAttributesExW(com_wstring_from_utf8(file_path).c_str(), GetFileExInfoStandard, &attr) == false)
     {
-        timestamp = statbuff.st_mtime;
+        return 0;
     }
+    timestamp = (((int64)attr.ftLastWriteTime.dwHighDateTime << 32) + attr.ftLastWriteTime.dwLowDateTime) / 100000000;
 #else
     struct stat statbuff;
     if(stat(file_path, &statbuff) == 0)
@@ -824,11 +826,12 @@ uint32 com_file_get_access_time(const char* file_path)
     }
     uint32 timestamp = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat64 statbuff;
-    if(_wstat64(com_wstring_from_utf8(file_path).c_str(), &statbuff) == 0)
+    WIN32_FILE_ATTRIBUTE_DATA attr = {0};
+    if(GetFileAttributesExW(com_wstring_from_utf8(file_path).c_str(), GetFileExInfoStandard, &attr) == false)
     {
-        timestamp = statbuff.st_atime;
+        return 0;
     }
+    timestamp = (((int64)attr.ftLastAccessTime.dwHighDateTime << 32) + attr.ftLastAccessTime.dwLowDateTime) / 100000000;
 #else
     struct stat statbuff;
     if(stat(file_path, &statbuff) == 0)
