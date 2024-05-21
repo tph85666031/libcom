@@ -73,7 +73,7 @@ IF (UNIX OR APPLE)
       m
 )
 ELSE()
-  ADD_COMPILE_OPTIONS( /W2 /wd4819 /wd4251 /wd4200 /wd4996)
+  ADD_COMPILE_OPTIONS( /W3 /wd4819 /wd4251 /wd4200)
   SET(PROJECT_LIB
       ${PROJECT_LIB}
       msvcrt.lib

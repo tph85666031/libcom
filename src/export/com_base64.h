@@ -4,17 +4,19 @@
 #include "com_base.h"
 #include "com_serializer.h"
 
-class COM_EXPORT Base64
+class COM_EXPORT ComBase64
 {
 public:
-    Base64();
-    virtual ~Base64();
+    ComBase64();
+    virtual ~ComBase64();
     static std::string Encode(const CPPBytes& bytes);
     static std::string Encode(const uint8* data, int data_size);
     static CPPBytes Decode(const char* base64_data);
 private:
-    static bool isBase64(char c);
+    static bool IsBase64(char c);
 };
+
+typedef COM_EXPORT ComBase64 DEPRECATED("Use ComBase64 instead") Base64;
 
 #endif /* __COM_BASE64_H__ */
 

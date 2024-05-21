@@ -5,25 +5,25 @@ static const std::string base64_chars =
     "abcdefghijklmnopqrstuvwxyz"
     "0123456789+/";
 
-Base64::Base64()
+ComBase64::ComBase64()
 {
 }
 
-Base64::~Base64()
+ComBase64::~ComBase64()
 {
 }
 
-bool Base64::isBase64(char c)
+bool ComBase64::IsBase64(char c)
 {
     return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string Base64::Encode(const CPPBytes& bytes)
+std::string ComBase64::Encode(const CPPBytes& bytes)
 {
     return Encode(bytes.getData(), bytes.getDataSize());
 }
 
-std::string Base64::Encode(const uint8* data, int data_size)
+std::string ComBase64::Encode(const uint8* data, int data_size)
 {
     int i = 0;
     int j = 0;
@@ -79,7 +79,7 @@ std::string Base64::Encode(const uint8* data, int data_size)
     return encode_data;
 }
 
-CPPBytes Base64::Decode(const char* base64_data)
+CPPBytes ComBase64::Decode(const char* base64_data)
 {
     CPPBytes bytes;
     if (base64_data == NULL)
