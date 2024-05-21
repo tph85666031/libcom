@@ -21,6 +21,4 @@ void com_base64_unit_test_suit(void** state)
         ASSERT_INT_EQUAL(bytes_org.getAt(i), bytes.getData()[i]);
     }
     ASSERT_TRUE(bytes_org == bytes);
-
-    Base64 b1;
 }

@@ -111,7 +111,7 @@ static bool dir_list(const char* dir_root, std::map<std::string, int>& list, con
                 {
                     list[path] = FILE_TYPE_DIR;
                 }
-                com_dir_list(path.c_str(), list, path_pattern, pattern_as_path);
+                dir_list(path.c_str(), list, path_pattern, pattern_as_path);
                 break;
             case DT_REG:
                 if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
@@ -2367,6 +2367,7 @@ SingleInstanceProcess::SingleInstanceProcess(const char* file_lock)
         int64 pid = 0;
         if(com_file_is_locked((FILE*)fp, type, pid))
         {
+            com_file_close((FILE*)fp);
             LOG_W("process already running, pid=%llu, type=%d", pid, type);
             exit(0);
         }
