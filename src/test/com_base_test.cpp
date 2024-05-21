@@ -697,6 +697,7 @@ void lock_test(T& m, int thread_count, int loop_count, int writer_ratio)
 
 void com_base_lock_unit_test_suit(void** state)
 {
+#if 0
     int thread_count = 32;
     int loop_count = 1 * 1024 * 1024;
 
@@ -708,6 +709,12 @@ void com_base_lock_unit_test_suit(void** state)
         //lock_test(m2, thread_count, loop_count, i);
         printf("\n");
     }
+#else
+    int64 size = com_file_size("d:\\123\\123.docx");
+    LOG_I("size=%lld", size);
+    size = com_file_size(".\\out\\com.exe");
+    LOG_I("size=%lld", size);
+#endif
 }
 
 #ifdef __GNUC__

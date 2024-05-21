@@ -677,7 +677,7 @@ int com_file_type(int fd)
 
 int com_file_type(FILE* file)
 {
-    return com_file_type(fileno(file));
+    return com_file_type(com_file_get_fd(file));
 }
 
 int64 com_file_size(int fd)
@@ -688,16 +688,11 @@ int64 com_file_size(int fd)
     }
     unsigned long filesize = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct _stat64 statbuff;
-    int ret = _fstat64(fd, &statbuff);
-    if(ret == 0)
-    {
-        filesize = statbuff.st_size;
-    }
-    else
-    {
-        LOG_E("failed to get file size,ret=%d,errno=%d", ret, errno);
-    }
+    //_fstat may has errno=132 error
+    int64 pos = _lseeki64(fd, 0, SEEK_CUR);
+    int64 size = _lseeki64(fd, 0, SEEK_END);
+    _lseeki64(fd, pos, SEEK_SET);
+    return size;
 #else
     struct stat statbuff;
     int ret = fstat(fd, &statbuff);
@@ -719,7 +714,7 @@ int64 com_file_size(FILE* file)
     {
         return -1;
     }
-    return com_file_size(fileno(file));
+    return com_file_size(com_file_get_fd(file));
 }
 
 int64 com_file_size(const char* file_path)
@@ -730,16 +725,15 @@ int64 com_file_size(const char* file_path)
     }
     unsigned long filesize = 0;
 #if defined(_WIN32) || defined(_WIN64)
-    struct __stat64 statbuff;
-    int ret = _wstat64(com_wstring_from_utf8(file_path).c_str(), &statbuff);
+    //_stat may has errno=132 error
+    WIN32_FILE_ATTRIBUTE_DATA attr;
+    int ret = GetFileAttributesExW(com_wstring_from_utf8(CPPBytes(file_path)).c_str(), GetFileExInfoStandard, &attr);
     if(ret == 0)
     {
-        filesize = statbuff.st_size;
+        LOG_E("failed to get file size,file=%s,ret=%d,errno=%d", file_path, ret, errno);
+        return -1;
     }
-    else
-    {
-        LOG_E("failed to get file size,ret=%d,errno=%d", ret, errno);
-    }
+    return ((int64)attr.nFileSizeHigh << 32) + attr.nFileSizeLow;
 #else
     struct stat statbuff;
     int ret = stat(file_path, &statbuff);
@@ -749,7 +743,7 @@ int64 com_file_size(const char* file_path)
     }
     else
     {
-        LOG_E("failed to get file size,ret=%d,errno=%d", ret, errno);
+        LOG_E("failed to get file size,file=%s,ret=%d,errno=%d", file_path, ret, errno);
     }
 #endif
     return filesize;
@@ -973,14 +967,14 @@ bool com_file_truncate(FILE* file, int64 size)
         size = total_size;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(_chsize_s(fileno(file), total_size - size) != 0)
+    if(_chsize_s(com_file_get_fd(file), total_size - size) != 0)
     {
         com_file_seek_set(file, pos);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
         return false;
     }
 #else
-    if(ftruncate(fileno(file), total_size - size) != 0)
+    if(ftruncate(com_file_get_fd(file), total_size - size) != 0)
     {
         com_file_seek_set(file, pos);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
@@ -1011,20 +1005,20 @@ bool com_file_truncate(const char* file_path, int64 size)
         size = total_size;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(_chsize_s(fileno(file), total_size - size) != 0)
+    if(_chsize_s(com_file_get_fd(file), total_size - size) != 0)
     {
         com_file_close(file);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
         return false;
     }
 #else
-    if(ftruncate(fileno(file), total_size - size) != 0)
+    if(ftruncate(com_file_get_fd(file), total_size - size) != 0)
     {
         com_file_close(file);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
         return false;
     }
-    lseek(fileno(file), total_size - size, SEEK_SET);
+    lseek(com_file_get_fd(file), total_size - size, SEEK_SET);
 #endif
     com_file_flush(file);
     com_file_close(file);
@@ -1845,7 +1839,7 @@ void com_file_sync(FILE* file)
 #if __linux__ == 1
     if(file)
     {
-        fsync(fileno(file));
+        fsync(com_file_get_fd(file));
     }
 #endif
 }
@@ -1945,7 +1939,11 @@ int com_file_get_fd(FILE* file)
     {
         return -1;
     }
+#if defined(_WIN32) || defined(_WIN64)
+    return _fileno(file);
+#else
     return fileno(file);
+#endif
 }
 
 bool com_file_lock(FILE* file, bool allow_share_read, bool wait)
@@ -1954,7 +1952,7 @@ bool com_file_lock(FILE* file, bool allow_share_read, bool wait)
     {
         return false;
     }
-    return com_file_lock(fileno(file), allow_share_read, wait);
+    return com_file_lock(com_file_get_fd(file), allow_share_read, wait);
 }
 
 bool com_file_lock(int fd, bool allow_share_read, bool wait)
@@ -1992,7 +1990,7 @@ bool com_file_lock(int fd, bool allow_share_read, bool wait)
 
 bool com_file_is_locked(FILE* file)
 {
-    return com_file_is_locked(fileno(file));
+    return com_file_is_locked(com_file_get_fd(file));
 }
 
 bool com_file_is_locked(FILE* file, int& type, int64& pid)
@@ -2001,7 +1999,7 @@ bool com_file_is_locked(FILE* file, int& type, int64& pid)
     {
         return false;
     }
-    return com_file_is_locked(fileno(file), type, pid);
+    return com_file_is_locked(com_file_get_fd(file), type, pid);
 }
 
 bool com_file_is_locked(int fd)
@@ -2049,7 +2047,7 @@ bool com_file_unlock(FILE* file)
     {
         return false;
     }
-    return com_file_unlock(fileno(file));
+    return com_file_unlock(com_file_get_fd(file));
 }
 
 bool com_file_unlock(int fd)
