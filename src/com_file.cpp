@@ -1069,7 +1069,7 @@ bool com_file_seek_head(int fd)
 #if defined(_WIN32) || defined(_WIN64)
     return (_lseeki64(fd, 0L, SEEK_SET) != -1);
 #else
-    return (lseek64(fd, 0L, SEEK_SET) != -1);
+    return (lseek(fd, 0L, SEEK_SET) != -1);
 #endif
 }
 
@@ -1091,7 +1091,7 @@ bool com_file_seek_tail(int fd)
 #if defined(_WIN32) || defined(_WIN64)
     return (_lseeki64(fd, 0L, SEEK_END) != -1);
 #else
-    return (lseek64(fd, 0L, SEEK_END) != -1);
+    return (lseek(fd, 0L, SEEK_END) != -1);
 #endif
 }
 
@@ -1113,7 +1113,7 @@ bool com_file_seek_step(int fd, int64 pos)
 #if defined(_WIN32) || defined(_WIN64)
     return (_lseeki64(fd, pos, SEEK_CUR) != -1);
 #else
-    return (lseek64(fd, pos, SEEK_CUR) != -1);
+    return (lseek(fd, pos, SEEK_CUR) != -1);
 #endif
 }
 
@@ -1151,11 +1151,11 @@ bool com_file_seek_set(int fd, int64 pos)
 #else
     if(pos >= 0)
     {
-        return (lseek64(fd, pos, SEEK_SET) != -1);
+        return (lseek(fd, pos, SEEK_SET) != -1);
     }
     else
     {
-        return (lseek64(fd, pos, SEEK_END) != -1);
+        return (lseek(fd, pos, SEEK_END) != -1);
     }
 #endif
 }
@@ -1178,7 +1178,7 @@ int64 com_file_seek_get(int fd)
 #if defined(_WIN32) || defined(_WIN64)
     return _lseeki64(fd, 0, SEEK_CUR);
 #else
-    return lseek64(fd, 0, SEEK_CUR);
+    return lseek(fd, 0, SEEK_CUR);
 #endif
 }
 
@@ -1675,7 +1675,7 @@ ComBytes com_file_readall(int fd, int64 offset)
 #if defined(_WIN32) || defined(_WIN64)
         _lseeki64(fd, offset, SEEK_SET);
 #else
-        lseek64(fd, offset, SEEK_SET);
+        lseek(fd, offset, SEEK_SET);
 #endif
     }
     uint8 buf[1024];
