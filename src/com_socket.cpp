@@ -198,7 +198,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
     }
     else
     {
-        inet_pton(AF_INET, nic.ip.c_str(), &local_addr.sin_addr.s_addr);
+        local_addr.sin_addr.s_addr = inet_addr(nic.ip.c_str());
     }
     if(bind(socketfd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0)
     {
@@ -318,7 +318,7 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
     }
     else
     {
-        inet_pton(AF_INET, nic.ip.c_str(), &local_addr.sin_addr.s_addr);
+        local_addr.sin_addr.s_addr = inet_addr(nic.ip.c_str());
     }
 
     if(bind(socketfd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0)
@@ -1159,7 +1159,7 @@ bool MulticastNode::startNode()
     }
 
     struct ip_mreq mreq; // 多播地址结构体
-    inet_pton(AF_INET, getHost().c_str(), &mreq.imr_multiaddr.s_addr);
+    mreq.imr_multiaddr.s_addr = inet_addr(getHost().c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     ret = setsockopt(socketfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*)&mreq, sizeof(mreq));
     if(ret < 0)
