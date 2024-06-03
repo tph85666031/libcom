@@ -240,9 +240,10 @@ COM_EXPORT int com_gcd(int x, int y);
 
 COM_EXPORT int com_user_get_uid(const char* user = NULL);
 COM_EXPORT int com_user_get_gid(const char* user = NULL);
-COM_EXPORT std::string com_user_get_name(int uid);
-COM_EXPORT std::string com_user_get_home(const char* user);
-COM_EXPORT std::string com_user_get_home(const std::string& user);
+COM_EXPORT std::string com_user_get_name(int uid = -1);
+COM_EXPORT std::string com_user_get_home(int uid = -1);
+COM_EXPORT std::string com_user_get_home(const char* user = NULL);
+COM_EXPORT std::string com_user_get_home(const std::string& user = std::string());
 COM_EXPORT int com_user_get_uid_logined();
 COM_EXPORT int com_user_get_gid_logined();
 COM_EXPORT std::string com_user_get_name_logined();

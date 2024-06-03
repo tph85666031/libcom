@@ -2173,7 +2173,7 @@ std::string com_user_get_name(int uid)
     LOG_E("api not support yet");
     return std::string();
 #else
-    struct passwd* pw = getpwuid(uid);
+    struct passwd* pw = getpwuid(uid < 0 ? getuid() : uid);
     if(pw == NULL || pw->pw_name == NULL)
     {
         return std::string();
@@ -2183,14 +2183,40 @@ std::string com_user_get_name(int uid)
 #endif
 }
 
+std::string com_user_get_home(int uid)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
+    return std::string();
+#else
+    struct passwd* p = getpwuid(uid < 0 ? getuid() : uid);
+    if(p == NULL || p->pw_dir == NULL)
+    {
+        return std::string();
+    }
+
+    return p->pw_dir;
+#endif
+}
+
 std::string com_user_get_home(const char* user)
 {
 #if defined(_WIN32) || defined(_WIN64)
     LOG_E("api not support yet");
     return std::string();
 #else
-    if(user == NULL || user[0] == '\0')
+    if(user == NULL || user[0] == '\0')//获取当前用户的主目录
     {
+        const char* home = getenv("HOME");
+        if(home != NULL)
+        {
+            return home;
+        }
+        struct passwd* p = getpwuid(getuid());
+        if(p != NULL && p->pw_dir != NULL)
+        {
+            return p->pw_dir;
+        }
         return std::string();
     }
 
@@ -2206,7 +2232,7 @@ std::string com_user_get_home(const char* user)
     }
 
     struct passwd* p = getpwuid(pw->pw_uid);
-    if(p == NULL)
+    if(p == NULL || p->pw_dir == NULL)
     {
         return std::string();
     }
