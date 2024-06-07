@@ -160,28 +160,20 @@ char** com_sqlite_query_F(void* fd, const char* sql, int* row_count, int* column
     return result;
 }
 
-/********************************************************
-    com_sqlite_query_count
-    说明：数据库查询并获取查询匹配的数据个数
-    入参：fd:sqlite3句柄，sql：查询语句
-
-    返回值：查询匹配的数据个数
- ********************************************************/
-static int sqlite_query_count_callback(void* arg, int argc, char** argv, char** azColName)
-{
-    int* row_count = (int*)arg;
-    *row_count = *row_count + 1;
-    return 0;
-}
-
 int com_sqlite_query_count(void* fd, const char* sql)
 {
     if(fd == NULL || sql == NULL)
     {
+        LOG_E("arg incorrect");
         return -1;
     }
     int count = 0;
-    int ret = sqlite3_exec((sqlite3*)fd, sql, sqlite_query_count_callback, &count, NULL);
+    int ret = sqlite3_exec((sqlite3*)fd, sql, [](void* arg, int argc, char** argv, char** col_name)->int
+    {
+        int* row_count = (int*)arg;
+        *row_count = *row_count + 1;
+        return 0;
+    }, &count, NULL);
     if(ret != SQLITE_OK)
     {
         return (-1 * ret);
@@ -280,15 +272,6 @@ bool com_sqlite_is_table_exist(void* fd, const char* table_name)
 
     返回值：数据表行数
  ********************************************************/
-static int sqlite_table_row_count_callback(void* arg, int argc, char** argv, char** azColName)
-{
-    int* row_count = (int*)arg;
-    if(argc > 0 && argv[0] != NULL)
-    {
-        *row_count = strtol(argv[0], NULL, 10);
-    }
-    return 0;
-}
 int com_sqlite_table_row_count(void* fd, const char* table_name)
 {
     if(fd == NULL || table_name == NULL)
@@ -298,7 +281,15 @@ int com_sqlite_table_row_count(void* fd, const char* table_name)
     char sql[256];
     snprintf(sql, sizeof(sql), "SELECT COUNT(*) FROM \"%s\";", com_sqlite_escape(table_name).c_str());
     int count = 0;
-    int ret = sqlite3_exec((sqlite3*)fd, sql, sqlite_table_row_count_callback, &count, NULL);
+    int ret = sqlite3_exec((sqlite3*)fd, sql, [](void* arg, int argc, char** argv, char** col_name)->int
+    {
+        int* row_count = (int*)arg;
+        if(argc > 0 && argv[0] != NULL)
+        {
+            *row_count = strtol(argv[0], NULL, 10);
+        }
+        return 0;
+    }, &count, NULL);
     if(ret != SQLITE_OK)
     {
         return (-1 * ret);
@@ -679,6 +670,10 @@ std::string DBQuery::getItem(int row, const char* col_name, const char* default_
     }
 
     std::map<std::string, std::string>& item = results[row];
+    if(item.count(col_name) <= 0)
+    {
+        return default_val == NULL ? "" : default_val;
+    }
     return item[col_name];
 }
 
@@ -690,6 +685,10 @@ double DBQuery::getItemAsDouble(int row, const char* col_name, double default_va
     }
 
     std::map<std::string, std::string>& item = results[row];
+    if(item.count(col_name) <= 0)
+    {
+        return default_val;
+    }
     return strtold(item[col_name].c_str(), NULL);
 }
 
@@ -701,6 +700,10 @@ int64 DBQuery::getItemAsNumber(int row, const char* col_name, int64 default_val)
     }
 
     std::map<std::string, std::string>& item = results[row];
+    if(item.count(col_name) <= 0)
+    {
+        return default_val;
+    }
     return strtoll(item[col_name].c_str(), NULL, 10);
 }
 

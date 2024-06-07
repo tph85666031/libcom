@@ -1320,14 +1320,7 @@ void com_sleep_ms(uint32 val)
 #if defined(_WIN32) || defined(_WIN64)
     Sleep(val);
 #else
-#if 1
     usleep((uint64)val * 1000);
-#else
-    struct timeval time;
-    time.tv_sec = val / 1000;//seconds
-    time.tv_usec = val % 1000 * 1000;//microsecond
-    select(0, NULL, NULL, NULL, &time);
-#endif
 #endif
 }
 

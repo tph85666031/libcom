@@ -7,7 +7,7 @@ std::atomic<uint32> progress_cur;
 std::atomic<uint32> progress_all;
 void sqlite_test_thread_progress()
 {
-    while (progress_cur < progress_all)
+    while(progress_cur < progress_all)
     {
         LOG_D("sqlite3 test progress: %.2f%%", progress_cur * 100.0f / progress_all);
         com_sleep_ms(100);
@@ -19,7 +19,7 @@ void sqlite3_test_thread(void* fd, std::string table_name, int count, int start)
 {
     uint32 ID = start;
     uint32 PARAM = start;
-    while (count-- > 0)
+    while(count-- > 0)
     {
         ID++;
         PARAM++;
@@ -56,7 +56,7 @@ void com_sqlite_unit_test_suit(void** state)
              "TYPE",
              "VALUE");
 
-    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),0);
+    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table), 0);
 
     snprintf(sql_create_table, sizeof(sql_create_table),
              "CREATE TABLE \"%s\" ( \
@@ -70,7 +70,7 @@ void com_sqlite_unit_test_suit(void** state)
              "TYPE",
              "VALUE");
 
-    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table),0);
+    ASSERT_INT_EQUAL(com_sqlite_run_sql(fd, sql_create_table), 0);
     const char* sql = "select * from setting";
     int row_count;
     int column_count;
@@ -91,31 +91,32 @@ void com_sqlite_unit_test_suit(void** state)
     progress_all = item_count * thread_count * 2;
     std::thread t_progress = std::thread(sqlite_test_thread_progress);
     LOG_D("start create %d threads for setting table, each will insert %d items", thread_count, item_count);
-    for (int i = 0; i < thread_count; i++)
+    for(int i = 0; i < thread_count; i++)
     {
         std::thread* t = new std::thread(sqlite3_test_thread, fd, "setting", item_count, i * item_count);
         threads.push_back(t);
     }
     LOG_D("start create %d threads for conf table, each will insert %d items", thread_count, item_count);
-    for (int i = 0; i < thread_count; i++)
+    for(int i = 0; i < thread_count; i++)
     {
         std::thread* t = new std::thread(sqlite3_test_thread, fd, "conf", item_count, i * item_count);
         threads.push_back(t);
     }
 
-    for (size_t i = 0; i < threads.size(); i++)
+    for(size_t i = 0; i < threads.size(); i++)
     {
-        if (threads[i]->joinable())
+        if(threads[i]->joinable())
         {
             threads[i]->join();
         }
         delete threads[i];
     }
 
-    if (t_progress.joinable())
+    if(t_progress.joinable())
     {
         t_progress.join();
     }
+    ASSERT_INT_EQUAL(com_sqlite_query_count(fd, "select * from conf"), item_count * thread_count);
     com_sqlite_close(fd);
     com_file_remove("./settings.db");
 }

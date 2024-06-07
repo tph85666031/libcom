@@ -159,6 +159,7 @@ COM_EXPORT bool com_file_is_locked(int fd);
 COM_EXPORT bool com_file_is_locked(int fd, int& type, int64& pid);
 COM_EXPORT bool com_file_unlock(FILE* file);
 COM_EXPORT bool com_file_unlock(int fd);
+COM_EXPORT std::string com_file_path_absolute(const char* path);
 
 class COM_EXPORT SingleInstanceProcess
 {

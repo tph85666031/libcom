@@ -24,33 +24,6 @@ static std::vector<int> signal_value_ignore;
 static std::vector<int> signal_value_none_reset;
 static std::vector<int> signal_value_reset;
 
-static bool com_stack_name_of_pid(uint64 pid, char* name, int name_size)
-{
-    if(name == NULL || name_size <= 0)
-    {
-        return false;
-    }
-#if __linux__ == 1
-    memset(name, 0, name_size);
-    char proc_pid_path[128];
-    char buf[128];
-    sprintf(proc_pid_path, "/proc/%llu/status", pid);
-    FILE* fp = fopen(proc_pid_path, "r");
-    if(NULL != fp)
-    {
-        if(fgets(buf, sizeof(buf), fp) == NULL)
-        {
-            fclose(fp);
-            return false;
-        }
-        fclose(fp);
-        sscanf(buf, "%*s %s", name);
-        return true;
-    }
-#endif
-    return false;
-}
-
 static std::string stack_addr2line(const char* info, const char* file_addr2line, const char* file_objdump)
 {
     if(info == NULL)
@@ -210,10 +183,9 @@ static void stack_signal_function(int sig, siginfo_t* info, void* context)
     }
 
 #if __linux__ == 1
-    char pid_name[128];
-    com_stack_name_of_pid(info->si_pid, pid_name, sizeof(pid_name));
+    std::string process_name = com_process_get_name(info->si_pid);
     LOG_W("%s:%d called\nsig=%d:%s, from=%s[%u], my pid=%d",
-          __FUNC__, __LINE__, sig, strsignal(sig), pid_name, info->si_pid, com_process_get_pid());
+          __FUNC__, __LINE__, sig, strsignal(sig), process_name.c_str(), info->si_pid, com_process_get_pid());
 
     com_stack_print();
 #endif
