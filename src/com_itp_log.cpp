@@ -536,12 +536,12 @@ void ITPLogWriter::write(int type, const char* val, int length, bool autoPost)
         {
             //消息过半后通知Reader来读取,Reader同时也会定时1秒读取消息
             int ret = postSem(sem_mem);//通知Reader来读
-            LOG_D("post sem auto:%d, notify reader to read, ret:%d", autoPost, ret);
+            LOG_T("post sem auto:%d, notify reader to read, ret:%d", autoPost, ret);
         }
     }
     else
     {
-        LOG_D("write share memory, memory is overflow, and discard itp msg");
+        LOG_T("write share memory, memory is overflow, and discard itp msg");
     }
     postSem(mutex_mem);
     return;

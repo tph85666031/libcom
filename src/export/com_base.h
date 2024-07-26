@@ -532,6 +532,33 @@ private:
     int64 buffer_pos = 0;
 };
 
+class COM_EXPORT ComOptionDesc
+{
+public:
+    std::string key;
+    std::string description;
+    bool need_value = false;;
+    std::string value;
+};
+
+class COM_EXPORT ComOption
+{
+public:
+    ComOption();
+    virtual ~ComOption();
+    ComOption& addOption(const char* key, const char* description, bool need_value = true);
+    bool keyExist(const char* key);
+    bool valueExist(const char* key);
+    std::string getString(const char* key, std::string default_val = std::string());
+    int64 getNumber(const char* key, int64 default_val = 0);
+    double getDolube(const char* key, double default_val = 0.0f);
+    bool getBool(const char* key, bool default_val = false);
+    bool parse(int argc, const char** argv);
+    std::string showUsage();
+private:
+    std::map<std::string, ComOptionDesc> params;
+};
+
 COM_EXPORT ComBytes com_hexstring_to_bytes(const char* str);
 COM_EXPORT ComBytes com_string_utf8_to_utf16(const ComBytes& utf8);
 COM_EXPORT ComBytes com_string_utf16_to_utf8(const ComBytes& utf16);

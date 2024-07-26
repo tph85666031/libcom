@@ -383,7 +383,6 @@ XT& getXT()
 void com_base_unit_test_suit(void** state)
 {
     com_stack_init();
-
     TIME_COST();
 
     std::vector<int> array_a;

@@ -25,6 +25,7 @@ public:
     ProcInfo();
 public:
     bool valid = false;
+    std::string path;
     int stat = -1;
     int pid = -1;
     int pgrp = -1;

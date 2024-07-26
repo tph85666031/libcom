@@ -3095,17 +3095,17 @@ bool Message::getBool(const char* key, bool default_val) const
     }
     std::string val = datas.at(key);
     com_string_to_lower(val);
-    if(val == "true")
+    if(val == "1" || val == "true" || val == "yes" || val == "on")
     {
         return true;
     }
-    else if(val == "false")
+    else if(val == "0" || val == "false" || val == "no" || val == "off")
     {
         return false;
     }
     else
     {
-        return (strtol(val.c_str(), NULL, 10) == 1);
+        return default_val;
     }
 }
 
@@ -3601,5 +3601,145 @@ void ByteStreamReader::reset()
 {
     com_file_seek_head(fp);
     buffer_pos = 0;
+}
+
+ComOption::ComOption()
+{
+}
+
+ComOption::~ComOption()
+{
+}
+
+ComOption& ComOption::addOption(const char* key, const char* description, bool need_value)
+{
+    if(com_string_len(key) >= 2 && key[0] == '-' && description != NULL)
+    {
+        ComOptionDesc desc;
+        desc.key = key;
+        desc.description = description;
+        desc.need_value = need_value;
+        params[key] = desc;
+    }
+    return *this;
+}
+
+bool ComOption::keyExist(const char* key)
+{
+    if(com_string_len(key) <= 0)
+    {
+        return false;
+    }
+
+    return (params.count(key) != 0);
+}
+
+bool ComOption::valueExist(const char* key)
+{
+    if(com_string_len(key) <= 0)
+    {
+        return false;
+    }
+    return !params[key].value.empty();
+}
+
+std::string ComOption::getString(const char* key, std::string default_val)
+{
+    if(keyExist(key) == false)
+    {
+        return default_val;
+    }
+
+    ComOptionDesc& desc = params[key];
+    return desc.value;
+}
+
+int64 ComOption::getNumber(const char* key, int64 default_val)
+{
+    std::string val = getString(key);
+    if(val.empty())
+    {
+        return default_val;
+    }
+    return strtoll(val.c_str(), NULL, 0);
+}
+
+double ComOption::getDolube(const char* key, double default_val)
+{
+    std::string val = getString(key);
+    if(val.empty())
+    {
+        return default_val;
+    }
+    return strtod(val.c_str(), NULL);
+}
+
+bool ComOption::getBool(const char* key, bool default_val)
+{
+    std::string val = getString(key);
+    if(val.empty())
+    {
+        return default_val;
+    }
+    com_string_to_lower(val);
+    if(val == "1" || val == "true" || val == "yes" || val == "on")
+    {
+        return true;
+    }
+    else if(val == "0" || val == "false" || val == "no" || val == "off")
+    {
+        return false;
+    }
+    else
+    {
+        return default_val;
+    }
+}
+
+bool ComOption::parse(int argc, const char** argv)
+{
+    if(argc <= 1 || argv == NULL)
+    {
+        LOG_E("arg incorrect");
+        return false;
+    }
+    for(int i = 1; i < argc;)
+    {
+        if(argv[i] == NULL || !keyExist(argv[i]))
+        {
+            LOG_E("arg value incorrect,argv[%d]=%s", i, argv[i]);
+            return false;
+        }
+
+        ComOptionDesc& desc = params[argv[i]];
+        if(desc.need_value)
+        {
+            if(i + 1 >= argc || argv[i + 1] == NULL || argv[i + 1][0] == '\0' || argv[i + 1][0] == '-')
+            {
+                LOG_E("value incorrect,i=%d,val=%s", i, argv[i + 1]);
+                return false;
+            }
+            desc.value = argv[i + 1];
+            i += 2;
+        }
+        else
+        {
+            desc.value = "true";
+            i++;
+        }
+    }
+    return true;
+}
+
+std::string ComOption::showUsage()
+{
+    std::string usage = "Usage:\n";
+    for(auto it = params.begin(); it != params.end(); it++)
+    {
+        ComOptionDesc& desc = it->second;
+        usage += "\t" + desc.key + "\t" + desc.description + "\n";
+    }
+    LOG_I("\n%s", usage.c_str());
+    return usage;
 }
 

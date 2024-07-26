@@ -428,6 +428,7 @@ ProcInfo com_process_get(int pid)
             DWORD session_id = 0;
             info.valid = ProcessIdToSessionId(pe.th32ParentProcessID, &session_id);
             info.session_id = (int)session_id;
+            info.path = com_wstring_to_utf8(pe.szExeFile).toString();
             break;
         }
     }
@@ -448,19 +449,20 @@ ProcInfo com_process_get(int pid)
               &info.pid, &info.ppid, &info.pgrp, &info.session_id, &info.thread_count) == 5)
     {
         info.valid = true;
-    }
-    content = com_file_readall(com_string_format("/proc/%d/status", pid).c_str()).toString();
-    ByteStreamReader reader(content);
-    std::string line;
-    while(reader.readLine(line))
-    {
-        if(com_string_start_with(line.c_str(), "Uid:"))
+        info.path = com_process_get_path(info.pid);
+        content = com_file_readall(com_string_format("/proc/%d/status", pid).c_str()).toString();
+        ByteStreamReader reader(content);
+        std::string line;
+        while(reader.readLine(line))
         {
-            sscanf(line.c_str(), "%*s %d %d %d %d", &info.uid, &info.euid, &info.suid, &info.fsuid);
-        }
-        else if(com_string_start_with(line.c_str(), "Gid:"))
-        {
-            sscanf(line.c_str(), "%*s %d %d %d %d", &info.gid, &info.egid, &info.sgid, &info.fsgid);
+            if(com_string_start_with(line.c_str(), "Uid:"))
+            {
+                sscanf(line.c_str(), "%*s %d %d %d %d", &info.uid, &info.euid, &info.suid, &info.fsuid);
+            }
+            else if(com_string_start_with(line.c_str(), "Gid:"))
+            {
+                sscanf(line.c_str(), "%*s %d %d %d %d", &info.gid, &info.egid, &info.sgid, &info.fsgid);
+            }
         }
     }
     return info;
@@ -487,12 +489,13 @@ std::map<int, ProcInfo> com_process_get_all()
         DWORD session_id = 0;
         info.valid = ProcessIdToSessionId(pe.th32ParentProcessID, &session_id);
         info.session_id = (int)session_id;
+        info.path = com_wstring_to_utf8(pe.szExeFile).toString();
         infos[pe.th32ProcessID] = info;
     }
     CloseHandle(handle_snapshot);
     return infos;
 #else
-    std::vector<std::string> list;
+    std::vector<int> list_pids;
     DIR* dir = opendir("/proc/");
     if(dir == NULL)
     {
@@ -511,27 +514,15 @@ std::map<int, ProcInfo> com_process_get_all()
         {
             continue;
         }
-        list.push_back(com_string_format("/proc/%ld/stat", strtol(ptr->d_name, NULL, 10)));
+        list_pids.push_back(strtol(ptr->d_name, NULL, 10));
     }
     closedir(dir);
 
-    for(size_t i = 0; i < list.size(); i++)
+    for(size_t i = 0; i < list_pids.size(); i++)
     {
-        std::string content = com_file_readall(list[i].c_str()).toString();
-        if(content.empty())
+        ProcInfo info = com_process_get(list_pids[i]);
+        if(info.valid)
         {
-            continue;
-        }
-        ProcInfo info;
-        if(sscanf(content.c_str(),
-                  "%d %*s %*s %d %d %d %*d %*d"\
-                  "%*u %*u %*u %*u %*u"\
-                  "%*u %*u %*u %*u"\
-                  "%*d %*d"\
-                  "%d",
-                  &info.pid, &info.ppid, &info.gid, &info.session_id, &info.thread_count) == 5)
-        {
-            info.valid = true;
             infos[info.pid] = info;
         }
     }
@@ -541,53 +532,7 @@ std::map<int, ProcInfo> com_process_get_all()
 
 ProcInfo com_process_get_parent(int pid)
 {
-    if(pid < 0)
-    {
-        pid = com_process_get_pid();
-    }
-#if defined(_WIN32) || defined(_WIN64)
-    HANDLE handle_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, pid);
-    if(INVALID_HANDLE_VALUE == handle_snapshot)
-    {
-        return ProcInfo();
-    }
-    ProcInfo info;
-    PROCESSENTRY32W pe = {0};
-    pe.dwSize = sizeof(PROCESSENTRY32W);
-    for(bool ret = Process32FirstW(handle_snapshot, &pe); ret; ret = Process32NextW(handle_snapshot, &pe))
-    {
-        if(pe.th32ProcessID == pid)
-        {
-            info.pid = pe.th32ProcessID;
-            info.ppid = pe.th32ParentProcessID;
-            info.thread_count = pe.cntThreads;
-            DWORD session_id = 0;
-            info.valid = ProcessIdToSessionId(pe.th32ParentProcessID, &session_id);
-            info.session_id = (int)session_id;
-            break;
-        }
-    }
-    CloseHandle(handle_snapshot);
-    return info;
-#else
-    std::string content = com_file_readall(com_string_format("/proc/%d/stat", com_process_get_ppid(pid)).c_str()).toString();
-    if(content.empty())
-    {
-        return ProcInfo();
-    }
-    ProcInfo info;
-    if(sscanf(content.c_str(),
-              "%d %*s %*s %d %d %d %*d %*d"\
-              "%*u %*u %*u %*u %*u"\
-              "%*u %*u %*u %*u"\
-              "%*d %*d"\
-              "%d",
-              &info.pid, &info.ppid, &info.gid, &info.session_id, &info.thread_count) == 5)
-    {
-        info.valid = true;
-    }
-    return info;
-#endif
+    return com_process_get(com_process_get_ppid(pid));
 }
 
 std::vector<ProcInfo> com_process_get_parent_all(int pid)
@@ -861,7 +806,6 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
     {
         return;
     }
-    std::queue<Message> queue_local;
     std::thread::id tid = std::this_thread::get_id();
     while(poll->thread_mgr_running)
     {
@@ -899,20 +843,15 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
 
         //继续获取数据进行处理
         poll->mutex_msgs.lock();
-        int count = 0;
-        while(poll->msgs.empty() == false && count < poll->queue_size_per_thread)
+        while(poll->thread_mgr_running && poll->msgs.empty() == false)
         {
-            queue_local.push(std::move(poll->msgs.front()));
+            Message msg(std::move(poll->msgs.front()));
             poll->msgs.pop();
+            poll->mutex_msgs.unlock();
+            poll->threadPoolRunner(msg);
+            poll->mutex_msgs.lock();
         }
         poll->mutex_msgs.unlock();
-
-        while(poll->thread_mgr_running && queue_local.empty() == false)
-        {
-            Message msg = std::move(queue_local.front());
-            queue_local.pop();
-            poll->threadPoolRunner(msg);
-        }
     }
 
     //本线程退出，设置标记为退出
