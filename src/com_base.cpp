@@ -3703,12 +3703,20 @@ bool ComOption::parse(int argc, const char** argv)
         LOG_E("arg incorrect");
         return false;
     }
+    app_name = com_path_name(argv[0]);
     for(int i = 1; i < argc;)
     {
-        if(argv[i] == NULL || !keyExist(argv[i]))
+        if(argv[i] == NULL)
         {
-            LOG_E("arg value incorrect,argv[%d]=%s", i, argv[i]);
-            return false;
+            LOG_W("param at position %d is empty", i);
+            i++;
+            continue;
+        }
+        if(!keyExist(argv[i]))
+        {
+            LOG_W("param[%s] not required", argv[i]);
+            i++;
+            continue;
         }
 
         ComOptionDesc& desc = params[argv[i]];
@@ -3716,8 +3724,9 @@ bool ComOption::parse(int argc, const char** argv)
         {
             if(i + 1 >= argc || argv[i + 1] == NULL || argv[i + 1][0] == '\0' || argv[i + 1][0] == '-')
             {
-                LOG_E("value incorrect,i=%d,val=%s", i, argv[i + 1]);
-                return false;
+                LOG_W("param[%s]'s value is incorrect", argv[i]);
+                i++;
+                continue;
             }
             desc.value = argv[i + 1];
             i += 2;

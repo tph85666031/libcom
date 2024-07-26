@@ -709,6 +709,39 @@ void com_base_lock_unit_test_suit(void** state)
     }
 }
 
+void com_base_option_unit_test_suit(void** state)
+{
+    const char* argv[] =
+    {
+        "com",
+        "-a", "5",
+        "-b", "true",
+        "-d", "0.34",
+        "-s", "str",
+        "-e",
+        "-e2",
+        "-s2",
+        "-e3",
+        "-s3", "str3"
+    };
+    ComOption opt;
+    opt.addOption("-a", "a is number").addOption("-b", "b is bool").addOption("-d", "d is double").addOption("-s", "s is string").addOption("-e", "e is flag", false);
+    opt.addOption("-s2", "str2");
+    opt.parse(sizeof(argv) / sizeof(argv[0]), argv);
+    opt.showUsage();
+
+    ASSERT_INT_EQUAL(opt.getNumber("-a"), 5);
+    ASSERT_TRUE(opt.getBool("-b"));
+    ASSERT_FLOAT_EQUAL(opt.getDolube("-d"), 0.34);
+    ASSERT_STR_EQUAL(opt.getString("-s").c_str(), "str");
+    ASSERT_TRUE(opt.valueExist("-e"));
+    ASSERT_TRUE(opt.valueExist("-a"));
+    ASSERT_TRUE(opt.valueExist("-b"));
+    ASSERT_TRUE(opt.valueExist("-d"));
+    ASSERT_TRUE(opt.valueExist("-s"));
+    ASSERT_FALSE(opt.valueExist("-e1"));
+}
+
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

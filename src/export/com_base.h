@@ -557,6 +557,7 @@ public:
     std::string showUsage();
 private:
     std::map<std::string, ComOptionDesc> params;
+    std::string app_name;
 };
 
 COM_EXPORT ComBytes com_hexstring_to_bytes(const char* str);
