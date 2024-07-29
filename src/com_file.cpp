@@ -2019,6 +2019,7 @@ bool com_file_is_locked(int fd, int& type, int64& pid)
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
     lock.l_len = 0;
+    lock.l_type = F_WRLCK;
 
     int ret = fcntl(fd, F_GETLK, &lock);
     if(ret != 0)

@@ -23,6 +23,7 @@ typedef struct
 #include <sys/sem.h>
 #include <sys/mman.h>
 #include <sys/sysctl.h>
+#include <libproc.h>
 #else
 #include <signal.h>
 #include <sys/syscall.h>
@@ -373,6 +374,18 @@ int com_process_get_ppid(int pid)
     }
     CloseHandle(handle_snapshot);
     return ppid;
+#elif defined(__APPLE__) && defined(__MACH__)
+    if(pid <= 0) {
+        return getppid();
+    }
+    else {
+        struct proc_taskallinfo info;
+        int ret = proc_pidinfo(pid, PROC_PIDTASKALLINFO, 0, &info, sizeof(info));
+        if (ret > 0) {
+            return info.pbsd.pbi_ppid;
+        }
+    }
+    return -1;
 #else
     if(pid < 0)
     {
