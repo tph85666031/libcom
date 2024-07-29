@@ -551,7 +551,7 @@ public:
     bool valueExist(const char* key);
     std::string getString(const char* key, std::string default_val = std::string());
     int64 getNumber(const char* key, int64 default_val = 0);
-    double getDolube(const char* key, double default_val = 0.0f);
+    double getDouble(const char* key, double default_val = 0.0f);
     bool getBool(const char* key, bool default_val = false);
     bool parse(int argc, const char** argv);
     std::string showUsage();

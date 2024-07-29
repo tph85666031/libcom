@@ -732,7 +732,7 @@ void com_base_option_unit_test_suit(void** state)
 
     ASSERT_INT_EQUAL(opt.getNumber("-a"), 5);
     ASSERT_TRUE(opt.getBool("-b"));
-    ASSERT_FLOAT_EQUAL(opt.getDolube("-d"), 0.34);
+    ASSERT_FLOAT_EQUAL(opt.getDouble("-d"), 0.34);
     ASSERT_STR_EQUAL(opt.getString("-s").c_str(), "str");
     ASSERT_TRUE(opt.valueExist("-e"));
     ASSERT_TRUE(opt.valueExist("-a"));

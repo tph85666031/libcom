@@ -3664,7 +3664,7 @@ int64 ComOption::getNumber(const char* key, int64 default_val)
     return strtoll(val.c_str(), NULL, 0);
 }
 
-double ComOption::getDolube(const char* key, double default_val)
+double ComOption::getDouble(const char* key, double default_val)
 {
     std::string val = getString(key);
     if(val.empty())
