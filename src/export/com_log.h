@@ -22,6 +22,7 @@ COM_EXPORT void com_log_shift_level();
 COM_EXPORT void com_log_set_level(int level);
 COM_EXPORT void com_log_set_level(const char* level);
 COM_EXPORT int com_log_get_level();
+COM_EXPORT std::string com_log_get_level_string();
 COM_EXPORT void com_log_uninit(void);
 COM_EXPORT void com_log_output(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 

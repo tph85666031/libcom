@@ -135,7 +135,36 @@ void com_log_set_level(const char* level)
 
 int com_log_get_level()
 {
-    return log_level.load();
+    return log_level;
+}
+
+std::string com_log_get_level_string()
+{
+    if(log_level == LOG_LEVEL_TRACE)
+    {
+        return "TRACE";
+    }
+    if(log_level == LOG_LEVEL_DEBUG)
+    {
+        return "DEBUG";
+    }
+    if(log_level == LOG_LEVEL_INFO)
+    {
+        return "INFO";
+    }
+    if(log_level == LOG_LEVEL_WARNING)
+    {
+        return "WARN";
+    }
+    if(log_level == LOG_LEVEL_ERROR)
+    {
+        return "ERROR";
+    }
+    if(log_level == LOG_LEVEL_FATAL)
+    {
+        return "FATAL";
+    }
+    return "INFO";
 }
 
 void com_log_uninit(void)
