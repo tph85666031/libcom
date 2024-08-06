@@ -1270,21 +1270,125 @@ bool com_string_is_ip(const char* ip)
 
 bool com_string_is_utf8(const std::string& str)
 {
-    if(str.empty())
-    {
-        return false;
-    }
-    return isLegalUTF8Sequence((const UTF8*)str.c_str(), (const UTF8*)str.c_str() + str.length());
+    return com_string_is_utf8(str.c_str(), str.length());
 }
 
-bool com_string_is_utf8(const char* str)
+bool com_string_is_utf8(const char* str, int len)
 {
-    if(str == NULL || str[0] == '\0')
+    int i = 0 ;
+    int j = 0;
+    int codelen = 0;
+    int codepoint = 0;
+    const unsigned char* ustr = (const unsigned char*)str;
+
+    if(str == NULL)
     {
         return false;
     }
+    if(len <= 0)
+    {
+        len = com_string_len(str);
+    }
 
-    return isLegalUTF8Sequence((const UTF8*)str, (const UTF8*)str + strlen(str));
+    for(i = 0; i < len; i++)
+    {
+        if(ustr[i] == 0)
+        {
+            return false;
+        }
+        else if(ustr[i] <= 0x7f)
+        {
+            codelen = 1;
+            codepoint = ustr[i];
+        }
+        else if((ustr[i] & 0xE0) == 0xC0)
+        {
+            /* 110xxxxx - 2 byte sequence */
+            if(ustr[i] == 0xC0 || ustr[i] == 0xC1)
+            {
+                /* Invalid bytes */
+                return false;
+            }
+            codelen = 2;
+            codepoint = (ustr[i] & 0x1F);
+        }
+        else if((ustr[i] & 0xF0) == 0xE0)
+        {
+            /* 1110xxxx - 3 byte sequence */
+            codelen = 3;
+            codepoint = (ustr[i] & 0x0F);
+        }
+        else if((ustr[i] & 0xF8) == 0xF0)
+        {
+            /* 11110xxx - 4 byte sequence */
+            if(ustr[i] > 0xF4)
+            {
+                /* Invalid, this would produce values > 0x10FFFF. */
+                return false;
+            }
+            codelen = 4;
+            codepoint = (ustr[i] & 0x07);
+        }
+        else
+        {
+            /* Unexpected continuation byte. */
+            return false;
+        }
+
+        /* Reconstruct full code point */
+        if(i == len - codelen + 1)
+        {
+            /* Not enough data */
+            return false;
+        }
+        for(j = 0; j < codelen - 1; j++)
+        {
+            if((ustr[++i] & 0xC0) != 0x80)
+            {
+                /* Not a continuation byte */
+                return false;
+            }
+            codepoint = (codepoint << 6) | (ustr[i] & 0x3F);
+        }
+
+        /* Check for UTF-16 high/low surrogates */
+        if(codepoint >= 0xD800 && codepoint <= 0xDFFF)
+        {
+            return false;
+        }
+
+        /* Check for overlong or out of range encodings */
+        /*  Checking codelen == 2 isn't necessary here, because it is already
+            covered above in the C0 and C1 checks.
+            if(codelen == 2 && codepoint < 0x0080){
+             return MOSQ_ERR_MALFORMED_UTF8;
+            }else
+        */
+        if(codelen == 3 && codepoint < 0x0800)
+        {
+            return false;
+        }
+        else if(codelen == 4 && (codepoint < 0x10000 || codepoint > 0x10FFFF))
+        {
+            return false;
+        }
+
+        /* Check for non-characters */
+        if(codepoint >= 0xFDD0 && codepoint <= 0xFDEF)
+        {
+            return false;
+        }
+        if((codepoint & 0xFFFF) == 0xFFFE || (codepoint & 0xFFFF) == 0xFFFF)
+        {
+            return false;
+        }
+        /* Check for control characters */
+        if(codepoint <= 0x001F || (codepoint >= 0x007F && codepoint <= 0x009F))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 

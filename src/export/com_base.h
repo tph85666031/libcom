@@ -183,7 +183,7 @@ COM_EXPORT int com_string_size(const char* str);
 COM_EXPORT bool com_string_is_empty(const char* str);
 COM_EXPORT bool com_string_is_ip(const char* ip);
 COM_EXPORT bool com_string_is_utf8(const std::string& str);
-COM_EXPORT bool com_string_is_utf8(const char* str);
+COM_EXPORT bool com_string_is_utf8(const char* str, int len = 0);
 COM_EXPORT std::string com_string_format(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 COM_EXPORT std::wstring com_wstring_format(const wchar_t* fmt, ...);
 

@@ -315,6 +315,7 @@ void com_base_string_unit_test_suit(void** state)
 
     ASSERT_TRUE(com_string_is_utf8("abcd"));
     ASSERT_TRUE(com_string_is_utf8("UTF8ä¸­æ–‡"));
+    ASSERT_FALSE(com_string_is_utf8("UTF8ÖÐÎÄ"));
     ASSERT_FALSE(com_string_is_utf8(NULL));
 }
 
