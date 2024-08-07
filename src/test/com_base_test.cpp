@@ -716,31 +716,62 @@ void com_base_option_unit_test_suit(void** state)
     {
         "com",
         "-a", "5",
+        "-a1=5",
         "-b", "true",
+        "-b1=true",
+        "-b0", "false",
+        "-b2=false",
         "-d", "0.34",
+        "-d1=0.34",
         "-s", "str",
+        "-s1=str",
         "-e",
-        "-e2",
-        "-s2",
-        "-e3",
-        "-s3", "str3"
+        "-x1",
+        "-x2", "x2",
+        "-x3=x3"
     };
     ComOption opt;
-    opt.addOption("-a", "a is number").addOption("-b", "b is bool").addOption("-d", "d is double").addOption("-s", "s is string").addOption("-e", "e is flag", false);
-    opt.addOption("-s2", "str2");
+    opt.addOption("-a", "a is number");
+    opt.addOption("-a1", "a1 is number");
+    opt.addOption("-b", "b is bool");
+    opt.addOption("-b1", "b1 is bool");
+    opt.addOption("-b0", "b0 is bool");
+    opt.addOption("-b2", "b2 is bool");
+    opt.addOption("-d", "d is double");
+    opt.addOption("-d1", "d1 is double");
+    opt.addOption("-s", "s is string");
+    opt.addOption("-s1", "s1 is string");
+    opt.addOption("-e", "e is flag", false);
+
     opt.parse(sizeof(argv) / sizeof(argv[0]), argv);
     opt.showUsage();
 
     ASSERT_INT_EQUAL(opt.getNumber("-a"), 5);
+    ASSERT_INT_EQUAL(opt.getNumber("-a1"), 5);
     ASSERT_TRUE(opt.getBool("-b"));
+    ASSERT_TRUE(opt.getBool("-b1"));
+    ASSERT_FALSE(opt.getBool("-b0"));
+    ASSERT_FALSE(opt.getBool("-b2"));
     ASSERT_FLOAT_EQUAL(opt.getDouble("-d"), 0.34);
+    ASSERT_FLOAT_EQUAL(opt.getDouble("-d1"), 0.34);
     ASSERT_STR_EQUAL(opt.getString("-s").c_str(), "str");
-    ASSERT_TRUE(opt.valueExist("-e"));
+    ASSERT_STR_EQUAL(opt.getString("-s1").c_str(), "str");
+
     ASSERT_TRUE(opt.valueExist("-a"));
+    ASSERT_TRUE(opt.valueExist("-a1"));
     ASSERT_TRUE(opt.valueExist("-b"));
+    ASSERT_TRUE(opt.valueExist("-b1"));
+    ASSERT_TRUE(opt.valueExist("-b0"));
+    ASSERT_TRUE(opt.valueExist("-b2"));
     ASSERT_TRUE(opt.valueExist("-d"));
+    ASSERT_TRUE(opt.valueExist("-d1"));
     ASSERT_TRUE(opt.valueExist("-s"));
-    ASSERT_FALSE(opt.valueExist("-e1"));
+    ASSERT_TRUE(opt.valueExist("-s1"));
+    ASSERT_TRUE(opt.valueExist("-e"));
+    
+    ASSERT_FALSE(opt.valueExist("-x1"));
+    ASSERT_FALSE(opt.valueExist("-x2"));
+    ASSERT_FALSE(opt.valueExist("-x3"));
 }
 
 #ifdef __GNUC__
