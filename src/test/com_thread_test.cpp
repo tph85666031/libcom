@@ -1,5 +1,6 @@
 #include "com_thread.h"
 #include "com_log.h"
+#include "com_file.h"
 #include "com_test.h"
 
 class MyThreadPoll: public ThreadPool, public ThreadRunner<std::string>
@@ -101,6 +102,13 @@ void com_thread_unit_test_suit(void** state)
         ppid_str += "->" + com_string_format("%d", infos[i].pid);
     }
     LOG_I("ppid_str=%s", ppid_str.c_str());
+
+    int pid_test = com_process_get_pid("EndpointWatchdog");
+    std::vector<ProcInfo> proc_childs = com_process_get_child_all(pid_test);
+    for(size_t i = 0; i < proc_childs.size(); i++)
+    {
+        LOG_I("pid=%d,ppid=%d,bin=%s", proc_childs[i].pid, proc_childs[i].ppid, com_path_name(proc_childs[i].path.c_str()).c_str());
+    }
 
     MyThreadPoll pool;
     pool.setThreadsCount(3, 5);

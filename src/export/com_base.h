@@ -554,6 +554,7 @@ public:
     double getDouble(const char* key, double default_val = 0.0f);
     bool getBool(const char* key, bool default_val = false);
     bool parse(int argc, const char** argv);
+    Message toMessage();
     std::string showUsage();
 private:
     std::map<std::string, ComOptionDesc> params;

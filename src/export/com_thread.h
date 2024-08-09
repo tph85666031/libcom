@@ -19,6 +19,15 @@ typedef int process_cond_t;
 typedef int process_share_mem_t;
 #endif
 
+#define PROC_STAT_IDEL                   0
+#define PROC_STAT_RUNNING                1
+#define PROC_STAT_SLEEP_INTERRUPTIBLE    2
+#define PROC_STAT_SLEEP_UNINTERRUPTIBLE  3
+#define PROC_STAT_DEAD                   4
+#define PROC_STAT_ZOMBIE                 5
+#define PROC_STAT_TRACED                 6
+#define PROC_STAT_PARKED                 7
+
 class COM_EXPORT ProcInfo
 {
 public:
@@ -60,6 +69,8 @@ COM_EXPORT ProcInfo com_process_get(int pid);
 COM_EXPORT std::map<int, ProcInfo> com_process_get_all();
 COM_EXPORT ProcInfo com_process_get_parent(int pid = -1);
 COM_EXPORT std::vector<ProcInfo> com_process_get_parent_all(int pid = -1);
+COM_EXPORT std::vector<ProcInfo> com_process_get_child(int pid);
+COM_EXPORT std::vector<ProcInfo> com_process_get_child_all(int pid);
 COM_EXPORT std::string com_thread_get_name(std::thread* t);
 COM_EXPORT std::string com_thread_get_name(std::thread& t);
 COM_EXPORT std::string com_thread_get_name(uint64 tid_posix);

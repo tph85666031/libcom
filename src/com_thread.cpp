@@ -375,13 +375,16 @@ int com_process_get_ppid(int pid)
     CloseHandle(handle_snapshot);
     return ppid;
 #elif defined(__APPLE__) && defined(__MACH__)
-    if(pid <= 0) {
+    if(pid <= 0)
+    {
         return getppid();
     }
-    else {
+    else
+    {
         struct proc_taskallinfo info;
         int ret = proc_pidinfo(pid, PROC_PIDTASKALLINFO, 0, &info, sizeof(info));
-        if (ret > 0) {
+        if(ret > 0)
+        {
             return info.pbsd.pbi_ppid;
         }
     }
@@ -439,7 +442,7 @@ ProcInfo com_process_get(int pid)
             info.ppid = pe.th32ParentProcessID;
             info.thread_count = pe.cntThreads;
             DWORD session_id = 0;
-            info.valid = ProcessIdToSessionId(pe.th32ParentProcessID, &session_id);
+            info.valid = ProcessIdToSessionId(pe.th32ProcessID, &session_id);
             info.session_id = (int)session_id;
             info.path = com_wstring_to_utf8(pe.szExeFile).toString();
             break;
@@ -453,14 +456,44 @@ ProcInfo com_process_get(int pid)
     {
         return info;
     }
+    char proc_status = ' ';
     if(sscanf(content.c_str(),
-              "%d %*s %*s %d %d %d %*d %*d"\
+              "%d %*s %c %d %d %d %*d %*d"\
               "%*u %*u %*u %*u %*u"\
               "%*u %*u %*u %*u"\
               "%*d %*d"\
               "%d",
-              &info.pid, &info.ppid, &info.pgrp, &info.session_id, &info.thread_count) == 5)
+              &info.pid, &proc_status, &info.ppid, &info.pgrp, &info.session_id, &info.thread_count) == 6)
     {
+        switch(proc_status)
+        {
+            case 'I':
+                info.stat = PROC_STAT_IDEL;
+                break;
+            case 'R':
+                info.stat = PROC_STAT_RUNNING;
+                break;
+            case 'S':
+                info.stat = PROC_STAT_SLEEP_INTERRUPTIBLE;
+                break;
+            case 'D':
+                info.stat = PROC_STAT_SLEEP_UNINTERRUPTIBLE;
+                break;
+            case 'X':
+            case 'x':
+                info.stat = PROC_STAT_DEAD;
+                break;
+            case 'Z':
+                info.stat = PROC_STAT_ZOMBIE;
+                break;
+            case 'T':
+            case 't':
+                info.stat = PROC_STAT_TRACED;
+                break;
+            case 'P':
+                info.stat = PROC_STAT_PARKED;
+                break;
+        }
         info.valid = true;
         info.path = com_process_get_path(info.pid);
         content = com_file_readall(com_string_format("/proc/%d/status", pid).c_str()).toString();
@@ -567,6 +600,46 @@ std::vector<ProcInfo> com_process_get_parent_all(int pid)
         }
         pid_cur = it->second.ppid;
     }
+    return result;
+}
+
+std::vector<ProcInfo> com_process_get_child(int pid)
+{
+    std::vector<ProcInfo> result;
+    std::map<int, ProcInfo> infos = com_process_get_all();
+    for(auto it = infos.begin(); it != infos.end(); it++)
+    {
+        if(it->second.ppid == pid)
+        {
+            result.push_back(it->second);
+        }
+    }
+    return result;
+}
+
+std::vector<ProcInfo> com_process_get_child_all(int pid)
+{
+    std::vector<ProcInfo> result;
+    std::queue<int> vals;
+    std::map<int, ProcInfo> proc_all = com_process_get_all();
+    do
+    {
+        for(auto it = proc_all.begin(); it != proc_all.end(); it++)
+        {
+            if(it->second.ppid == pid)
+            {
+                vals.push(it->second.pid);
+                result.push_back(it->second);
+            }
+        }
+        if(vals.empty())
+        {
+            break;
+        }
+        pid = vals.front();
+        vals.pop();
+    }
+    while(true);
     return result;
 }
 

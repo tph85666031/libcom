@@ -3853,6 +3853,17 @@ bool ComOption::parse(int argc, const char** argv)
     return true;
 }
 
+Message ComOption::toMessage()
+{
+    Message msg;
+    for(auto it = params.begin(); it != params.end(); it++)
+    {
+        msg.set(it->first.c_str(), it->second.value);
+    }
+
+    return msg;
+}
+
 std::string ComOption::showUsage()
 {
     std::string usage = "Usage:\n";
