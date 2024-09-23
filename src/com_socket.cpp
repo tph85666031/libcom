@@ -808,14 +808,19 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
         LOG_E("arg incorrect");
         return;
     }
+    
+    while(ctx->running)
+    {
+        if(ctx->getHost().empty() == false && ctx->getPort() > 0)
+        {
+            break;
+        }
+        com_sleep_s(1);
+    }
+
     uint8 buf[4096];
     while(ctx->running)
     {
-        if(ctx->getHost().empty() || ctx->getPort() == 0)
-        {
-            com_sleep_s(1);
-            continue;
-        }
         if(ctx->reconnect_now || com_socket_get_tcp_connection_status(ctx->socketfd) == 0)
         {
             com_socket_close(ctx->socketfd);
@@ -847,6 +852,7 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
             }
             LOG_I("connect to %s:%u success,fd=%d", ctx->getHost().c_str(), ctx->getPort(), ctx->socketfd.load());
             ctx->connected = true;
+            ctx->condition_connection.notifyAll();
             ctx->onConnectionChanged(ctx->connected);
         }
 
@@ -920,9 +926,14 @@ int SocketTcpClient::send(const void* data, int data_size)
     return ret;
 }
 
-bool SocketTcpClient::isConnected()
+bool SocketTcpClient::waitForConnected(int timeout_ms)
 {
-    return connected;
+    if(isConnected())
+    {
+        return true;
+    }
+    condition_connection.wait(timeout_ms);
+    return isConnected();
 }
 
 void SocketTcpClient::onConnectionChanged(bool connected)

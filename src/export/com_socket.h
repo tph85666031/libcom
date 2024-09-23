@@ -89,9 +89,14 @@ public:
     virtual bool startClient();
     virtual void stopClient();
     int send(const void* data, int data_size);
-    bool isConnected();
+    bool waitForConnected(int timeout_ms = 0);
     void reconnect();
     void setReconnectInterval(int reconnect_interval_ms);
+public:
+    inline bool isConnected()
+    {
+        return connected;
+    }
 protected:
     virtual void onConnectionChanged(bool connected);
     virtual void onRecv(uint8* data, int data_size);
@@ -103,6 +108,7 @@ private:
     std::atomic<bool> reconnect_now;
     std::atomic<int> reconnect_interval_ms = {3000};
     std::atomic<bool> connected;
+    ComCondition condition_connection;
 };
 
 class UnixDomainTcpClient
