@@ -15,9 +15,9 @@ SocketTcpServer::SocketTcpServer()
     server_port = 0;
     server_fd = -1;
     epollfd = -1;
-    receiver_running = false;
     listener_running = false;
     epoll_timeout_ms = 3000;
+    setAllowDuplicateMessage(false);
 }
 
 SocketTcpServer::SocketTcpServer(uint16 port)
@@ -25,7 +25,6 @@ SocketTcpServer::SocketTcpServer(uint16 port)
     server_port = port;
     server_fd = -1;
     epollfd = -1;
-    receiver_running = false;
     listener_running = false;
     epoll_timeout_ms = 3000;
 }
@@ -41,40 +40,31 @@ SocketTcpServer& SocketTcpServer::setPort(uint16 port)
     return *this;
 }
 
-void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* ctx)
+void SocketTcpServer::threadPoolRunner(Message& msg)
 {
+    int clientfd = (int)msg.getID();
+    std::string host = msg.getString("host");
+    uint16 port = msg.getUInt16("port");
     uint8 buf[4096];
-    while(ctx->receiver_running)
+    while(true)
     {
-        ctx->semfds.wait(1000);
-        ctx->mutexfds.lock();
-        if(ctx->ready_fds.size() <= 0)
+        memset(buf, 0, sizeof(buf));
+        int ret = recv(clientfd, buf, sizeof(buf), MSG_DONTWAIT);
+        if(ret == 0)
         {
-            ctx->mutexfds.unlock();
-            continue;
+            break;
         }
-        SOCKET_CLIENT_DES des = ctx->ready_fds.front();
-        ctx->ready_fds.pop_front();
-        ctx->mutexfds.unlock();
-        while(true)
+        else if(ret < 0)
         {
-            memset(buf, 0, sizeof(buf));
-            int ret = recv(des.clientfd, buf, sizeof(buf), MSG_DONTWAIT);
-            if(ret == 0)
+            int err_code = errno;
+            if(err_code != EAGAIN && err_code != EWOULDBLOCK && err_code != EINTR)
             {
-                break;
+                closeClient(clientfd);
             }
-            else if (ret < 0){
-                int err_code = errno;
-                if (err_code != EAGAIN && err_code != EWOULDBLOCK && err_code != EINTR) {
-                    ctx->closeClient(des.clientfd);
-                }
-                break;
-            }
-            ctx->onRecv(des.host, des.port, des.clientfd, buf, ret);
+            break;
         }
+        onRecv(host, port, clientfd, buf, ret);
     }
-    return;
 }
 
 void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
@@ -122,37 +112,22 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
             }
             else
             {
-                ctx->recvData(event_list[i].data.fd);
+                ctx->mutex_clients.lock();
+                auto it = ctx->clients.find(event_list[i].data.fd);
+                if(it != ctx->clients.end())
+                {
+                    SOCKET_CLIENT_DES des = ctx->clients[event_list[i].data.fd];
+                    Message msg(it->first);
+                    msg.set("host", it->second.host);
+                    msg.set("port", it->second.port);
+                    ctx->pushPoolMessage(msg);
+                }
+                ctx->mutex_clients.unlock();
             }
         }
     }
     LOG_I("socket server quit, server_port=%d", ctx->server_port);
     return;
-}
-
-int SocketTcpServer::recvData(int clientfd)//ThreadSocketServerRunner线程
-{
-    mutex_clients.lock();
-    if(clients.count(clientfd) == 0)
-    {
-        mutex_clients.unlock();
-        return -1;
-    }
-    SOCKET_CLIENT_DES des = clients[clientfd];
-    mutex_clients.unlock();
-    mutexfds.lock();
-    for(size_t i = 0; i < ready_fds.size(); i++)
-    {
-        if(ready_fds[i].clientfd == clientfd)
-        {
-            mutexfds.unlock();
-            return 0;
-        }
-    }
-    ready_fds.push_back(des);
-    semfds.post();
-    mutexfds.unlock();
-    return 0;
 }
 
 void SocketTcpServer::closeClient(int fd)
@@ -190,11 +165,11 @@ int SocketTcpServer::acceptClient()//ThreadSocketServerRunner线程
         return -1;
     }
     LOG_D("Accept Connection, fd=%d, addr=%s,server_port=%u",
-          clientfd, com_ip_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
+          clientfd, com_ipv4_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
     SOCKET_CLIENT_DES des;
     des.clientfd = clientfd;
-    des.host = com_ip_to_string(sin.sin_addr.s_addr);
-    des.port = sin.sin_port;
+    des.host = com_ipv4_to_string(sin.sin_addr.s_addr);
+    des.port = ntohs(sin.sin_port);
     mutex_clients.lock();
     clients[des.clientfd] = des;
     mutex_clients.unlock();
@@ -223,7 +198,7 @@ int SocketTcpServer::startServer()
     }
     struct sockaddr_in server_addr;
     bzero(&server_addr, sizeof(server_addr));
-    server_addr.sin_family  =  AF_INET;
+    server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(server_port);
     server_addr.sin_addr.s_addr  =  htonl(INADDR_ANY);
     int resuse_flag = 1;
@@ -251,24 +226,20 @@ int SocketTcpServer::startServer()
         LOG_E("epoll add failed : fd = %d", server_fd);
         return -4;
     }
+    startThreadPool();
     listener_running = true;
     thread_listener = std::thread(ThreadSocketServerListener, this);
-    receiver_running = true;
-    thread_receiver = std::thread(ThreadSocketServerReceiver, this);
+    LOG_I("start done");
     return 0;
 }
 
 void SocketTcpServer::stopServer()
 {
+    stopThreadPool();
     listener_running = false;
     if(thread_listener.joinable())
     {
         thread_listener.join();
-    }
-    receiver_running = false;
-    if(thread_receiver.joinable())
-    {
-        thread_receiver.join();
     }
     com_socket_close(server_fd);
     server_fd = -1;

@@ -94,8 +94,9 @@ public:
     virtual ~ThreadPool();
     ThreadPool& setThreadsCount(int minThreads, int maxThreads);
     ThreadPool& setQueueSize(int queue_size_per_thread);
-    bool pushPoolMessage(Message&& msg);
-    bool pushPoolMessage(const Message& msg);
+    ThreadPool& setAllowDuplicateMessage(bool allow);
+    bool pushPoolMessage(Message&& msg, bool urgent = false);
+    bool pushPoolMessage(const Message& msg, bool urgent = false);
     void waitAllDone(int timeout_ms = 0);
     void startThreadPool();
     void stopThreadPool(bool force = false);
@@ -110,7 +111,7 @@ private:
     int getPauseCount();
     int getMessageCount();
 private:
-    std::queue<Message> msgs;
+    std::deque<Message> msgs;
     std::map<std::thread::id, THREAD_POLL_INFO> threads;
     std::mutex mutex_msgs;
     std::mutex mutex_threads;
@@ -120,6 +121,7 @@ private:
     std::atomic<int> queue_size_per_thread;
     std::atomic<bool> thread_mgr_running;
     std::thread thread_mgr;
+    bool allow_duplicate_message;
 };
 
 template <typename T>

@@ -100,7 +100,7 @@ private:
 private:
     std::atomic<bool> running;
     std::thread thread_runner;
-    std::atomic<bool> reconnect_at_once;
+    std::atomic<bool> reconnect_now;
     std::atomic<int> reconnect_interval_ms = {3000};
     std::atomic<bool> connected;
 };

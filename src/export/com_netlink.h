@@ -8,7 +8,7 @@ class ComNetLink
 public:
     ComNetLink();
     virtual ~ComNetLink();
-    int openLink(int local_id, int group, int type);
+    int openLink(int local_id, int group, int protocol_type);
     void closeLink();
     /* will ALSO send to group if group not 0 */
     int sendMessage(int remote_id, int group, const void* data, int data_size);

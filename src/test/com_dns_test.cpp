@@ -24,7 +24,7 @@ void com_dns_unit_test_suit(void** state)
     ip = com_dns_query("www.google.com");
     ASSERT_FALSE(ip.empty());
 
-    ASSERT_TRUE(com_string_is_ip("127.23.247.6"));
-    ASSERT_FALSE(com_string_is_ip("127.0247.4467.6"));
+    ASSERT_TRUE(com_string_is_ipv4("127.23.247.6"));
+    ASSERT_FALSE(com_string_is_ipv4("127.0247.4467.6"));
 #endif
 }

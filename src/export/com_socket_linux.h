@@ -3,8 +3,9 @@
 
 #if __linux__ == 1
 #include "com_base.h"
+#include "com_thread.h"
 
-class SocketTcpServer
+class SocketTcpServer: public ThreadPool
 {
 public:
     SocketTcpServer();
@@ -22,23 +23,17 @@ protected:
     virtual void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
 private:
     int acceptClient();
-    int recvData(int clientfd);
-    static void ThreadSocketServerReceiver(SocketTcpServer* ctx);
+    void threadPoolRunner(Message& msg);
     static void ThreadSocketServerListener(SocketTcpServer* ctx);
 private:
     uint16 server_port;
     int server_fd;
     int epollfd;
-    std::atomic<bool> receiver_running;
     std::atomic<bool> listener_running;
     int epoll_timeout_ms;
     std::thread thread_listener;
-    std::thread thread_receiver;
     std::mutex mutex_clients;
     std::map<int, SOCKET_CLIENT_DES> clients;
-    std::mutex mutexfds;
-    ComSem semfds;
-    std::deque<SOCKET_CLIENT_DES> ready_fds;
 };
 
 class UnixDomainTcpServer

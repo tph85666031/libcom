@@ -840,6 +840,7 @@ std::string com_thread_get_name()
 ThreadPool::ThreadPool()
 {
     thread_mgr_running = false;
+    allow_duplicate_message = false;
     min_thread_count = 2;
     max_thread_count = 10;
     queue_size_per_thread = 5;
@@ -932,7 +933,7 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
         while(poll->thread_mgr_running && poll->msgs.empty() == false)
         {
             Message msg(std::move(poll->msgs.front()));
-            poll->msgs.pop();
+            poll->msgs.pop_front();
             poll->mutex_msgs.unlock();
             poll->threadPoolRunner(msg);
             poll->mutex_msgs.lock();
@@ -1013,6 +1014,12 @@ ThreadPool& ThreadPool::setQueueSize(int queue_size_per_thread)
     {
         this->queue_size_per_thread = queue_size_per_thread;
     }
+    return *this;
+}
+
+ThreadPool& ThreadPool::setAllowDuplicateMessage(bool allow)
+{
+    this->allow_duplicate_message = allow;
     return *this;
 }
 
@@ -1145,7 +1152,7 @@ void ThreadPool::stopThreadPool(bool force)
     }
 }
 
-bool ThreadPool::pushPoolMessage(Message&& msg)
+bool ThreadPool::pushPoolMessage(Message&& msg, bool urgent)
 {
     if(thread_mgr_running == false)
     {
@@ -1153,13 +1160,31 @@ bool ThreadPool::pushPoolMessage(Message&& msg)
         return false;
     }
     mutex_msgs.lock();
-    msgs.push(msg);
+    if(allow_duplicate_message == false)
+    {
+        for(size_t i = 0; i < msgs.size(); i++)
+        {
+            if(msgs[i] == msg)
+            {
+                mutex_msgs.unlock();
+                return false;
+            }
+        }
+    }
+    if(urgent)
+    {
+        msgs.push_front(msg);
+    }
+    else
+    {
+        msgs.push_back(msg);
+    }
     mutex_msgs.unlock();
     condition.notifyOne();
     return true;
 }
 
-bool ThreadPool::pushPoolMessage(const Message& msg)
+bool ThreadPool::pushPoolMessage(const Message& msg, bool urgent)
 {
     if(thread_mgr_running == false)
     {
@@ -1167,7 +1192,7 @@ bool ThreadPool::pushPoolMessage(const Message& msg)
         return false;
     }
     mutex_msgs.lock();
-    msgs.push(msg);
+    msgs.push_back(msg);
     mutex_msgs.unlock();
     condition.notifyOne();
     return true;

@@ -32,7 +32,7 @@ std::vector<std::string> dns_get_server_list(const char* file_dns)
             {
                 continue;
             }
-            if(com_string_is_ip(vals[1].c_str()))
+            if(com_string_is_ipv4(vals[1].c_str()))
             {
                 list.push_back(vals[1]);
             }
@@ -269,7 +269,7 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
     {
         dns_server_list = dns_get_server_list(NULL);
     }
-    else if(com_string_is_ip(dns_server_ip))
+    else if(com_string_is_ipv4(dns_server_ip))
     {
         dns_server_list.push_back(dns_server_ip);
     }

@@ -16,10 +16,10 @@ ComNetLink::~ComNetLink()
     closeLink();
 }
 
-int ComNetLink::openLink(int local_id, int group, int type)
+int ComNetLink::openLink(int local_id, int group, int protocol_type)
 {
 #if __linux__==1
-    sd = socket(AF_NETLINK, SOCK_DGRAM, type);
+    sd = socket(AF_NETLINK, SOCK_DGRAM, protocol_type);
     if(sd <= 0)
     {
         LOG_E("failed to open netlink socket,ret=%d", sd);
@@ -105,7 +105,6 @@ void ComNetLink::ThreadRx(ComNetLink* ctx)
         return;
     }
 
-    //uint8* buf = new uint8[NLMSG_SPACE(ctx->buf_size)];
     uint8 buf[NLMSG_SPACE(ctx->buf_size)];
 
     int timeout_ms = 1000;
@@ -140,7 +139,6 @@ void ComNetLink::ThreadRx(ComNetLink* ctx)
             ctx->onMessage(((struct nlmsghdr*)buf)->nlmsg_pid, (uint8*)NLMSG_DATA((struct nlmsghdr*)buf), ((struct nlmsghdr*)buf)->nlmsg_len - NLMSG_HDRLEN);
         }
     }
-    //delete[] buf;
 #endif
 }
 

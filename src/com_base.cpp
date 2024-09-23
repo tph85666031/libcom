@@ -1246,7 +1246,7 @@ bool com_string_is_empty(const char* str)
     return (str == NULL || str[0] == '\0');
 }
 
-bool com_string_is_ip(const char* ip)
+bool com_string_is_ipv4(const char* ip)
 {
     if(ip == NULL)
     {
@@ -2033,7 +2033,7 @@ GPS com_gps_gcj02_to_bd09(double longitude, double latitude)
 }
 
 //ip是大端结构
-uint32 com_string_to_ip(const char* ip_str)
+uint32 com_ipv4_from_string(const char* ip_str)
 {
     uint32 ip[4];
     int ret = sscanf(ip_str, "%u.%u.%u.%u",
@@ -2047,15 +2047,15 @@ uint32 com_string_to_ip(const char* ip_str)
         return 0;
     }
     uint32 val = 0;
-    val = (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3];
+    val = (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3] << 0);
     return val;
 }
 
-std::string com_ip_to_string(uint32 ip)
+std::string com_ipv4_to_string(uint32 ip)
 {
     static char str[64];
-    snprintf(str, sizeof(str),
-             "%u.%u.%u.%u", (ip) & 0xFF, ((ip) >> 8) & 0xFF,
+    snprintf(str, sizeof(str), "%u.%u.%u.%u",
+             (ip >> 0) & 0xFF, ((ip) >> 8) & 0xFF,
              ((ip) >> 16) & 0xFF, ((ip) >> 24) & 0xFF);
     return str;
 }
@@ -3056,6 +3056,22 @@ Message& Message::operator=(Message&& msg)
         this->datas.swap(msg.datas);
     }
     return *this;
+}
+
+bool Message::operator==(const Message& msg)
+{
+    if(msg.id != this->id || msg.datas.size() != this->datas.size())
+    {
+        return false;
+    }
+    for(auto it = this->datas.begin(); it != this->datas.end(); it++)
+    {
+        if(msg.datas.count(it->first) <= 0)
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 void Message::reset()

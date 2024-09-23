@@ -780,7 +780,7 @@ std::string Socket::getInterface()
 SocketTcpClient::SocketTcpClient()
 {
     com_socket_global_init();
-    reconnect_at_once = false;
+    reconnect_now = false;
     running = false;
     connected = false;
 }
@@ -788,7 +788,7 @@ SocketTcpClient::SocketTcpClient()
 SocketTcpClient::SocketTcpClient(const char* host, uint16 port)
 {
     com_socket_global_init();
-    reconnect_at_once = false;
+    reconnect_now = false;
     running = false;
     connected = false;
     setHost(host);
@@ -808,10 +808,15 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
         LOG_E("arg incorrect");
         return;
     }
-    uint8 buf[4096 * 4];
+    uint8 buf[4096];
     while(ctx->running)
     {
-        if(ctx->reconnect_at_once || com_socket_get_tcp_connection_status(ctx->socketfd) == 0)
+        if(ctx->getHost().empty() || ctx->getPort() == 0)
+        {
+            com_sleep_s(1);
+            continue;
+        }
+        if(ctx->reconnect_now || com_socket_get_tcp_connection_status(ctx->socketfd) == 0)
         {
             com_socket_close(ctx->socketfd);
             ctx->socketfd = -1;
@@ -819,9 +824,9 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
                   ctx->getHost().c_str(), ctx->getPort());
             ctx->connected = false;
             ctx->onConnectionChanged(ctx->connected);
-            if(ctx->reconnect_at_once)
+            if(ctx->reconnect_now)
             {
-                ctx->reconnect_at_once = false;
+                ctx->reconnect_now = false;
             }
             else
             {
@@ -844,55 +849,33 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
             ctx->connected = true;
             ctx->onConnectionChanged(ctx->connected);
         }
-        memset(buf, 0, sizeof(buf));
-        int ret = com_socket_tcp_read(ctx->socketfd, buf, sizeof(buf), 1000);
-        if(ret > 0)
+
+        do
         {
-            ctx->onRecv(buf, ret);
-        }
-        else if(0 == ret)
-        {
-            LOG_W("read data empty! will reconnect after 3s");
-            ctx->reconnect_at_once = true;
-            com_sleep_s(3);
-        }
-        else
-        {
-            if(-1 == ret)
+            int ret = com_socket_tcp_read(ctx->socketfd, buf, sizeof(buf), 1000);
+            if(ret > 0)
             {
-                LOG_E("read data failed! will reconnect after 3s");
-                ctx->reconnect_at_once = true;
-                com_sleep_s(3);
+                ctx->onRecv(buf, ret);
             }
-            else if(-2 == ret)
+            else if(ret == -2)
             {
-                // select() timeout
-                // com_sleep_s(1);
-            }
-            else if(-3 == ret)
-            {
-                // arg incorrect
+                //select() timeout
             }
             else
             {
-                LOG_F("recv() returns error: %s, ret: %d", strerror(errno), ret);
-                com_sleep_s(1); // 防止CPU占用率过高
+                ctx->reconnect_now = true;
+                break;
             }
         }
+        while(ctx->running && ctx->reconnect_now == false);
     }
     return;
 }
 
 bool SocketTcpClient::startClient()
 {
-    if(getHost().empty() || getPort() == 0)
-    {
-        LOG_E("host or port not set");
-        return false;
-    }
     running = true;
     thread_runner = std::thread(ThreadSocketClientRunner, this);
-    LOG_I("start connect to server: %s:%d", getHost().c_str(), getPort());
     return true;
 }
 
@@ -915,7 +898,7 @@ void SocketTcpClient::stopClient()
 
 void SocketTcpClient::reconnect()
 {
-    this->reconnect_at_once = true;
+    this->reconnect_now = true;
 }
 
 void SocketTcpClient::setReconnectInterval(int reconnect_interval_ms)
@@ -932,7 +915,7 @@ int SocketTcpClient::send(const void* data, int data_size)
     int ret = com_socket_tcp_send(socketfd, data, data_size);
     if(ret == -1)
     {
-        this->reconnect_at_once = true;
+        this->reconnect_now = true;
     }
     return ret;
 }
