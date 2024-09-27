@@ -13,7 +13,7 @@
 
 #define SOCKET_SERVER_MAX_CLIENTS 500
 
-class COM_EXPORT NicInfo
+class COM_EXPORT ComNicInfo
 {
 public:
     std::string name;
@@ -25,8 +25,8 @@ public:
     std::string ip_mask;
     std::string ip_broadcast;
 public:
-    NicInfo();
-    virtual ~NicInfo();
+    ComNicInfo();
+    virtual ~ComNicInfo();
 };
 
 COM_EXPORT void com_socket_global_init();
@@ -50,7 +50,7 @@ COM_EXPORT int com_socket_tcp_read(int socketfd, uint8* data, int data_size,
 COM_EXPORT void com_socket_close(int socketfd);
 
 COM_EXPORT bool com_net_get_mac(const char* interface_name, uint8* mac);
-COM_EXPORT bool com_net_get_nic(const char* interface_name, NicInfo& nic);
+COM_EXPORT bool com_net_get_nic(const char* interface_name, ComNicInfo& nic);
 //反向原地址可达性校验，0=不校验，1=严格校验，2=宽松校验
 COM_EXPORT void com_net_set_rpfilter(const char* interface_name, uint8 flag);
 COM_EXPORT uint8 com_net_get_rpfilter(const char* interface_name);
@@ -58,11 +58,11 @@ COM_EXPORT uint8 com_net_get_rpfilter(const char* interface_name);
 COM_EXPORT bool com_net_is_interface_exist(const char* interface_name);
 COM_EXPORT std::vector<std::string> com_net_get_interface_all();
 
-class COM_EXPORT Socket
+class COM_EXPORT ComSocket
 {
 public:
-    Socket();
-    virtual ~Socket();
+    ComSocket();
+    virtual ~ComSocket();
     void setHost(const char* host);
     void setPort(uint16 port);
     void setSocketfd(int fd);
@@ -80,12 +80,12 @@ private:
     std::string host;
 };
 
-class COM_EXPORT SocketTcpClient : public Socket
+class COM_EXPORT ComTcpClient : public ComSocket
 {
 public:
-    SocketTcpClient();
-    SocketTcpClient(const char* host, uint16 port);
-    virtual ~SocketTcpClient();
+    ComTcpClient();
+    ComTcpClient(const char* host, uint16 port);
+    virtual ~ComTcpClient();
     virtual bool startClient();
     virtual void stopClient();
     int send(const void* data, int data_size);
@@ -101,22 +101,21 @@ protected:
     virtual void onConnectionChanged(bool connected);
     virtual void onRecv(uint8* data, int data_size);
 private:
-    static void ThreadSocketClientRunner(SocketTcpClient* socket_client);
+    static void ThreadReceiver(ComTcpClient* socket_client);
 private:
-    std::atomic<bool> running;
-    std::thread thread_runner;
+    std::atomic<bool> thread_receiver_running;
+    std::thread thread_receiver;
     std::atomic<bool> reconnect_now;
     std::atomic<int> reconnect_interval_ms = {3000};
     std::atomic<bool> connected;
     ComCondition condition_connection;
 };
 
-class UnixDomainTcpClient
+class COM_EXPORT ComUnixDomainClient
 {
 public:
-    UnixDomainTcpClient(const char* server_file_name, const char* file_name);
-    UnixDomainTcpClient(const char* server_file_name) : UnixDomainTcpClient(server_file_name, NULL) {}
-    virtual ~UnixDomainTcpClient();
+    ComUnixDomainClient(const char* server_file_name, const char* file_name = NULL);
+    virtual ~ComUnixDomainClient();
     void setServerFileName(const char* server_file_name);
     void setFileName(const char* file_name);
     int startClient();
@@ -130,21 +129,21 @@ public:
     int getSocketfd();
 private:
     bool connect();
-    static void ThreadUnixDomainClientReceiver(UnixDomainTcpClient* client);
+    static void ThreadReceiver(ComUnixDomainClient* client);
 private:
     std::atomic<int> socketfd;
     std::string file_name;
     std::string server_file_name;
-    std::atomic<bool> receiver_running;
+    std::atomic<bool> thread_receiver_running;
     std::thread thread_receiver;
     std::atomic<bool> need_reconnect;
 };
 
-class COM_EXPORT MulticastNode : public Socket
+class COM_EXPORT ComMulticastNode : public ComSocket
 {
 public:
-    MulticastNode();
-    virtual ~MulticastNode();
+    ComMulticastNode();
+    virtual ~ComMulticastNode();
 
     bool startNode();
     void stopNode();
@@ -152,7 +151,7 @@ public:
 
 private:
     virtual void onRecv(uint8* data, int data_size);
-    static void ThreadRX(MulticastNode* client);
+    static void ThreadRX(ComMulticastNode* client);
 
 private:
     std::atomic<bool> thread_rx_running = {false};
@@ -160,13 +159,13 @@ private:
     uint8 buf[4096];
 };
 
-class COM_EXPORT MulticastNodeString : public MulticastNode
+class COM_EXPORT ComMulticastNodeString : public ComMulticastNode
 {
 public:
-    MulticastNodeString();
-    virtual ~MulticastNodeString();
+    ComMulticastNodeString();
+    virtual ~ComMulticastNodeString();
 
-    using MulticastNode::send;
+    using ComMulticastNode::send;
     int send(const char* content);
     int send(const std::string& content);
 
@@ -185,11 +184,11 @@ private:
 
 };
 
-class COM_EXPORT StringIPCClient : protected SocketTcpClient
+class COM_EXPORT ComStringIpcClient : protected ComTcpClient
 {
 public:
-    StringIPCClient();
-    virtual ~StringIPCClient();
+    ComStringIpcClient();
+    virtual ~ComStringIpcClient();
 
     bool startIPC(const char* name, const char* host, uint16 port);
     void stopIPC();
@@ -201,7 +200,7 @@ protected:
     virtual void onMessage(const std::string& name, const std::string& message);
     virtual void onConnectionChanged(bool connected);
 private:
-    static void ThreadReceiver(StringIPCClient* ctx);
+    static void ThreadReceiver(ComStringIpcClient* ctx);
     void onRecv(uint8* data, int data_size);
 private:
     ComCondition condition_queue;
@@ -224,11 +223,11 @@ private:
 #include "com_socket_mac.h"
 #endif
 
-class COM_EXPORT StringIPCServer : protected SocketTcpServer
+class COM_EXPORT ComStringIpcServer : protected ComTcpServer
 {
 public:
-    StringIPCServer();
-    virtual ~StringIPCServer();
+    ComStringIpcServer();
+    virtual ~ComStringIpcServer();
 
     bool startIPC(const char* name, uint16 port);
     void stopIPC();
@@ -239,7 +238,7 @@ public:
 protected:
     virtual void onMessage(const std::string& name, const std::string& message);
 private:
-    static void ThreadReceiver(StringIPCServer* ctx);
+    static void ThreadReceiver(ComStringIpcServer* ctx);
     void onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected);
     void onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size);
     void setClientFD(const char* name, int fd);

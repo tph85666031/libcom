@@ -5,13 +5,13 @@
 #include "com_base.h"
 #include "com_log.h"
 
-class COM_EXPORT SocketTcpServer
+class COM_EXPORT ComTcpServer
 {
 public:
-    SocketTcpServer();
-    SocketTcpServer(uint16 port);
-    virtual ~SocketTcpServer();
-    SocketTcpServer& setPort(uint16 port);
+    ComTcpServer();
+    ComTcpServer(uint16 port);
+    virtual ~ComTcpServer();
+    ComTcpServer& setPort(uint16 port);
     int startServer();
     void stopServer();
     void closeClient(int fd);
@@ -24,16 +24,16 @@ protected:
 private:
     int acceptClient();
     int recvData(int clientfd);
-    static void ThreadSocketServerReceiver(SocketTcpServer* ctx);
-    static void ThreadSocketServerListener(SocketTcpServer* ctx);
+    static void ThreadReceiver(ComTcpServer* ctx);
+    static void ThreadListener(ComTcpServer* ctx);
 private:
     uint16 server_port;
     int server_fd;
     int max_fd;
     std::mutex mutex_select_fd;
     fd_set select_fd;
-    std::atomic<bool> receiver_running;
-    std::atomic<bool> listener_running;
+    std::atomic<bool> thread_listener_running;
+    std::atomic<bool> thread_receiver_running;
     int select_timeout_ms;
     std::thread thread_listener;
     std::thread thread_receiver;

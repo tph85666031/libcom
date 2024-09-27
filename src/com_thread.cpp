@@ -837,7 +837,7 @@ std::string com_thread_get_name()
     return name;
 }
 
-ThreadPool::ThreadPool()
+ComThreadPool::ComThreadPool()
 {
     thread_mgr_running = false;
     allow_duplicate_message = false;
@@ -846,12 +846,12 @@ ThreadPool::ThreadPool()
     queue_size_per_thread = 5;
 }
 
-ThreadPool::~ThreadPool()
+ComThreadPool::~ComThreadPool()
 {
     stopThreadPool();
 }
 
-void ThreadPool::ThreadManager(ThreadPool* poll)
+void ComThreadPool::ThreadManager(ComThreadPool* poll)
 {
     if(poll == NULL)
     {
@@ -887,7 +887,7 @@ void ThreadPool::ThreadManager(ThreadPool* poll)
     }
 }
 
-void ThreadPool::ThreadLoop(ThreadPool* poll)
+void ComThreadPool::ThreadLoop(ComThreadPool* poll)
 {
     if(poll == NULL)
     {
@@ -956,13 +956,13 @@ void ThreadPool::ThreadLoop(ThreadPool* poll)
     return;
 }
 
-void ThreadPool::startManagerThread()
+void ComThreadPool::startManagerThread()
 {
     thread_mgr_running = true;
     thread_mgr = std::thread(ThreadManager, this);
 }
 
-void ThreadPool::createThread(int count)
+void ComThreadPool::createThread(int count)
 {
     mutex_threads.lock();
     for(int i = 0; i < count; i++)
@@ -977,7 +977,7 @@ void ThreadPool::createThread(int count)
     mutex_threads.unlock();
 }
 
-void ThreadPool::recycleThread()
+void ComThreadPool::recycleThread()
 {
     mutex_threads.lock();
     std::map<std::thread::id, THREAD_POLL_INFO>::iterator it;
@@ -998,7 +998,7 @@ void ThreadPool::recycleThread()
     mutex_threads.unlock();
 }
 
-ThreadPool& ThreadPool::setThreadsCount(int min_threads, int max_threads)
+ComThreadPool& ComThreadPool::setThreadsCount(int min_threads, int max_threads)
 {
     if(min_threads > 0 && max_threads > 0 && min_threads <= max_threads)
     {
@@ -1008,7 +1008,7 @@ ThreadPool& ThreadPool::setThreadsCount(int min_threads, int max_threads)
     return *this;
 }
 
-ThreadPool& ThreadPool::setQueueSize(int queue_size_per_thread)
+ComThreadPool& ComThreadPool::setQueueSize(int queue_size_per_thread)
 {
     if(queue_size_per_thread > 0)
     {
@@ -1017,13 +1017,13 @@ ThreadPool& ThreadPool::setQueueSize(int queue_size_per_thread)
     return *this;
 }
 
-ThreadPool& ThreadPool::setAllowDuplicateMessage(bool allow)
+ComThreadPool& ComThreadPool::setAllowDuplicateMessage(bool allow)
 {
     this->allow_duplicate_message = allow;
     return *this;
 }
 
-int ThreadPool::getRunningCount()
+int ComThreadPool::getRunningCount()
 {
     int count = 0;
     mutex_threads.lock();
@@ -1040,7 +1040,7 @@ int ThreadPool::getRunningCount()
     return count;
 }
 
-int ThreadPool::getPauseCount()
+int ComThreadPool::getPauseCount()
 {
     int count = 0;
     mutex_threads.lock();
@@ -1057,7 +1057,7 @@ int ThreadPool::getPauseCount()
     return count;
 }
 
-int ThreadPool::getMessageCount()
+int ComThreadPool::getMessageCount()
 {
     int count = 0;
     mutex_msgs.lock();
@@ -1066,7 +1066,7 @@ int ThreadPool::getMessageCount()
     return count;
 }
 
-void ThreadPool::waitAllDone(int timeout_ms)
+void ComThreadPool::waitAllDone(int timeout_ms)
 {
     if(thread_mgr.joinable() == false)
     {
@@ -1092,12 +1092,12 @@ void ThreadPool::waitAllDone(int timeout_ms)
     while(true);
 }
 
-void ThreadPool::startThreadPool()
+void ComThreadPool::startThreadPool()
 {
     startManagerThread();
 }
 
-void ThreadPool::stopThreadPool(bool force)
+void ComThreadPool::stopThreadPool(bool force)
 {
     LOG_I("stop thread pool enter");
     thread_mgr_running = false;
@@ -1152,7 +1152,7 @@ void ThreadPool::stopThreadPool(bool force)
     }
 }
 
-bool ThreadPool::pushPoolMessage(Message&& msg, bool urgent)
+bool ComThreadPool::pushPoolMessage(Message&& msg, bool urgent)
 {
     if(thread_mgr_running == false)
     {
@@ -1184,7 +1184,7 @@ bool ThreadPool::pushPoolMessage(Message&& msg, bool urgent)
     return true;
 }
 
-bool ThreadPool::pushPoolMessage(const Message& msg, bool urgent)
+bool ComThreadPool::pushPoolMessage(const Message& msg, bool urgent)
 {
     if(thread_mgr_running == false)
     {

@@ -157,7 +157,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
     com_socket_set_send_timeout(socketfd, 10 * 1000);
     com_socket_set_recv_timeout(socketfd, 10 * 1000);
 
-    NicInfo nic;
+    ComNicInfo nic;
 
 #if __linux__ == 1
     if(com_string_len(interface_name) > 0)  //绑定到指定网卡，忽略路由
@@ -292,7 +292,7 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
     }
 
 
-    NicInfo nic;
+    ComNicInfo nic;
 #if __linux__ == 1
     if(com_string_len(interface_name) > 0)  //绑定到指定网卡，忽略路由
     {
@@ -608,7 +608,7 @@ std::vector<std::string> com_net_get_interface_all()
     return list;
 }
 
-bool com_net_get_nic(const char* interface_name, NicInfo& nic)
+bool com_net_get_nic(const char* interface_name, ComNicInfo& nic)
 {
 #if __linux__ == 1
     if(com_net_is_interface_exist(interface_name) == false)
@@ -706,28 +706,28 @@ bool com_net_get_mac(const char* interface_name, uint8* mac)
 #endif
 }
 
-NicInfo::NicInfo()
+ComNicInfo::ComNicInfo()
 {
     flags = 0;
     addr_family = 0;
     memset(mac, 0, sizeof(mac));
 }
 
-NicInfo::~NicInfo()
+ComNicInfo::~ComNicInfo()
 {
 }
 
-Socket::Socket()
+ComSocket::ComSocket()
 {
     port = 0;
     socketfd = 0;
 }
 
-Socket::~Socket()
+ComSocket::~ComSocket()
 {
 }
 
-void Socket::setHost(const char* host)
+void ComSocket::setHost(const char* host)
 {
     std::lock_guard<std::mutex> lck(mutxe);
     if(host != NULL)
@@ -736,17 +736,17 @@ void Socket::setHost(const char* host)
     }
 }
 
-void Socket::setPort(uint16 port)
+void ComSocket::setPort(uint16 port)
 {
     this->port = port;
 }
 
-void Socket::setSocketfd(int fd)
+void ComSocket::setSocketfd(int fd)
 {
     this->socketfd = fd;
 }
 
-void Socket::setInterface(const char* interface_name)
+void ComSocket::setInterface(const char* interface_name)
 {
     std::lock_guard<std::mutex> lck(mutxe);
     if(interface_name != NULL)
@@ -755,53 +755,53 @@ void Socket::setInterface(const char* interface_name)
     }
 }
 
-std::string Socket::getHost()
+std::string ComSocket::getHost()
 {
     std::lock_guard<std::mutex> lck(mutxe);
     return host.c_str();
 }
 
-uint16 Socket::getPort()
+uint16 ComSocket::getPort()
 {
     return port;
 }
 
-int Socket::getSocketfd()
+int ComSocket::getSocketfd()
 {
     return socketfd;
 }
 
-std::string Socket::getInterface()
+std::string ComSocket::getInterface()
 {
     std::lock_guard<std::mutex> lck(mutxe);
     return interface_name;
 }
 
-SocketTcpClient::SocketTcpClient()
+ComTcpClient::ComTcpClient()
 {
     com_socket_global_init();
     reconnect_now = false;
-    running = false;
+    thread_receiver_running = false;
     connected = false;
 }
 
-SocketTcpClient::SocketTcpClient(const char* host, uint16 port)
+ComTcpClient::ComTcpClient(const char* host, uint16 port)
 {
     com_socket_global_init();
     reconnect_now = false;
-    running = false;
+    thread_receiver_running = false;
     connected = false;
     setHost(host);
     setPort(port);
 }
 
-SocketTcpClient::~SocketTcpClient()
+ComTcpClient::~ComTcpClient()
 {
     stopClient();
     com_socket_global_uninit();
 }
 
-void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
+void ComTcpClient::ThreadReceiver(ComTcpClient* ctx)
 {
     if(ctx == NULL)
     {
@@ -809,7 +809,7 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
         return;
     }
     
-    while(ctx->running)
+    while(ctx->thread_receiver_running)
     {
         if(ctx->getHost().empty() == false && ctx->getPort() > 0)
         {
@@ -819,7 +819,7 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
     }
 
     uint8 buf[4096];
-    while(ctx->running)
+    while(ctx->thread_receiver_running)
     {
         if(ctx->reconnect_now || com_socket_get_tcp_connection_status(ctx->socketfd) == 0)
         {
@@ -873,24 +873,24 @@ void SocketTcpClient::ThreadSocketClientRunner(SocketTcpClient* ctx)
                 break;
             }
         }
-        while(ctx->running && ctx->reconnect_now == false);
+        while(ctx->thread_receiver_running && ctx->reconnect_now == false);
     }
     return;
 }
 
-bool SocketTcpClient::startClient()
+bool ComTcpClient::startClient()
 {
-    running = true;
-    thread_runner = std::thread(ThreadSocketClientRunner, this);
+    thread_receiver_running = true;
+    thread_receiver = std::thread(ThreadReceiver, this);
     return true;
 }
 
-void SocketTcpClient::stopClient()
+void ComTcpClient::stopClient()
 {
-    running = false;
-    if(thread_runner.joinable())
+    thread_receiver_running = false;
+    if(thread_receiver.joinable())
     {
-        thread_runner.join();
+        thread_receiver.join();
     }
     if(socketfd > 0)
     {
@@ -902,17 +902,17 @@ void SocketTcpClient::stopClient()
     }
 }
 
-void SocketTcpClient::reconnect()
+void ComTcpClient::reconnect()
 {
     this->reconnect_now = true;
 }
 
-void SocketTcpClient::setReconnectInterval(int reconnect_interval_ms)
+void ComTcpClient::setReconnectInterval(int reconnect_interval_ms)
 {
     this->reconnect_interval_ms = reconnect_interval_ms;
 }
 
-int SocketTcpClient::send(const void* data, int data_size)
+int ComTcpClient::send(const void* data, int data_size)
 {
     if(connected == false || data == NULL || data_size <= 0)
     {
@@ -926,7 +926,7 @@ int SocketTcpClient::send(const void* data, int data_size)
     return ret;
 }
 
-bool SocketTcpClient::waitForConnected(int timeout_ms)
+bool ComTcpClient::waitForConnected(int timeout_ms)
 {
     if(isConnected())
     {
@@ -936,19 +936,19 @@ bool SocketTcpClient::waitForConnected(int timeout_ms)
     return isConnected();
 }
 
-void SocketTcpClient::onConnectionChanged(bool connected)
+void ComTcpClient::onConnectionChanged(bool connected)
 {
 }
 
-void SocketTcpClient::onRecv(uint8* data, int data_size)
+void ComTcpClient::onRecv(uint8* data, int data_size)
 {
 }
 
-UnixDomainTcpClient::UnixDomainTcpClient(const char* server_file_name, const char* file_name)
+ComUnixDomainClient::ComUnixDomainClient(const char* server_file_name, const char* file_name)
 {
     need_reconnect = false;
     socketfd = -1;
-    receiver_running = false;
+    thread_receiver_running = false;
     if(file_name != NULL)
     {
         this->file_name = file_name;
@@ -959,13 +959,13 @@ UnixDomainTcpClient::UnixDomainTcpClient(const char* server_file_name, const cha
     }
 }
 
-UnixDomainTcpClient::~UnixDomainTcpClient()
+ComUnixDomainClient::~ComUnixDomainClient()
 {
     stopClient();
     com_file_remove(getFileName().c_str());
 }
 
-void UnixDomainTcpClient::setServerFileName(const char* server_file_name)
+void ComUnixDomainClient::setServerFileName(const char* server_file_name)
 {
     if(server_file_name != NULL)
     {
@@ -973,7 +973,7 @@ void UnixDomainTcpClient::setServerFileName(const char* server_file_name)
     }
 }
 
-void UnixDomainTcpClient::setFileName(const char* file_name)
+void ComUnixDomainClient::setFileName(const char* file_name)
 {
     if(file_name != NULL)
     {
@@ -981,14 +981,14 @@ void UnixDomainTcpClient::setFileName(const char* file_name)
     }
 }
 
-void UnixDomainTcpClient::ThreadUnixDomainClientReceiver(UnixDomainTcpClient* client)
+void ComUnixDomainClient::ThreadReceiver(ComUnixDomainClient* client)
 {
     if(client == NULL)
     {
         return;
     }
     uint8 buf[4096 * 4];
-    while(client->receiver_running)
+    while(client->thread_receiver_running)
     {
         if(client->need_reconnect)
         {
@@ -1050,7 +1050,7 @@ void UnixDomainTcpClient::ThreadUnixDomainClientReceiver(UnixDomainTcpClient* cl
     return;
 }
 
-int UnixDomainTcpClient::startClient()
+int ComUnixDomainClient::startClient()
 {
     socketfd = com_socket_unix_domain_open(file_name.c_str(), server_file_name.c_str());
     if(socketfd <= 0)
@@ -1058,16 +1058,16 @@ int UnixDomainTcpClient::startClient()
         LOG_W("connection to %s failed, will auto reconnect later", server_file_name.c_str());
     }
     LOG_I("socketfd: %d, success open server file: %s", socketfd.load(), server_file_name.c_str());
-    receiver_running = true;
+    thread_receiver_running = true;
     onConnectionChanged(true);
-    thread_receiver = std::thread(ThreadUnixDomainClientReceiver, this);
+    thread_receiver = std::thread(ThreadReceiver, this);
     LOG_I("start unix domain tcp client");
     return 0;
 }
 
-void UnixDomainTcpClient::stopClient()
+void ComUnixDomainClient::stopClient()
 {
-    receiver_running = false;
+    thread_receiver_running = false;
     if(thread_receiver.joinable())
     {
         thread_receiver.join();
@@ -1081,12 +1081,12 @@ void UnixDomainTcpClient::stopClient()
     }
 }
 
-void UnixDomainTcpClient::reconnect()
+void ComUnixDomainClient::reconnect()
 {
     this->need_reconnect = true;
 }
 
-int UnixDomainTcpClient::send(const void* data, int data_size)
+int ComUnixDomainClient::send(const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -1095,42 +1095,42 @@ int UnixDomainTcpClient::send(const void* data, int data_size)
     return com_socket_tcp_send(socketfd, data, data_size);
 }
 
-std::string& UnixDomainTcpClient::getFileName()
+std::string& ComUnixDomainClient::getFileName()
 {
     return file_name;
 }
 
-std::string& UnixDomainTcpClient::getServerFileName()
+std::string& ComUnixDomainClient::getServerFileName()
 {
     return server_file_name;
 }
 
-int UnixDomainTcpClient::getSocketfd()
+int ComUnixDomainClient::getSocketfd()
 {
     return socketfd;
 }
 
-void UnixDomainTcpClient::onConnectionChanged(bool connected)
+void ComUnixDomainClient::onConnectionChanged(bool connected)
 {
 }
 
-void UnixDomainTcpClient::onRecv(uint8* data, int data_size)
+void ComUnixDomainClient::onRecv(uint8* data, int data_size)
 {
 }
 
-MulticastNode::MulticastNode()
+ComMulticastNode::ComMulticastNode()
 {
     com_socket_global_init();
     memset(buf, 0, sizeof(buf));
 }
 
-MulticastNode::~MulticastNode()
+ComMulticastNode::~ComMulticastNode()
 {
     stopNode();
     com_socket_global_uninit();
 }
 
-bool MulticastNode::startNode()
+bool ComMulticastNode::startNode()
 {
     LOG_I("called");
     stopNode();
@@ -1181,7 +1181,7 @@ bool MulticastNode::startNode()
     return true;
 }
 
-void MulticastNode::stopNode()
+void ComMulticastNode::stopNode()
 {
     LOG_I("called");
     thread_rx_running = false;
@@ -1193,12 +1193,12 @@ void MulticastNode::stopNode()
     socketfd = -1;
 }
 
-int MulticastNode::send(const void* data, int data_size)
+int ComMulticastNode::send(const void* data, int data_size)
 {
     return com_socket_udp_send(socketfd, getHost().c_str(), port, data, data_size);
 }
 
-void MulticastNode::ThreadRX(MulticastNode* client)
+void ComMulticastNode::ThreadRX(ComMulticastNode* client)
 {
     if(client == NULL)
     {
@@ -1224,22 +1224,22 @@ void MulticastNode::ThreadRX(MulticastNode* client)
     return;
 }
 
-void MulticastNode::onRecv(uint8* data, int data_size)
+void ComMulticastNode::onRecv(uint8* data, int data_size)
 {
     ComBytes bytes(data, data_size);
     LOG_I("received,hex=%s,size=%d", bytes.toHexString().c_str(), data_size);
 }
 
 
-MulticastNodeString::MulticastNodeString()
+ComMulticastNodeString::ComMulticastNodeString()
 {
 }
 
-MulticastNodeString::~MulticastNodeString()
+ComMulticastNodeString::~ComMulticastNodeString()
 {
 }
 
-int MulticastNodeString::send(const char* str)
+int ComMulticastNodeString::send(const char* str)
 {
     if(str == NULL)
     {
@@ -1249,18 +1249,18 @@ int MulticastNodeString::send(const char* str)
     return send(str, size);
 }
 
-int MulticastNodeString::send(const std::string& str)
+int ComMulticastNodeString::send(const std::string& str)
 {
     return send(str.c_str(), (int)str.length() + 1);
 }
 
-int MulticastNodeString::getCount()
+int ComMulticastNodeString::getCount()
 {
     std::lock_guard<std::mutex> lck(mutex_queue);
     return (int)queue.size();
 }
 
-bool MulticastNodeString::fetchString(std::string& item)
+bool ComMulticastNodeString::fetchString(std::string& item)
 {
     std::lock_guard<std::mutex> lck(mutex_queue);
     if(queue.empty())
@@ -1272,12 +1272,12 @@ bool MulticastNodeString::fetchString(std::string& item)
     return true;
 }
 
-bool MulticastNodeString::waitString(int timeout_ms)
+bool ComMulticastNodeString::waitString(int timeout_ms)
 {
     return condition_queue.wait(timeout_ms);
 }
 
-void MulticastNodeString::onRecv(uint8* data, int data_size)
+void ComMulticastNodeString::onRecv(uint8* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -1302,16 +1302,16 @@ void MulticastNodeString::onRecv(uint8* data, int data_size)
     }
 }
 
-StringIPCClient::StringIPCClient()
+ComStringIpcClient::ComStringIpcClient()
 {
 }
 
-StringIPCClient::~StringIPCClient()
+ComStringIpcClient::~ComStringIpcClient()
 {
     stopIPC();
 }
 
-bool StringIPCClient::startIPC(const char* name, const char* host, uint16 port)
+bool ComStringIpcClient::startIPC(const char* name, const char* host, uint16 port)
 {
     if(name == NULL || host == NULL)
     {
@@ -1326,7 +1326,7 @@ bool StringIPCClient::startIPC(const char* name, const char* host, uint16 port)
     return startClient();
 }
 
-void StringIPCClient::stopIPC()
+void ComStringIpcClient::stopIPC()
 {
     thread_receiver_running = false;
     if(thread_receiver.joinable())
@@ -1336,12 +1336,12 @@ void StringIPCClient::stopIPC()
     stopClient();
 }
 
-bool StringIPCClient::sendString(const char* name_to, const std::string& message)
+bool ComStringIpcClient::sendString(const char* name_to, const std::string& message)
 {
     return sendString(name_to, message.c_str());
 }
 
-bool StringIPCClient::sendString(const char* name_to, const char* message)
+bool ComStringIpcClient::sendString(const char* name_to, const char* message)
 {
     if(name_to == NULL || message == NULL)
     {
@@ -1360,21 +1360,21 @@ bool StringIPCClient::sendString(const char* name_to, const char* message)
     return true;
 }
 
-std::string StringIPCClient::getName()
+std::string ComStringIpcClient::getName()
 {
     return name;
 }
 
-void StringIPCClient::onMessage(const std::string& name, const std::string& message)
+void ComStringIpcClient::onMessage(const std::string& name, const std::string& message)
 {
     LOG_I("name=%s,message=%s", name.c_str(), message.c_str());
 }
 
-void StringIPCClient::onConnectionChanged(bool connected)
+void ComStringIpcClient::onConnectionChanged(bool connected)
 {
 }
 
-void StringIPCClient::onRecv(uint8* data, int data_size)
+void ComStringIpcClient::onRecv(uint8* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -1424,7 +1424,7 @@ void StringIPCClient::onRecv(uint8* data, int data_size)
     }
 }
 
-void StringIPCClient::ThreadReceiver(StringIPCClient* ctx)
+void ComStringIpcClient::ThreadReceiver(ComStringIpcClient* ctx)
 {
     if(ctx == NULL)
     {
@@ -1468,16 +1468,16 @@ void StringIPCClient::ThreadReceiver(StringIPCClient* ctx)
     }
 }
 
-StringIPCServer::StringIPCServer()
+ComStringIpcServer::ComStringIpcServer()
 {
 }
 
-StringIPCServer::~StringIPCServer()
+ComStringIpcServer::~ComStringIpcServer()
 {
     stopIPC();
 }
 
-bool StringIPCServer::startIPC(const char* name, uint16 port)
+bool ComStringIpcServer::startIPC(const char* name, uint16 port)
 {
     if(name == NULL)
     {
@@ -1490,7 +1490,7 @@ bool StringIPCServer::startIPC(const char* name, uint16 port)
     return (startServer() == 0);
 }
 
-void StringIPCServer::stopIPC()
+void ComStringIpcServer::stopIPC()
 {
     thread_receiver_running = false;
     if(thread_receiver.joinable())
@@ -1500,12 +1500,12 @@ void StringIPCServer::stopIPC()
     stopServer();
 }
 
-bool StringIPCServer::sendString(const char* name_to, const std::string& message)
+bool ComStringIpcServer::sendString(const char* name_to, const std::string& message)
 {
     return sendString(name_to, message.c_str());
 }
 
-bool StringIPCServer::sendString(const char* name_to, const char* message)
+bool ComStringIpcServer::sendString(const char* name_to, const char* message)
 {
     if(name_to == NULL || message == NULL)
     {
@@ -1529,7 +1529,7 @@ bool StringIPCServer::sendString(const char* name_to, const char* message)
     return true;
 }
 
-void StringIPCServer::setClientFD(const char* name, int fd)
+void ComStringIpcServer::setClientFD(const char* name, int fd)
 {
     if(name != NULL)
     {
@@ -1540,7 +1540,7 @@ void StringIPCServer::setClientFD(const char* name, int fd)
     }
 }
 
-int StringIPCServer::getClientFD(const char* name)
+int ComStringIpcServer::getClientFD(const char* name)
 {
     if(name == NULL)
     {
@@ -1554,12 +1554,12 @@ int StringIPCServer::getClientFD(const char* name)
     return clients[name];
 }
 
-std::string StringIPCServer::getName()
+std::string ComStringIpcServer::getName()
 {
     return name;
 }
 
-void StringIPCServer::removeClientFD(int fd)
+void ComStringIpcServer::removeClientFD(int fd)
 {
     mutex_clients.lock();
     for(auto it = clients.begin(); it != clients.end(); it++)
@@ -1573,12 +1573,12 @@ void StringIPCServer::removeClientFD(int fd)
     mutex_clients.unlock();
 }
 
-void StringIPCServer::onMessage(const std::string& name, const std::string& message)
+void ComStringIpcServer::onMessage(const std::string& name, const std::string& message)
 {
     LOG_I("name=%s,message=%s", name.c_str(), message.c_str());
 }
 
-void StringIPCServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
+void ComStringIpcServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
 {
     LOG_D("String IPC Connection Changed, fd:%d connected:%d", socketfd, connected);
     if(connected == false)
@@ -1587,7 +1587,7 @@ void StringIPCServer::onConnectionChanged(std::string& host, uint16 port, int so
     }
 }
 
-void StringIPCServer::removeClientFD(const char* name)
+void ComStringIpcServer::removeClientFD(const char* name)
 {
     if(name == NULL)
     {
@@ -1602,7 +1602,7 @@ void StringIPCServer::removeClientFD(const char* name)
     mutex_clients.unlock();
 }
 
-void StringIPCServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
+void ComStringIpcServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
 {
 
     if(data == NULL || data_size <= 0)
@@ -1661,7 +1661,7 @@ void StringIPCServer::onRecv(std::string& host, uint16 port, int socketfd, uint8
     }
 }
 
-void StringIPCServer::ThreadReceiver(StringIPCServer* ctx)
+void ComStringIpcServer::ThreadReceiver(ComStringIpcServer* ctx)
 {
     if(ctx == NULL)
     {

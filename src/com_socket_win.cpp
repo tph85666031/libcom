@@ -1,29 +1,29 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include "com_socket.h"
 
-SocketTcpServer::SocketTcpServer()
+ComTcpServer::ComTcpServer()
 {
     com_socket_global_init();
 }
 
-SocketTcpServer::SocketTcpServer(uint16 port)
+ComTcpServer::ComTcpServer(uint16 port)
 {
     this->server_port = port;
 }
 
-SocketTcpServer::~SocketTcpServer()
+ComTcpServer::~ComTcpServer()
 {
     stopServer();
     com_socket_global_uninit();
 }
 
-SocketTcpServer& SocketTcpServer::setPort(uint16 port)
+ComTcpServer& ComTcpServer::setPort(uint16 port)
 {
     this->server_port = port;
     return *this;
 }
 
-void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* ctx)
+void ComTcpServer::ThreadReceiver(ComTcpServer* ctx)
 {
     if(ctx == NULL)
     {
@@ -33,7 +33,7 @@ void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* ctx)
 //    LOG_D("Tcp Server Receiver Enter");
 
     uint8 buf[4096];
-    while(ctx->receiver_running)
+    while(ctx->thread_receiver_running)
     {
         ctx->semfds.wait(1000);
         ctx->mutexfds.lock();
@@ -78,7 +78,7 @@ void SocketTcpServer::ThreadSocketServerReceiver(SocketTcpServer* ctx)
     return;
 }
 
-void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
+void ComTcpServer::ThreadListener(ComTcpServer* ctx)
 {
     if(ctx == NULL)
     {
@@ -91,7 +91,7 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
     FD_SET(ctx->server_fd, &ctx->select_fd);
     ctx->mutex_select_fd.unlock();
 
-    while(ctx->listener_running)
+    while(ctx->thread_listener_running)
     {
         ctx->select_timeout_ms = 1000;
         ctx->mutex_select_fd.lock();
@@ -111,7 +111,7 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
             //LOG_D("epoll timeout");
             continue;
         }
-        if(ctx->listener_running == false)
+        if(ctx->thread_listener_running == false)
         {
             break;
         }
@@ -137,7 +137,7 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
     return;
 }
 
-int SocketTcpServer::recvData(int clientfd)//ThreadSocketServerRunner线程
+int ComTcpServer::recvData(int clientfd)//ThreadSocketServerRunner线程
 {
     mutex_clients.lock();
     if(clients.count(clientfd) == 0)
@@ -167,7 +167,7 @@ int SocketTcpServer::recvData(int clientfd)//ThreadSocketServerRunner线程
     return 0;
 }
 
-void SocketTcpServer::closeClient(int fd)
+void ComTcpServer::closeClient(int fd)
 {
 //    LOG_D("Tcp Server Close fd:%d", fd);
     mutex_select_fd.lock();
@@ -195,7 +195,7 @@ void SocketTcpServer::closeClient(int fd)
     mutex_clients.unlock();
 }
 
-int SocketTcpServer::acceptClient()//ThreadSocketServerRunner线程
+int ComTcpServer::acceptClient()
 {
     struct sockaddr_in sin;
     int len = sizeof(struct sockaddr_in);
@@ -229,7 +229,7 @@ int SocketTcpServer::acceptClient()//ThreadSocketServerRunner线程
     return 0;
 }
 
-int SocketTcpServer::startServer()
+int ComTcpServer::startServer()
 {
     if(server_port == 0)
     {
@@ -265,21 +265,21 @@ int SocketTcpServer::startServer()
     //com_socket_set_recv_timeout(server_fd, 0);
     unsigned long none_block = 1;
     ioctlsocket(server_fd, FIONBIO, &none_block);
-    listener_running = true;
-    thread_listener = std::thread(ThreadSocketServerListener, this);
-    receiver_running = true;
-    thread_receiver = std::thread(ThreadSocketServerReceiver, this);
+    thread_listener_running = true;
+    thread_listener = std::thread(ThreadListener, this);
+    thread_receiver_running = true;
+    thread_receiver = std::thread(ThreadReceiver, this);
     return 0;
 }
 
-void SocketTcpServer::stopServer()
+void ComTcpServer::stopServer()
 {
-    listener_running = false;
+    thread_listener_running = false;
     if(thread_listener.joinable())
     {
         thread_listener.join();
     }
-    receiver_running = false;
+    thread_receiver_running = false;
     if(thread_receiver.joinable())
     {
         thread_receiver.join();
@@ -295,7 +295,7 @@ void SocketTcpServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int SocketTcpServer::send(const char* host, uint16 port, const void* data, int data_size)
+int ComTcpServer::send(const char* host, uint16 port, const void* data, int data_size)
 {
     LOG_D("enter");
     if(host == NULL || data == NULL || data_size <= 0)
@@ -333,7 +333,7 @@ int SocketTcpServer::send(const char* host, uint16 port, const void* data, int d
     return ret;
 }
 
-int SocketTcpServer::send(int clientfd, const void* data, int data_size)
+int ComTcpServer::send(int clientfd, const void* data, int data_size)
 {
     LOG_D("enter");
     if(data == NULL || data_size <= 0)
@@ -351,15 +351,15 @@ int SocketTcpServer::send(int clientfd, const void* data, int data_size)
     return ret;
 }
 
-void SocketTcpServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
+void ComTcpServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
 {
 }
 
-void SocketTcpServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
+void ComTcpServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
 {
 }
 
-void SocketTcpServer::broadcast(const void* data, int data_size)
+void ComTcpServer::broadcast(const void* data, int data_size)
 {
     mutex_clients.lock();
     for(auto iter : clients)

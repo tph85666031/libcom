@@ -5,13 +5,13 @@
 #include "com_base.h"
 #include "com_thread.h"
 
-class SocketTcpServer: public ThreadPool
+class COM_EXPORT ComTcpServer: public ComThreadPool
 {
 public:
-    SocketTcpServer();
-    SocketTcpServer(uint16 port);
-    virtual ~SocketTcpServer();
-    SocketTcpServer& setPort(uint16 port);
+    ComTcpServer();
+    ComTcpServer(uint16 port);
+    virtual ~ComTcpServer();
+    ComTcpServer& setPort(uint16 port);
     int startServer();
     void stopServer();
     void closeClient(int fd);
@@ -24,23 +24,23 @@ protected:
 private:
     int acceptClient();
     void threadPoolRunner(Message& msg);
-    static void ThreadSocketServerListener(SocketTcpServer* ctx);
+    static void ThreadListener(ComTcpServer* ctx);
 private:
     uint16 server_port;
     int server_fd;
     int epollfd;
-    std::atomic<bool> listener_running;
+    std::atomic<bool> thread_listener_running;
     int epoll_timeout_ms;
     std::thread thread_listener;
     std::mutex mutex_clients;
     std::map<int, SOCKET_CLIENT_DES> clients;
 };
 
-class UnixDomainTcpServer
+class COM_EXPORT ComUnixDomainServer
 {
 public:
-    UnixDomainTcpServer(const char* server_file_name);
-    virtual ~UnixDomainTcpServer();
+    ComUnixDomainServer(const char* server_file_name);
+    virtual ~ComUnixDomainServer();
     int startServer();
     void stopServer();
     int send(const char* client_file_name_wildcard, const void* data, int data_size);
@@ -55,14 +55,14 @@ private:
     int acceptClient();
     void closeClient(int fd);
     int recvData(int clientfd);
-    static void ThreadUnixDomainServerReceiver(UnixDomainTcpServer* socket_server);
-    static void ThreadUnixDomainServerListener(UnixDomainTcpServer* socket_server);
+    static void ThreadReceiver(ComUnixDomainServer* socket_server);
+    static void ThreadListener(ComUnixDomainServer* socket_server);
 private:
     std::string server_file_name;
     int server_fd;
     int epollfd;
-    std::atomic<bool> listener_running;
-    std::atomic<bool> receiver_running;
+    std::atomic<bool> thread_listener_running;
+    std::atomic<bool> thread_receiver_running;
     int epoll_timeout_ms;
     std::thread thread_listener;
     std::thread thread_receiver;

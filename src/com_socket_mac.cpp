@@ -286,27 +286,27 @@ void TCPServer::ThreadTCPServerReceiver(TCPServer* socket_server)
 }
 
 
-// SocketTcpServer
-SocketTcpServer::SocketTcpServer()
+// ComTcpServer
+ComTcpServer::ComTcpServer()
 {
 }
 
-SocketTcpServer::SocketTcpServer(uint16 port)
+ComTcpServer::ComTcpServer(uint16 port)
 {
     server_port = port;
 }
 
-SocketTcpServer::~SocketTcpServer()
+ComTcpServer::~ComTcpServer()
 {
 }
 
-SocketTcpServer& SocketTcpServer::setPort(uint16 port)
+ComTcpServer& ComTcpServer::setPort(uint16 port)
 {
     this->server_port = port;
     return *this;
 }
 
-bool SocketTcpServer::initListen()
+bool ComTcpServer::initListen()
 {
     if(server_port == 0)
     {
@@ -332,11 +332,11 @@ bool SocketTcpServer::initListen()
         com_socket_close(server_fd);
         return false;
     }
-    LOG_I("SocketTcpServer init listen, server_fd: %d, server port: %d", server_fd, server_port);
+    LOG_I("ComTcpServer init listen, server_fd: %d, server port: %d", server_fd, server_port);
     return true;
 }
 
-int SocketTcpServer::acceptClient()
+int ComTcpServer::acceptClient()
 {
     struct sockaddr_in sin;
     socklen_t len = sizeof(struct sockaddr_in);
@@ -363,7 +363,7 @@ int SocketTcpServer::acceptClient()
     return 0;
 }
 
-int SocketTcpServer::send(int clientfd, const void* data, int data_size)
+int ComTcpServer::send(int clientfd, const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -377,7 +377,7 @@ int SocketTcpServer::send(int clientfd, const void* data, int data_size)
     return ret;
 }
 
-int SocketTcpServer::send(const char* host, uint16 port, const void* data, int dataSize)
+int ComTcpServer::send(const char* host, uint16 port, const void* data, int dataSize)
 {
     if(host == NULL || data == NULL || dataSize <= 0)
     {
@@ -408,13 +408,13 @@ int SocketTcpServer::send(const char* host, uint16 port, const void* data, int d
     return ret;
 }
 
-void SocketTcpServer::broadcast(const void *data, int data_size) {
+void ComTcpServer::broadcast(const void *data, int data_size) {
     TCPServer::broadcast(data, data_size);
 }
 
 
 // UnixDomainTcpServer
-UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
+ComUnixDomainServer::ComUnixDomainServer(const char* server_file_name)
 {
     if(server_file_name != NULL)
     {
@@ -422,12 +422,12 @@ UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
     }
 }
 
-UnixDomainTcpServer::~UnixDomainTcpServer()
+ComUnixDomainServer::~ComUnixDomainServer()
 {
     com_file_remove(server_file_name.c_str());
 }
 
-bool UnixDomainTcpServer::initListen()
+bool ComUnixDomainServer::initListen()
 {
     server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(server_fd <= 0)
@@ -450,7 +450,7 @@ bool UnixDomainTcpServer::initListen()
     return true;
 }
 
-int UnixDomainTcpServer::acceptClient()
+int ComUnixDomainServer::acceptClient()
 {
     struct sockaddr_un client_addr;
     memset(&client_addr, 0, sizeof(struct sockaddr_un));
@@ -475,7 +475,7 @@ int UnixDomainTcpServer::acceptClient()
     return 0;
 }
 
-int UnixDomainTcpServer::send(int clientfd, const void* data, int data_size)
+int ComUnixDomainServer::send(int clientfd, const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -484,7 +484,7 @@ int UnixDomainTcpServer::send(int clientfd, const void* data, int data_size)
     return com_socket_tcp_send(clientfd, data, data_size);
 }
 
-int UnixDomainTcpServer::send(const char* client_file_name_wildcard, const void* data, int data_size)
+int ComUnixDomainServer::send(const char* client_file_name_wildcard, const void* data, int data_size)
 {
     if(client_file_name_wildcard == NULL || data == NULL || data_size <= 0)
     {
@@ -524,7 +524,7 @@ int UnixDomainTcpServer::send(const char* client_file_name_wildcard, const void*
     return ret;
 }
 
-void UnixDomainTcpServer::broadcast(const void *data, int data_size) {
+void ComUnixDomainServer::broadcast(const void *data, int data_size) {
     TCPServer::broadcast(data, data_size);
 }
 

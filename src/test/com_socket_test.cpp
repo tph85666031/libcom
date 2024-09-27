@@ -2,7 +2,7 @@
 #include "com_log.h"
 #include "com_test.h"
 
-class MySocketTcpClient : public SocketTcpClient
+class MySocketTcpClient : public ComTcpClient
 {
 public:
     MySocketTcpClient(const char* host, uint16 port) : SocketTcpClient(host, port)
@@ -23,7 +23,7 @@ public:
     std::atomic<int> data_size;
 };
 
-class MySocketTcpServer : public SocketTcpServer
+class MySocketTcpServer : public ComTcpServer
 {
 public:
     MySocketTcpServer(uint16 port) : SocketTcpServer(port)
@@ -44,7 +44,7 @@ public:
     std::atomic<int> data_size;
 };
 
-class MyUnixDomainTcpClient : public UnixDomainTcpClient
+class MyUnixDomainTcpClient : public ComUnixDomainClient
 {
 public:
     MyUnixDomainTcpClient(const char* server_name, const char* name) : UnixDomainTcpClient(server_name, name)
@@ -65,7 +65,7 @@ public:
     std::atomic<int> data_size;
 };
 
-class MyUnixDomainTcpServer : public UnixDomainTcpServer
+class MyUnixDomainTcpServer : public ComUnixDomainServer
 {
 public:
     MyUnixDomainTcpServer(const char* name) : UnixDomainTcpServer(name)
@@ -159,19 +159,19 @@ void com_unix_domain_unit_test_suit(void** state)
 
 void com_socket_multicast_unit_test_suit(void** state)
 {
-    MulticastNodeString a;
+    ComMulticastNodeString a;
     a.setHost("224.0.0.88");
     a.setPort(8888);
 
     a.startNode();
 
-    MulticastNodeString b;
+    ComMulticastNodeString b;
     b.setHost("224.0.0.88");
     b.setPort(8888);
 
     b.startNode();
 
-    MulticastNodeString c;
+    ComMulticastNodeString c;
     c.setHost("224.0.0.88");
     c.setPort(8888);
 
@@ -187,7 +187,7 @@ void com_socket_multicast_unit_test_suit(void** state)
     ASSERT_INT_EQUAL(c.getCount(), 3);
 }
 
-class MyStringIPCClient : public StringIPCClient
+class MyStringIPCClient : public ComStringIpcClient
 {
 public:
     MyStringIPCClient() {};
@@ -210,7 +210,7 @@ public:
     std::map<std::string, int> counts;
 };
 
-class MyStringIPCServer : public StringIPCServer
+class MyStringIPCServer : public ComStringIpcServer
 {
 public:
     MyStringIPCServer() {};

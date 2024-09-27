@@ -87,14 +87,14 @@ typedef struct
 } THREAD_POLL_INFO;
 #pragma pack(pop)
 
-class COM_EXPORT ThreadPool
+class COM_EXPORT ComThreadPool
 {
 public:
-    ThreadPool();
-    virtual ~ThreadPool();
-    ThreadPool& setThreadsCount(int minThreads, int maxThreads);
-    ThreadPool& setQueueSize(int queue_size_per_thread);
-    ThreadPool& setAllowDuplicateMessage(bool allow);
+    ComThreadPool();
+    virtual ~ComThreadPool();
+    ComThreadPool& setThreadsCount(int min_threads, int max_threads);
+    ComThreadPool& setQueueSize(int queue_size_per_thread);
+    ComThreadPool& setAllowDuplicateMessage(bool allow);
     bool pushPoolMessage(Message&& msg, bool urgent = false);
     bool pushPoolMessage(const Message& msg, bool urgent = false);
     void waitAllDone(int timeout_ms = 0);
@@ -102,8 +102,8 @@ public:
     void stopThreadPool(bool force = false);
     virtual void threadPoolRunner(Message& msg) {};
 private:
-    static void ThreadLoop(ThreadPool* poll);
-    static void ThreadManager(ThreadPool* poll);
+    static void ThreadLoop(ComThreadPool* poll);
+    static void ThreadManager(ComThreadPool* poll);
     void createThread(int count);
     void recycleThread();
     void startManagerThread();

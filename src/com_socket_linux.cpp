@@ -10,37 +10,37 @@
 #include "com_log.h"
 #include <errno.h>
 
-SocketTcpServer::SocketTcpServer()
+ComTcpServer::ComTcpServer()
 {
     server_port = 0;
     server_fd = -1;
     epollfd = -1;
-    listener_running = false;
+    thread_listener_running = false;
     epoll_timeout_ms = 3000;
     setAllowDuplicateMessage(false);
 }
 
-SocketTcpServer::SocketTcpServer(uint16 port)
+ComTcpServer::ComTcpServer(uint16 port)
 {
     server_port = port;
     server_fd = -1;
     epollfd = -1;
-    listener_running = false;
+    thread_listener_running = false;
     epoll_timeout_ms = 3000;
 }
 
-SocketTcpServer::~SocketTcpServer()
+ComTcpServer::~ComTcpServer()
 {
     stopServer();
 }
 
-SocketTcpServer& SocketTcpServer::setPort(uint16 port)
+ComTcpServer& ComTcpServer::setPort(uint16 port)
 {
     this->server_port = port;
     return *this;
 }
 
-void SocketTcpServer::threadPoolRunner(Message& msg)
+void ComTcpServer::threadPoolRunner(Message& msg)
 {
     int clientfd = (int)msg.getID();
     std::string host = msg.getString("host");
@@ -67,7 +67,7 @@ void SocketTcpServer::threadPoolRunner(Message& msg)
     }
 }
 
-void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
+void ComTcpServer::ThreadListener(ComTcpServer* ctx)
 {
     if(ctx == NULL)
     {
@@ -75,7 +75,7 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
         return;
     }
     struct epoll_event event_list[SOCKET_SERVER_MAX_CLIENTS];
-    while(ctx->listener_running)
+    while(ctx->thread_listener_running)
     {
         ctx->epoll_timeout_ms = 1000;
         //epoll_wait
@@ -90,7 +90,7 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
             //LOG_D("epoll timeout");
             continue;
         }
-        if(ctx->listener_running == false)
+        if(ctx->thread_listener_running == false)
         {
             break;
         }
@@ -130,7 +130,7 @@ void SocketTcpServer::ThreadSocketServerListener(SocketTcpServer* ctx)
     return;
 }
 
-void SocketTcpServer::closeClient(int fd)
+void ComTcpServer::closeClient(int fd)
 {
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
     SOCKET_CLIENT_DES des;
@@ -153,7 +153,7 @@ void SocketTcpServer::closeClient(int fd)
     mutex_clients.unlock();
 }
 
-int SocketTcpServer::acceptClient()//ThreadSocketServerRunner线程
+int ComTcpServer::acceptClient()//ThreadSocketServerRunner线程
 {
     struct sockaddr_in sin;
     socklen_t len = sizeof(struct sockaddr_in);
@@ -183,7 +183,7 @@ int SocketTcpServer::acceptClient()//ThreadSocketServerRunner线程
     return 0;
 }
 
-int SocketTcpServer::startServer()
+int ComTcpServer::startServer()
 {
     if(server_port == 0)
     {
@@ -227,16 +227,16 @@ int SocketTcpServer::startServer()
         return -4;
     }
     startThreadPool();
-    listener_running = true;
-    thread_listener = std::thread(ThreadSocketServerListener, this);
+    thread_listener_running = true;
+    thread_listener = std::thread(ThreadListener, this);
     LOG_I("start done");
     return 0;
 }
 
-void SocketTcpServer::stopServer()
+void ComTcpServer::stopServer()
 {
     stopThreadPool();
-    listener_running = false;
+    thread_listener_running = false;
     if(thread_listener.joinable())
     {
         thread_listener.join();
@@ -254,7 +254,7 @@ void SocketTcpServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int SocketTcpServer::send(const char* host, uint16 port, const void* data, int data_size)
+int ComTcpServer::send(const char* host, uint16 port, const void* data, int data_size)
 {
     if(host == NULL || data == NULL || data_size <= 0)
     {
@@ -285,7 +285,7 @@ int SocketTcpServer::send(const char* host, uint16 port, const void* data, int d
     return ret;
 }
 
-int SocketTcpServer::send(int clientfd, const void* data, int data_size)
+int ComTcpServer::send(int clientfd, const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -299,15 +299,15 @@ int SocketTcpServer::send(int clientfd, const void* data, int data_size)
     return ret;
 }
 
-void SocketTcpServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
+void ComTcpServer::onConnectionChanged(std::string& host, uint16 port, int socketfd, bool connected)
 {
 }
 
-void SocketTcpServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
+void ComTcpServer::onRecv(std::string& host, uint16 port, int socketfd, uint8* data, int data_size)
 {
 }
 
-void SocketTcpServer::broadcast(const void* data, int data_size)
+void ComTcpServer::broadcast(const void* data, int data_size)
 {
     mutex_clients.lock();
     for(auto iter : clients)
@@ -325,7 +325,7 @@ void SocketTcpServer::broadcast(const void* data, int data_size)
     mutex_clients.unlock();
 }
 
-UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
+ComUnixDomainServer::ComUnixDomainServer(const char* server_file_name)
 {
     if(server_file_name != NULL)
     {
@@ -333,21 +333,21 @@ UnixDomainTcpServer::UnixDomainTcpServer(const char* server_file_name)
     }
     server_fd = -1;
     epollfd = -1;
-    listener_running = false;
-    receiver_running = false;
+    thread_listener_running = false;
+    thread_receiver_running = false;
     epoll_timeout_ms = 3000;
 }
 
-UnixDomainTcpServer::~UnixDomainTcpServer()
+ComUnixDomainServer::~ComUnixDomainServer()
 {
     stopServer();
     com_file_remove(getServerFileName().c_str());
 }
 
-void UnixDomainTcpServer::ThreadUnixDomainServerReceiver(UnixDomainTcpServer* ctx)
+void ComUnixDomainServer::ThreadReceiver(ComUnixDomainServer* ctx)
 {
     uint8 buf[4096];
-    while(ctx->receiver_running)
+    while(ctx->thread_receiver_running)
     {
         ctx->semfds.wait(1000);
         ctx->mutexfds.lock();
@@ -374,7 +374,7 @@ void UnixDomainTcpServer::ThreadUnixDomainServerReceiver(UnixDomainTcpServer* ct
     return;
 }
 
-void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* ctx)
+void ComUnixDomainServer::ThreadListener(ComUnixDomainServer* ctx)
 {
     if(ctx == NULL)
     {
@@ -382,7 +382,7 @@ void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* ct
         return;
     }
     struct epoll_event event_list[SOCKET_SERVER_MAX_CLIENTS];
-    while(ctx->listener_running)
+    while(ctx->thread_listener_running)
     {
         ctx->epoll_timeout_ms = 1000;
         //epoll_wait
@@ -397,7 +397,7 @@ void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* ct
             //LOG_D("epoll timeout");
             continue;
         }
-        if(ctx->listener_running == false)
+        if(ctx->thread_listener_running == false)
         {
             break;
         }
@@ -427,7 +427,7 @@ void UnixDomainTcpServer::ThreadUnixDomainServerListener(UnixDomainTcpServer* ct
     return;
 }
 
-int UnixDomainTcpServer::recvData(int socketfd)
+int ComUnixDomainServer::recvData(int socketfd)
 {
     mutex_clients.lock();
     if(clients.count(socketfd) == 0)
@@ -444,7 +444,7 @@ int UnixDomainTcpServer::recvData(int socketfd)
     return 0;
 }
 
-void UnixDomainTcpServer::closeClient(int fd)
+void ComUnixDomainServer::closeClient(int fd)
 {
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
     SOCKET_CLIENT_DES des;
@@ -467,7 +467,7 @@ void UnixDomainTcpServer::closeClient(int fd)
     mutex_clients.unlock();
 }
 
-int UnixDomainTcpServer::acceptClient()
+int ComUnixDomainServer::acceptClient()
 {
     struct sockaddr_un client_addr;
     memset(&client_addr, 0, sizeof(struct sockaddr_un));
@@ -495,7 +495,7 @@ int UnixDomainTcpServer::acceptClient()
     return 0;
 }
 
-int UnixDomainTcpServer::startServer()
+int ComUnixDomainServer::startServer()
 {
     server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(server_fd <= 0)
@@ -517,7 +517,7 @@ int UnixDomainTcpServer::startServer()
         com_socket_close(server_fd);
         return -2;
     }
-    if(listen(server_fd, 5) < 0)
+    if(listen(server_fd, 128) < 0)
     {
         LOG_E("socket listen failed : socketfd = %d", server_fd);
         com_socket_close(server_fd);
@@ -534,21 +534,21 @@ int UnixDomainTcpServer::startServer()
         LOG_E("epoll add failed : socketfd = %d", server_fd);
         return -4;
     }
-    listener_running = true;
-    thread_listener = std::thread(ThreadUnixDomainServerListener, this);
-    receiver_running = true;
-    thread_receiver = std::thread(ThreadUnixDomainServerReceiver, this);
+    thread_listener_running = true;
+    thread_listener = std::thread(ThreadListener, this);
+    thread_receiver_running = true;
+    thread_receiver = std::thread(ThreadReceiver, this);
     return 0;
 }
 
-void UnixDomainTcpServer::stopServer()
+void ComUnixDomainServer::stopServer()
 {
-    listener_running = false;
+    thread_listener_running = false;
     if(thread_listener.joinable())
     {
         thread_listener.join();
     }
-    receiver_running = false;
+    thread_receiver_running = false;
     if(thread_receiver.joinable())
     {
         thread_receiver.join();
@@ -566,7 +566,7 @@ void UnixDomainTcpServer::stopServer()
     LOG_I("socket server stopped");
 }
 
-int UnixDomainTcpServer::send(int clientfd, const void* data, int data_size)
+int ComUnixDomainServer::send(int clientfd, const void* data, int data_size)
 {
     if(data == NULL || data_size <= 0)
     {
@@ -575,7 +575,7 @@ int UnixDomainTcpServer::send(int clientfd, const void* data, int data_size)
     return com_socket_tcp_send(clientfd, data, data_size);
 }
 
-int UnixDomainTcpServer::send(const char* client_file_name_wildcard, const void* data, int data_size)
+int ComUnixDomainServer::send(const char* client_file_name_wildcard, const void* data, int data_size)
 {
     if(client_file_name_wildcard == NULL || data == NULL || data_size <= 0)
     {
@@ -615,25 +615,25 @@ int UnixDomainTcpServer::send(const char* client_file_name_wildcard, const void*
     return ret;
 }
 
-std::string& UnixDomainTcpServer::getServerFileName()
+std::string& ComUnixDomainServer::getServerFileName()
 {
     return server_file_name;
 }
 
-int UnixDomainTcpServer::getSocketfd()
+int ComUnixDomainServer::getSocketfd()
 {
     return server_fd;
 }
 
-void UnixDomainTcpServer::onConnectionChanged(std::string& client_file_name, int socketfd, bool connected)
+void ComUnixDomainServer::onConnectionChanged(std::string& client_file_name, int socketfd, bool connected)
 {
 }
 
-void UnixDomainTcpServer::onRecv(std::string& client_file_name, int socketfd, uint8* data, int data_size)
+void ComUnixDomainServer::onRecv(std::string& client_file_name, int socketfd, uint8* data, int data_size)
 {
 }
 
-void UnixDomainTcpServer::broadcast(const void* data, int data_size)
+void ComUnixDomainServer::broadcast(const void* data, int data_size)
 {
     mutex_clients.lock();
     for(auto iter : clients)

@@ -280,7 +280,7 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
         dns_server_list.push_back("8.8.8.8");
     }
 
-    NicInfo nic;
+    ComNicInfo nic;
     if(com_net_get_nic(interface_name, nic) == false)
     {
         LOG_E("failed to get %s info", interface_name);

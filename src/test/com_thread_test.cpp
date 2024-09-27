@@ -3,7 +3,7 @@
 #include "com_file.h"
 #include "com_test.h"
 
-class MyThreadPoll: public ThreadPool, public ThreadRunner<std::string>
+class MyThreadPoll: public ComThreadPool, public ThreadRunner<std::string>
 {
 public:
     void threadPoolRunner(Message& msg)

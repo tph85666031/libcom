@@ -50,13 +50,13 @@ protected:
     std::queue<SOCKET_CLIENT_DES> ready_fds;
 };
 
-class SocketTcpServer : public TCPServer
+class ComTcpServer : public TCPServer
 {
 public:
-    SocketTcpServer();
-    SocketTcpServer(uint16 port);
-    virtual ~SocketTcpServer();
-    SocketTcpServer& setPort(uint16 port);
+    ComTcpServer();
+    ComTcpServer(uint16 port);
+    virtual ~ComTcpServer();
+    ComTcpServer& setPort(uint16 port);
 public:
     virtual bool initListen() override;
     virtual int acceptClient() override;
@@ -64,14 +64,14 @@ public:
     int send(const char* host, uint16 port, const void* data, int data_size);
     virtual void broadcast(const void* data, int data_size) override;
 private:
-    static void ThreadSocketServerDispatcher(SocketTcpServer* socket_server);
+    static void ThreadDispatcher(ComTcpServer* socket_server);
 };
 
-class UnixDomainTcpServer : public TCPServer
+class ComUnixDomainServer : public TCPServer
 {
 public:
-    UnixDomainTcpServer(const char* server_file_name);
-    virtual ~UnixDomainTcpServer();
+    ComUnixDomainServer(const char* server_file_name);
+    virtual ~ComUnixDomainServer();
 public:
     virtual bool initListen() override;
     virtual int acceptClient() override;
