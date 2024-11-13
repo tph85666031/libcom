@@ -5,7 +5,7 @@
 class MySocketTcpClient : public ComTcpClient
 {
 public:
-    MySocketTcpClient(const char* host, uint16 port) : SocketTcpClient(host, port)
+    MySocketTcpClient(const char* host, uint16 port) : ComTcpClient(host, port)
     {
         data_size = 0;
     }
@@ -26,7 +26,7 @@ public:
 class MySocketTcpServer : public ComTcpServer
 {
 public:
-    MySocketTcpServer(uint16 port) : SocketTcpServer(port)
+    MySocketTcpServer(uint16 port) : ComTcpServer(port)
     {
         data_size = 0;
     }
@@ -47,7 +47,7 @@ public:
 class MyUnixDomainTcpClient : public ComUnixDomainClient
 {
 public:
-    MyUnixDomainTcpClient(const char* server_name, const char* name) : UnixDomainTcpClient(server_name, name)
+    MyUnixDomainTcpClient(const char* server_name, const char* name) : ComUnixDomainClient(server_name, name)
     {
         data_size = 0;
     }
@@ -68,7 +68,7 @@ public:
 class MyUnixDomainTcpServer : public ComUnixDomainServer
 {
 public:
-    MyUnixDomainTcpServer(const char* name) : UnixDomainTcpServer(name)
+    MyUnixDomainTcpServer(const char* name) : ComUnixDomainServer(name)
     {
         data_size = 0;
     }
@@ -95,7 +95,7 @@ void com_socket_unit_test_suit(void** state)
     std::string mac_str = com_string_format("%02X-%02X-%02X-%02X-%02X-%02X",
                                             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     LOG_D("if=%s, mac=%s", ifs[0].c_str(), mac_str.c_str());
-    NicInfo nic;
+    ComNicInfo nic;
     com_net_get_nic("eth0", nic);
     LOG_D("nic:%s,up=%s,mac_type=%d,mac=%02X-%02X-%02X-%02X-%02X-%02X,ip=%s,ip_mask=%s,ip_broadcast=%s",
           nic.name.c_str(), nic.flags & 0x02 ? "true" : "false", nic.addr_family,

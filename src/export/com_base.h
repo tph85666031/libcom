@@ -562,6 +562,21 @@ private:
     std::string app_name;
 };
 
+class COM_EXPORT ComAutoClean
+{
+public:
+    ComAutoClean(std::function<void()> cb)
+    {
+        this->cb = cb;
+    }
+    virtual ~ComAutoClean()
+    {
+        cb();
+    }
+private:
+    std::function<void()> cb;
+};
+
 COM_EXPORT ComBytes com_hexstring_to_bytes(const char* str);
 COM_EXPORT ComBytes com_string_utf8_to_utf16(const ComBytes& utf8);
 COM_EXPORT ComBytes com_string_utf16_to_utf8(const ComBytes& utf16);

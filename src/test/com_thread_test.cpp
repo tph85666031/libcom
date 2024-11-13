@@ -20,8 +20,8 @@ public:
 
 static void thread_cpp_test(int val1, int val2)
 {
-    LOG_D("vals=%d,val2=%d", val1, val2);
-    LOG_D("tid=%llu", com_thread_get_tid());
+    LOG_I("vals=%d,val2=%d", val1, val2);
+    LOG_I("tid=%llu", com_thread_get_tid());
     ComProcessMutex mutex_a("/tmp/1.txt");
     LOG_I("start lock");
     mutex_a.lock();
@@ -39,6 +39,17 @@ static void thread_process_condition_test(int index, ComProcessCondition* cond)
 
 void com_thread_unit_test_suit(void** state)
 {
+    std::vector<uint8> xxx;
+    ComAutoClean ac([&]()
+    {
+        for(size_t i = 0; i < xxx.size(); i++)
+        {
+            LOG_I("%zu=%hu", i, xxx[i]);
+        }
+    });
+    xxx.push_back(1);
+    xxx.push_back(2);
+    xxx.push_back(3);
     if(com_string_equal(getenv("CMD"), "cond"))
     {
         ComProcessCondition c1("c1");
@@ -102,7 +113,11 @@ void com_thread_unit_test_suit(void** state)
         ppid_str += "->" + com_string_format("%d", infos[i].pid);
     }
     LOG_I("ppid_str=%s", ppid_str.c_str());
-
+    std::vector<uint64> tids = com_thread_get_tid_all();
+    for(size_t i = 0; i < tids.size(); i++)
+    {
+        LOG_I("pid %d:tid[%zu]=%llu", com_process_get_pid(), i, tids[i]);
+    }
     int pid_test = com_process_get_pid("EndpointWatchdog");
     std::vector<ProcInfo> proc_childs = com_process_get_child_all(pid_test);
     for(size_t i = 0; i < proc_childs.size(); i++)
@@ -123,11 +138,14 @@ void com_thread_unit_test_suit(void** state)
     pool.waitAllDone();
     ComProcessMutex mutex_a("/tmp/1.txt");
     LOG_I("start lock");
+    mutex_a.reset();
     mutex_a.lock();
+    LOG_I("lock done");
     std::thread t1(thread_cpp_test, 1, 2);
     com_sleep_s(1);
-    LOG_I("lock done");
+    LOG_I("start unlock");
     mutex_a.unlock();
+    LOG_I("unlock done");
     if(t1.joinable())
     {
         t1.join();

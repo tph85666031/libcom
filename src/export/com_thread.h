@@ -77,6 +77,7 @@ COM_EXPORT std::string com_thread_get_name(uint64 tid_posix);
 COM_EXPORT std::string com_thread_get_name();
 COM_EXPORT uint64 com_thread_get_tid_posix();
 COM_EXPORT uint64 com_thread_get_tid();
+COM_EXPORT std::vector<uint64> com_thread_get_tid_all(int pid = -1);
 
 #pragma pack(push)
 #pragma pack(4)
@@ -218,7 +219,6 @@ public:
     ComProcessSem(const char* name, int init_val = 0);//通过构造函数创建
     virtual ~ComProcessSem();
 
-    //相同name，不同的offset也算不同的sem
     bool init(const char* name, int init_val = 0);//通过init方法创建
     void uninit(bool destroy = false);//destroy=true将从系统删除此Sem，(非WIn系统下)其它进程使用此命名的Sem下的API会立即返回
     int post();
@@ -235,13 +235,13 @@ public:
     ComProcessMutex(const char* name);//通过构造函数创建
     virtual ~ComProcessMutex();
 
-    //相同name，不同的offset也算不同的mutex
     bool init(const char* name);//通过init方法创建
     void uninit(bool destroy = false);//destroy=true将从系统删除此Mutex，其它进程使用此命名的Mutex下的API会立即返回
 
     int lock();
     int trylock();
     int unlock();
+    void reset(bool to_unlocked = true);
 protected:
     process_mutex_t mutex;
 };

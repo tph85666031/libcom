@@ -703,6 +703,43 @@ uint64 com_thread_get_tid_posix()
 #endif
 }
 
+std::vector<uint64> com_thread_get_tid_all(int pid)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    return std::vector<uint64>();
+#elif __linux__ == 1
+    if(pid < 0)
+    {
+        pid = com_process_get_pid();
+    }
+    std::string path = com_string_format("/proc/%d/task", pid);
+    std::map<std::string, int> list;
+    com_dir_list(path.c_str(), list);
+    std::vector<uint64> tids;
+    tids.push_back(pid);
+    for(auto it = list.begin(); it != list.end(); it++)
+    {
+        if(it->second != FILE_TYPE_DIR)
+        {
+            continue;
+        }
+        std::string name = com_path_name(it->first.c_str());
+        if(name.empty())
+        {
+            continue;
+        }
+        uint64 tid = strtoul(name.c_str(), NULL, 10);
+        if(tid != (uint64)pid)
+        {
+            tids.push_back(tid);
+        }
+    }
+    return tids;
+#else
+    return std::vector<uint64>();
+#endif
+}
+
 void com_thread_set_name(std::thread* t, const char* name)
 {
     if(t == NULL || name == NULL)
@@ -1424,7 +1461,7 @@ bool ComProcessMutex::init(const char* name)
     mutex = semget(key, 1, flag);
     if(mutex >= 0)
     {
-        LOG_I("%s already created", name);
+        LOG_I("%s already created,key=0x%x,mutex=%d", name, key, mutex);
         return true;
     }
     flag |= IPC_CREAT;
@@ -1460,6 +1497,17 @@ void ComProcessMutex::uninit(bool destroy)
     CloseHandle(mutex);
 #endif
     mutex = PROCESS_MUTEX_DEFAULT_VALUE;
+}
+
+void ComProcessMutex::reset(bool to_unlocked)
+{
+#if __linux__ == 1 || defined(__APPLE__)
+    union semun arg;
+    arg.val = to_unlocked ? 1 : 0;
+    semctl(mutex, 0, SETVAL, arg);
+#elif defined(_WIN32) || defined(_WIN64)
+    LOG_I("not required by win");
+#endif
 }
 
 int ComProcessMutex::lock()
