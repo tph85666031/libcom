@@ -18,7 +18,7 @@ private:
 
 private:
     int sd = 0;
-    int buf_size = 1024;
+    int buf_size = 8192;
     int local_id;
     int group;
     std::atomic<bool> thread_rx_running = {false};

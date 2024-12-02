@@ -71,7 +71,8 @@ int ComNetLink::sendMessage(int remote_id, int group, const void* data, int data
         LOG_E("arg incorrect,data=%p,data_size=%d", data, data_size);
         return -1;
     }
-    uint8* buf = new uint8[NLMSG_SPACE(data_size)];
+    int total_size = NLMSG_SPACE(data_size);
+    uint8* buf = new uint8[total_size]();
     struct nlmsghdr* nl_header = (struct nlmsghdr*)buf;
     nl_header->nlmsg_len = NLMSG_LENGTH(data_size);
     nl_header->nlmsg_type = NLMSG_DONE;
@@ -85,9 +86,20 @@ int ComNetLink::sendMessage(int remote_id, int group, const void* data, int data
     addr_remote.nl_groups = group;
     addr_remote.nl_pid = remote_id;
 
-    int ret = sendto(sd, nl_header, NLMSG_LENGTH(data_size), 0, (struct sockaddr*)&addr_remote, sizeof(addr_remote));
+    int size_sent = 0;
+    do
+    {
+        int ret = sendto(sd, buf + size_sent, total_size - size_sent, 0, (struct sockaddr*)&addr_remote, sizeof(addr_remote));
+        if(ret <= 0)
+        {
+            break;
+        }
+        size_sent += ret;
+    }
+    while(size_sent < total_size);
+
     delete[] buf;
-    return ret;
+    return size_sent;
 #else
     return -1;
 #endif
@@ -105,7 +117,7 @@ void ComNetLink::ThreadRx(ComNetLink* ctx)
         return;
     }
 
-    uint8 buf[NLMSG_SPACE(ctx->buf_size)];
+    uint8* buf = new uint8[ctx->buf_size]();
 
     int timeout_ms = 1000;
     while(ctx->thread_rx_running)
@@ -134,11 +146,20 @@ void ComNetLink::ThreadRx(ComNetLink* ctx)
             continue;
         }
 
-        while(ctx->thread_rx_running && recvfrom(ctx->sd, buf, ctx->buf_size, MSG_DONTWAIT, NULL, NULL) > NLMSG_HDRLEN)
+        int size = 0;
+        int ret = 0;
+        while(ctx->thread_rx_running
+                && (ret = recvfrom(ctx->sd, buf + size, ctx->buf_size - size, MSG_DONTWAIT, NULL, NULL)) > 0)
+        {
+            size += ret;
+        }
+
+        if(size >= NLMSG_HDRLEN)
         {
             ctx->onMessage(((struct nlmsghdr*)buf)->nlmsg_pid, (uint8*)NLMSG_DATA((struct nlmsghdr*)buf), ((struct nlmsghdr*)buf)->nlmsg_len - NLMSG_HDRLEN);
         }
     }
+    delete[] buf;
 #endif
 }
 
