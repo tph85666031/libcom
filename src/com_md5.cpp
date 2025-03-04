@@ -259,7 +259,7 @@ void ComMD5::appendFile(const char* file_path, int64 offset, int64 size)
     }
     if(size == -1)
     {
-        size = com_file_size(file);
+        size = com_file_size(file) - offset;
     }
     if(offset > 0)
     {

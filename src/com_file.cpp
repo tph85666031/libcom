@@ -1207,7 +1207,7 @@ bool com_file_rename(const char* file_name_new, const char* file_name_old)
 #endif
 }
 
-FILE* com_file_open(const char* file_path, const char* flag)
+COM_FILE com_file_open(const char* file_path, const char* flag)
 {
     if(com_string_is_empty(file_path) || com_string_is_empty(flag))
     {
