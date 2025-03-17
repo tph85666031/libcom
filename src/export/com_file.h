@@ -153,6 +153,8 @@ COM_EXPORT bool com_file_crop(const char* file_name, uint8 start_percent_keeped,
 COM_EXPORT int com_file_get_fd(FILE* file);
 COM_EXPORT bool com_file_lock(FILE* file, bool share_read = false, bool wait = false);
 COM_EXPORT bool com_file_lock(int fd, bool share_read = false, bool wait = false);
+COM_EXPORT bool com_file_is_locked(const char* file_path);
+COM_EXPORT bool com_file_is_locked(const char* file_path, int& type, int64& pid);
 COM_EXPORT bool com_file_is_locked(FILE* file);
 COM_EXPORT bool com_file_is_locked(FILE* file, int& type, int64& pid);
 COM_EXPORT bool com_file_is_locked(int fd);

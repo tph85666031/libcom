@@ -3,6 +3,24 @@
 #include "com_log.h"
 #include "com_test.h"
 
+void com_file_lock_unit_test_suit(void** state)
+{
+    int type = 0;
+    int64 pid = 0;
+    LOG_I("xlocked=%s", com_file_is_locked("/data/1.txt", type, pid) ? "yes" : "no");
+    LOG_I("type=%d,pid=%lld", type, pid);
+    getchar();
+    FILE* fp = com_file_open("/data/1.txt", "w+");
+    com_file_lock(fp, true);
+    LOG_I("locked=%s", com_file_is_locked(fp) ? "yes" : "no");
+    //LOG_I("xlocked=%s", com_file_is_locked("/data/1.txt") ? "yes" : "no");
+    getchar();
+    com_file_unlock(fp);
+    LOG_I("locked=%s", com_file_is_locked(fp) ? "yes" : "no");
+    LOG_I("xlocked=%s", com_file_is_locked("/data/1.txt") ? "yes" : "no");
+    com_file_close(fp);
+}
+
 void com_file_unit_test_suit(void** state)
 {
     ComBytes bytes = com_file_readall(PATH_TO_LOCAL(com_get_bin_path() + com_get_bin_name()).c_str());

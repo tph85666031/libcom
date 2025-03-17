@@ -1207,7 +1207,7 @@ bool com_file_rename(const char* file_name_new, const char* file_name_old)
 #endif
 }
 
-COM_FILE com_file_open(const char* file_path, const char* flag)
+FILE* com_file_open(const char* file_path, const char* flag)
 {
     if(com_string_is_empty(file_path) || com_string_is_empty(flag))
     {
@@ -1983,6 +1983,34 @@ bool com_file_lock(int fd, bool allow_share_read, bool wait)
 #endif
 }
 
+bool com_file_is_locked(const char* file_path)
+{
+    int type = 0;
+    int64 pid = 0;
+    return com_file_is_locked(file_path, type, pid);
+}
+
+bool com_file_is_locked(const char* file_path, int& type, int64& pid)
+{
+    if(com_string_is_empty(file_path))
+    {
+        return false;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    LOG_E("api not support yet");
+    return false;
+#else
+    FILE* fp = com_file_open(file_path, "r+");
+    if(fp == NULL)
+    {
+        return false;
+    }
+    bool locked = com_file_is_locked(fp, type, pid);
+    com_file_close(fp);
+    return locked;
+#endif
+}
+
 bool com_file_is_locked(FILE* file)
 {
     return com_file_is_locked(com_file_get_fd(file));
@@ -2024,13 +2052,16 @@ bool com_file_is_locked(int fd, int& type, int64& pid)
     int ret = fcntl(fd, F_GETLK, &lock);
     if(ret != 0)
     {
+        LOG_E("failed to get lock");
         return false;
     }
-    type = lock.l_type;
+    
     if(lock.l_type == F_UNLCK)
     {
         return false;
     }
+
+    type = lock.l_type;
     pid = (int64)lock.l_pid;
 
     return true;

@@ -22,6 +22,7 @@ extern void com_url_unit_test_suit(void** state);
 extern void com_md5_unit_test_suit(void** state);
 extern void com_task_unit_test_suit(void** state);
 extern void com_file_unit_test_suit(void** state);
+extern void com_file_lock_unit_test_suit(void** state);
 extern void com_unix_domain_unit_test_suit(void** state);
 extern void com_kv_unit_test_suit(void** state);
 extern void com_crc_unit_test_suit(void** state);
@@ -70,7 +71,7 @@ CMUnitTest test_cases_com_lib[] =
     cmocka_unit_test(com_sync_unit_test_suit),
     cmocka_unit_test(com_socket_stringipc_unit_test_suit)
 #else
-    cmocka_unit_test(com_thread_unit_test_suit)
+    cmocka_unit_test(com_file_lock_unit_test_suit)
 #endif
 };
 
