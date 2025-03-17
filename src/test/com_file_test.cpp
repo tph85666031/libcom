@@ -7,18 +7,18 @@ void com_file_lock_unit_test_suit(void** state)
 {
     int type = 0;
     int64 pid = 0;
-    LOG_I("xlocked=%s", com_file_is_locked("/data/1.txt", type, pid) ? "yes" : "no");
+    LOG_I("xlocked=%s", com_file_is_locked(PATH_TO_LOCAL("./1.txt").c_str(), type, pid) ? "yes" : "no");
     LOG_I("type=%d,pid=%lld", type, pid);
     getchar();
-    FILE* fp = com_file_open("/data/1.txt", "w+");
-    com_file_lock(fp, true);
+    FILE* fp = com_file_open(PATH_TO_LOCAL("./1.txt").c_str(), "r+");
+    com_file_lock(fp);
     LOG_I("locked=%s", com_file_is_locked(fp) ? "yes" : "no");
-    //LOG_I("xlocked=%s", com_file_is_locked("/data/1.txt") ? "yes" : "no");
+    LOG_I("xlocked=%s", com_file_is_locked(PATH_TO_LOCAL("./1.txt").c_str()) ? "yes" : "no");
     getchar();
     com_file_unlock(fp);
     LOG_I("locked=%s", com_file_is_locked(fp) ? "yes" : "no");
-    LOG_I("xlocked=%s", com_file_is_locked("/data/1.txt") ? "yes" : "no");
     com_file_close(fp);
+    LOG_I("xlocked=%s", com_file_is_locked(PATH_TO_LOCAL("./1.txt").c_str()) ? "yes" : "no");
 }
 
 void com_file_unit_test_suit(void** state)

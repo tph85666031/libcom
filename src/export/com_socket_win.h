@@ -45,15 +45,15 @@ private:
 };
 
 //以下留空即可，win不支持
-class COM_EXPORT UnixDomainTcpServer
+class COM_EXPORT ComUnixDomainServer
 {
 public:
-    UnixDomainTcpServer(const char* server_file_name)
+    ComUnixDomainServer(const char* server_file_name)
     {
         LOG_E("not support");
         return;
     };
-    virtual ~UnixDomainTcpServer()
+    virtual ~ComUnixDomainServer()
     {
         LOG_E("not support");
         return;

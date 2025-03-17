@@ -1997,8 +1997,39 @@ bool com_file_is_locked(const char* file_path, int& type, int64& pid)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
-    return false;
+    HANDLE fp = CreateFileW(com_wstring_from_utf8(file_path).c_str(),
+                            GENERIC_READ | GENERIC_WRITE,
+                            0,//以独占方式打开
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+
+    if(fp != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(fp);
+        return false;
+    }
+    if(errno == ERROR_FILE_NOT_FOUND)
+    {
+        LOG_D("file not exist:%s", file_path);
+        return false;
+    }
+    type = 0;
+    fp = CreateFileW(com_wstring_from_utf8(file_path).c_str(),
+                     GENERIC_READ,
+                     FILE_SHARE_READ | FILE_SHARE_WRITE,//以共享读写的方式打开
+                     NULL,
+                     OPEN_EXISTING,
+                     FILE_ATTRIBUTE_NORMAL,
+                     NULL);
+    if(fp != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(fp);//打开成功，说明原文件被共享读的方式打开了
+        return true;
+    }
+    type = 1;
+    return true;
 #else
     FILE* fp = com_file_open(file_path, "r+");
     if(fp == NULL)
@@ -2039,8 +2070,18 @@ bool com_file_is_locked(int fd, int& type, int64& pid)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
-    return false;
+    if(com_file_lock(fd))
+    {
+        com_file_unlock(fd);
+        return false;
+    }
+    type = 0;
+    if(com_file_lock(fd, true))
+    {
+        com_file_unlock(fd);
+        type = 1;
+    }
+    return true;
 #else
     struct flock lock;
     memset(&lock, 0, sizeof(struct flock));
@@ -2055,7 +2096,7 @@ bool com_file_is_locked(int fd, int& type, int64& pid)
         LOG_E("failed to get lock");
         return false;
     }
-    
+
     if(lock.l_type == F_UNLCK)
     {
         return false;
