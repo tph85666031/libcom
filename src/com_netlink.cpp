@@ -1,5 +1,6 @@
 #if __linux__==1
 #include <linux/netlink.h>
+#include <linux/genetlink.h>
 #include <sys/socket.h>
 #include <unistd.h> //close
 #endif
@@ -163,4 +164,263 @@ void ComNetLink::ThreadRx(ComNetLink* ctx)
 #endif
 }
 
+ComNetLinkGeneric::ComNetLinkGeneric()
+{
+    buf = new uint8[buf_size]();
+}
+
+ComNetLinkGeneric::~ComNetLinkGeneric()
+{
+    closeLink();
+    delete[] buf;
+}
+
+int ComNetLinkGeneric::getFamilyID()
+{
+#if __linux__==1
+    if(sendMessage(0, GENL_ID_CTRL, CTRL_CMD_GETFAMILY, CTRL_ATTR_FAMILY_NAME, name.c_str(), name.length() + 1) == false)
+    {
+        LOG_E("failed");
+        return -1;
+    }
+    ComBytes reply = recvMessage(3000);
+    struct nlmsghdr* nl_header = (struct nlmsghdr*)reply.getData();
+    if(NLMSG_OK(nl_header, reply.getDataSize()) == false)
+    {
+        LOG_E("reply data check failed,size=%d", reply.getDataSize());
+        return -2;
+    }
+
+    if(nl_header->nlmsg_type != GENL_ID_CTRL)
+    {
+        LOG_E("reply data type check failed,type=%d", nl_header->nlmsg_type);
+        return -3;
+    }
+
+    int nl_size = reply.getDataSize();
+    struct nlmsghdr* nl_header_cur = nl_header;
+    for(nl_header_cur = nl_header; NLMSG_OK(nl_header_cur, nl_size); nl_header_cur = NLMSG_NEXT(nl_header_cur, nl_size))
+    {
+        if(nl_header_cur->nlmsg_type == NLMSG_DONE
+                || nl_header_cur->nlmsg_type == NLMSG_ERROR)
+        {
+            break;
+        }
+
+        struct genlmsghdr* gnl_header = (struct genlmsghdr*)NLMSG_DATA(nl_header_cur);
+        struct nlattr* nla = (struct nlattr*)((char*)gnl_header + GENL_HDRLEN);
+        int nla_total_size = nl_header_cur->nlmsg_len - NLMSG_HDRLEN - GENL_HDRLEN;
+        while(nla_total_size >= NLA_ALIGN(nla->nla_len))
+        {
+            if(nla->nla_type == CTRL_ATTR_FAMILY_ID)
+            {
+                return *((int16*)((char*)nla + NLA_HDRLEN));
+            }
+            nla_total_size -= NLA_ALIGN(nla->nla_len);
+            nla = (struct nlattr*)((char*)nla + NLA_ALIGN(nla->nla_len));
+        }
+    }
+
+#endif
+    return -1;
+}
+
+int ComNetLinkGeneric::openLink(const char* name)
+{
+    if(name == NULL)
+    {
+        return -1;
+    }
+    this->name = name;
+
+#if __linux__==1
+    sd = socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
+    if(sd <= 0)
+    {
+        LOG_E("failed to open netlink socket,ret=%d", sd);
+        return -1;
+    }
+
+    struct sockaddr_nl addr_local;
+    memset(&addr_local, 0, sizeof(struct sockaddr_nl));
+    addr_local.nl_family = AF_NETLINK;
+    addr_local.nl_groups = 0;
+    addr_local.nl_pid = com_process_get_pid();
+
+    int ret = bind(sd, (struct sockaddr*)&addr_local, sizeof(sockaddr_nl));
+    if(ret < 0)
+    {
+        LOG_E("bind failed,ret=%d", ret);
+        return -2;
+    }
+    family_id = getFamilyID();
+    if(family_id < 0)
+    {
+        LOG_E("failed to get family id,ret=%d", family_id);
+        return -3;
+    }
+    LOG_I("family id=%d", family_id);
+    thread_rx_running = true;
+    thread_rx = std::thread(ThreadRx, this);
+    return 0;
+#else
+    return -1;
+#endif
+
+}
+
+void ComNetLinkGeneric::closeLink()
+{
+#if __linux__==1
+    if(sd > 0)
+    {
+        close(sd);
+        sd = 0;
+    }
+    thread_rx_running = false;
+    if(thread_rx.joinable())
+    {
+        thread_rx.join();
+    }
+#endif
+}
+
+bool ComNetLinkGeneric::sendMessage(int remote_id, int type, int cmd,
+                                    int data_type, const void* data, int data_size)
+{
+#if __linux__==1
+    int gnl_data_size = NLA_ALIGN(NLA_HDRLEN + data_size + GENL_HDRLEN) ;
+    int total_size = NLMSG_SPACE(gnl_data_size);
+    uint8* buf = new uint8[total_size]();
+    struct nlmsghdr* nl_header = (struct nlmsghdr*)buf;
+    nl_header->nlmsg_len = NLMSG_LENGTH(gnl_data_size);
+    nl_header->nlmsg_type = type;
+    nl_header->nlmsg_flags = NLM_F_REQUEST;
+    nl_header->nlmsg_pid = com_process_get_pid();
+    nl_header->nlmsg_seq = 0;
+
+    struct genlmsghdr* gnl_header = (struct genlmsghdr*)NLMSG_DATA(nl_header);
+    gnl_header->cmd = cmd;
+    gnl_header->version = 1;
+
+    struct nlattr* gnl_attr = (struct nlattr*)((char*)gnl_header + GENL_HDRLEN);
+    gnl_attr->nla_type = data_type;
+    gnl_attr->nla_len = NLA_HDRLEN + data_size;
+    memcpy((char*)gnl_attr + NLA_HDRLEN, data, data_size);
+
+    struct sockaddr_nl addr_remote;
+    memset(&addr_remote, 0, sizeof(struct sockaddr_nl));
+    addr_remote.nl_family = AF_NETLINK;
+    addr_remote.nl_pid = remote_id;
+    addr_remote.nl_groups = 0;
+
+    int size_sent = 0;
+    do
+    {
+        int ret = sendto(sd, buf + size_sent, total_size - size_sent, 0, (struct sockaddr*)&addr_remote, sizeof(addr_remote));
+        if(ret <= 0)
+        {
+            delete[] buf;
+            return false;
+        }
+        size_sent += ret;
+    }
+    while(size_sent < total_size);
+    delete[] buf;
+
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool ComNetLinkGeneric::sendMessage(int remote_id, const void* data, int data_size)
+{
+    return sendMessage(remote_id, family_id, 1, 1, data, data_size);
+}
+
+ComBytes ComNetLinkGeneric::recvMessage(int timeout_ms)
+{
+#if __linux__==1
+    if(timeout_ms <= 0)
+    {
+        timeout_ms = 1000;
+    }
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(sd, &readfds);
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    int select_rtn = select(sd + 1, &readfds, NULL, NULL, &tv);
+    //如果对端关闭了连接,select的返回值可能为1,且errno为2
+    if(select_rtn < 0)
+    {
+        LOG_W("select() failed,ret=%d,errno=%d:%s", select_rtn, errno, strerror(errno));
+        return ComBytes();
+    }
+    if(select_rtn == 0)
+    {
+        LOG_T("select() timeout");
+        return ComBytes();
+    }
+    if(FD_ISSET(sd, &readfds) == 0)
+    {
+        LOG_D("select() no data");
+        return ComBytes();
+    }
+
+    int size = 0;
+    int ret = 0;
+    while((ret = recvfrom(sd, buf + size, buf_size - size, MSG_DONTWAIT, NULL, NULL)) > 0)
+    {
+        size += ret;
+    }
+#endif
+    return ComBytes(buf, size);
+}
+
+void ComNetLinkGeneric::onMessage(int sender_id, const uint8* data, int data_size)
+{
+    LOG_I("sender=%d,data_size=%d", sender_id, data_size);
+}
+
+void ComNetLinkGeneric::ThreadRx(ComNetLinkGeneric* ctx)
+{
+#if __linux__==1
+    if(ctx == NULL)
+    {
+        return;
+    }
+
+    while(ctx->thread_rx_running)
+    {
+        ComBytes result = ctx->recvMessage(1000);
+        if(result.getDataSize() <= (int)(NLMSG_HDRLEN + GENL_HDRLEN + NLA_HDRLEN))
+        {
+            continue;
+        }
+        struct nlmsghdr* nl_header = (struct nlmsghdr*)result.getData();
+        if(nl_header == NULL)
+        {
+            LOG_E("failed");
+            continue;
+        }
+        struct genlmsghdr* gnl_header = (struct genlmsghdr*)NLMSG_DATA(nl_header);
+        if(gnl_header == NULL)
+        {
+            LOG_E("failed");
+            continue;
+        }
+
+        struct nlattr* nla = (struct nlattr*)((char*)gnl_header + GENL_HDRLEN);
+        if(nla == NULL || nla->nla_len < NLA_HDRLEN)
+        {
+            LOG_E("failed");
+            continue;
+        }
+        ctx->onMessage(nl_header->nlmsg_pid, (uint8*)nla + NLA_HDRLEN, nla->nla_len - NLA_HDRLEN);
+    }
+#endif
+}
 

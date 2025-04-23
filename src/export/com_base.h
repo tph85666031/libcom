@@ -173,19 +173,25 @@ COM_EXPORT std::string& com_string_to_upper(std::string& str);
 COM_EXPORT std::string& com_string_to_lower(std::string& str);
 COM_EXPORT char* com_string_to_upper(char* str);
 COM_EXPORT char* com_string_to_lower(char* str);
-COM_EXPORT uint32 com_ipv4_from_string(const char* ip_str);
-COM_EXPORT std::string com_ipv4_to_string(uint32 ip);
 COM_EXPORT bool com_string_replace(char* str, char from, char to);
 COM_EXPORT bool com_string_replace(std::string& str, const char* from, const char* to);
 COM_EXPORT int com_string_len_utf8(const char* str);
 COM_EXPORT int com_string_len(const char* str);
 COM_EXPORT int com_string_size(const char* str);
 COM_EXPORT bool com_string_is_empty(const char* str);
-COM_EXPORT bool com_string_is_ipv4(const char* ip);
 COM_EXPORT bool com_string_is_utf8(const std::string& str);
 COM_EXPORT bool com_string_is_utf8(const char* str, int len = 0);
 COM_EXPORT std::string com_string_format(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 COM_EXPORT std::wstring com_wstring_format(const wchar_t* fmt, ...);
+
+COM_EXPORT bool com_string_is_ipv4(const char* str);
+COM_EXPORT bool com_string_is_ipv6(const char* str);
+COM_EXPORT bool com_string_to_ip(const char* str, struct sockaddr_storage& addr);
+COM_EXPORT bool com_string_from_ip(const char* str, struct sockaddr_storage& addr);
+COM_EXPORT bool com_string_to_ipv4(const char* str, uint32& ipv4);
+COM_EXPORT bool com_string_to_ipv6(const char* str, uint16 ipv6[8]);
+COM_EXPORT std::string com_string_from_ipv4(uint32 ipv4);
+COM_EXPORT std::string com_string_from_ipv6(uint16 ipv6[8]);
 
 COM_EXPORT int com_snprintf(char* buf, int buf_size, const char* fmt, ...) __attribute__((format(printf, 3, 4)));
 COM_EXPORT std::string com_bytes_to_hexstring(const uint8* data, int size);

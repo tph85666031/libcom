@@ -1246,28 +1246,6 @@ bool com_string_is_empty(const char* str)
     return (str == NULL || str[0] == '\0');
 }
 
-bool com_string_is_ipv4(const char* ip)
-{
-    if(ip == NULL)
-    {
-        return false;
-    }
-    int ip_val[4];
-    if(sscanf(ip, "%d.%d.%d.%d", ip_val, ip_val + 1, ip_val + 2, ip_val + 3) != 4)
-    {
-        return false;
-    }
-
-    for(int i = 0; i < 4; i++)
-    {
-        if(ip_val[i] < 0 || ip_val[i] > 255)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool com_string_is_utf8(const std::string& str)
 {
     return com_string_is_utf8(str.c_str(), str.length());
@@ -1391,6 +1369,208 @@ bool com_string_is_utf8(const char* str, int len)
     return true;
 }
 
+bool com_string_is_ipv4(const char* str)
+{
+    if(str == NULL)
+    {
+        return false;
+    }
+    int ip_val[4];
+    if(sscanf(str, "%d.%d.%d.%d", ip_val, ip_val + 1, ip_val + 2, ip_val + 3) != 4)
+    {
+        return false;
+    }
+
+    for(int i = 0; i < 4; i++)
+    {
+        if(ip_val[i] < 0 || ip_val[i] > 255)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool com_string_is_ipv6(const char* str)
+{
+    int seg_count = 0;
+    int double_colon = 0;
+    char copy[40];
+    strncpy(copy, str, 39);
+
+    // 检查压缩符号
+    if(strstr(copy, "::"))
+    {
+        if(strstr(strstr(copy, "::") + 2, "::"))
+        {
+            return false;
+        }
+        double_colon = 1;
+    }
+
+    char* token = strtok(copy, ":");
+    while(token)
+    {
+        // 字段长度校验
+        size_t len = strlen(token);
+        if(len < 1 || len > 4)
+        {
+            return false;
+        }
+
+        // 十六进制字符校验
+        for(char* p = token; *p; p++)
+        {
+            if(!isxdigit(*p))
+            {
+                return false;
+            }
+        }
+
+        token = strtok(nullptr, ":");
+        seg_count++;
+    }
+
+    // 段数校验（考虑压缩情况）
+    if(double_colon)
+    {
+        return seg_count <= 7 && seg_count >= 1;
+    }
+    return seg_count == 8;
+}
+
+bool com_string_to_ipv4(const char* str, uint32& ipv4)
+{
+    if(str == NULL || str[0] == '\0')
+    {
+        return false;
+    }
+    uint32 ip_val[4];
+    int ret = sscanf(str, "%u.%u.%u.%u",
+                     &ip_val[0], &ip_val[1], &ip_val[2], &ip_val[3]);
+    if(ret != 4)
+    {
+        return false;
+    }
+    if(ip_val[0] > 255 || ip_val[1] > 255 || ip_val[2] > 255 || ip_val[3] > 255)
+    {
+        return false;
+    }
+    ipv4 = (ip_val[0] << 24) | (ip_val[1] << 16) | (ip_val[2] << 8) | ip_val[3];
+    return true;
+}
+
+bool com_string_to_ipv6(const char* str, uint16 ipv6[8])
+{
+    const char* p = str;
+    int seg_count = 0;      // 已解析的段数
+    int double_colon = -1;  // 双冒号位置（-1表示不存在）
+    uint16_t segments[8] = {0};
+    int current_seg_len = 0; // 当前段的字符长度
+    bool in_compressed = false;
+
+    // 第一阶段：解析所有段并检测压缩符
+    while(*p)
+    {
+        if(*p == ':')
+        {
+            if(*(p + 1) == ':')
+            {
+                if(double_colon != -1)
+                {
+                    return false;    // 多个压缩符[7,8](@ref)
+                }
+                double_colon = seg_count;
+                p += 2; // 跳过两个冒号
+                in_compressed = true;
+                continue;
+            }
+            // 普通冒号分隔符
+            if(current_seg_len == 0)
+            {
+                return false;    // 空段错误（如 ::1: ）
+            }
+            seg_count++;
+            current_seg_len = 0;
+            p++;
+        }
+        else if(std::isxdigit(*p))
+        {
+            if(current_seg_len >= 4)
+            {
+                return false;    // 段超长[7](@ref)
+            }
+            // 转换十六进制字符[2](@ref)
+            uint16_t val = (*p >= 'A' ? (*p | 0x20) - 'a' + 10 :
+                            *p >= 'a' ? *p - 'a' + 10 : *p - '0');
+            segments[seg_count] = segments[seg_count] * 16 + val;
+            current_seg_len++;
+            p++;
+        }
+        else
+        {
+            return false; // 非法字符[8](@ref)
+        }
+
+        if(seg_count >= 8)
+        {
+            return false;    // 段数超限[8](@ref)
+        }
+    }
+
+    // 处理末尾未闭合段
+    if(current_seg_len > 0)
+    {
+        seg_count++;
+    }
+
+    // 第二阶段：处理压缩符逻辑
+    if(double_colon != -1)
+    {
+        const int total_segs = seg_count + (in_compressed ? 0 : 1);
+        const int expand_count = 8 - total_segs;
+        if(expand_count < 0)
+        {
+            return false;    // 段数超限[8](@ref)
+        }
+
+        // 右移现有段并填充零段
+        memmove(&segments[double_colon + expand_count],
+                &segments[double_colon],
+                (seg_count - double_colon)*sizeof(uint16_t));
+        memset(&segments[double_colon], 0, expand_count * sizeof(uint16_t));
+        seg_count = 8;
+    }
+
+    // 最终段数校验
+    if(seg_count != 8)
+    {
+        return false;    // 段数不足[8](@ref)
+    }
+
+    // 输出结果
+    memcpy(ipv6, segments, 8 * sizeof(uint16_t));
+    return true;
+}
+
+std::string com_string_from_ipv4(uint32 ipv4)
+{
+    static char str[64];
+    snprintf(str, sizeof(str),
+             "%u.%u.%u.%u", (ipv4) & 0xFF, ((ipv4) >> 8) & 0xFF,
+             ((ipv4) >> 16) & 0xFF, ((ipv4) >> 24) & 0xFF);
+    return str;
+}
+
+std::string com_string_from_ipv6(uint16 ipv6[8])
+{
+    static char str[128];
+    snprintf(str, sizeof(str),
+             "%u:%u:%u:%u:%u:%u:%u:%u",
+             ipv6[0], ipv6[1], ipv6[2], ipv6[3],
+             ipv6[4], ipv6[5], ipv6[6], ipv6[7]);
+    return str;
+}
 
 //返回值为已写入buf的长度，不包括末尾的\0
 int com_snprintf(char* buf, int buf_size, const char* fmt, ...)
@@ -2030,34 +2210,6 @@ GPS com_gps_gcj02_to_bd09(double longitude, double latitude)
     gps.latitude = z * sin(theta) + 0.006;
     gps.longitude = z * cos(theta) + 0.0065;
     return gps;
-}
-
-//ip是大端结构
-uint32 com_ipv4_from_string(const char* ip_str)
-{
-    uint32 ip[4];
-    int ret = sscanf(ip_str, "%u.%u.%u.%u",
-                     &ip[0], &ip[1], &ip[2], &ip[3]);
-    if(ret != 4)
-    {
-        return 0;
-    }
-    if(ip[0] > 255 || ip[1] > 255 || ip[2] > 255 || ip[3] > 255)
-    {
-        return 0;
-    }
-    uint32 val = 0;
-    val = (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3] << 0);
-    return val;
-}
-
-std::string com_ipv4_to_string(uint32 ip)
-{
-    static char str[64];
-    snprintf(str, sizeof(str), "%u.%u.%u.%u",
-             (ip >> 0) & 0xFF, ((ip) >> 8) & 0xFF,
-             ((ip) >> 16) & 0xFF, ((ip) >> 24) & 0xFF);
-    return str;
 }
 
 std::string com_get_bin_name()
