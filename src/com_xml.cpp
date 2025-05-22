@@ -470,7 +470,7 @@ static void plist_other_to_json(CJsonObject& json, std::string& key, XMLElement*
     }
     else if(com_string_equal(ele->Name(), "data"))
     {
-        json.Add(key, Base64::Decode(ele->GetText()));
+        json.Add(key, ComBase64::Decode(ele->GetText()));
     }
 }
 
@@ -527,7 +527,7 @@ static void plist_other_to_json(CJsonObject& json, XMLElement* ele)
     }
     else if(com_string_equal(ele->Name(), "data"))
     {
-        json.Add(Base64::Decode(ele->GetText()));
+        json.Add(ComBase64::Decode(ele->GetText()));
     }
 }
 

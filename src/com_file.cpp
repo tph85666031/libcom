@@ -88,12 +88,6 @@ static bool dir_list(const char* dir_root, std::map<std::string, int>& list, con
     struct dirent* ptr = NULL;
     while((ptr = readdir(dir)) != NULL)
     {
-#if __ANDROID__ != 1
-        if(ptr->d_name == NULL)
-        {
-            continue;
-        }
-#endif
         std::string path = dir_root;
         if(path.back() != '/')
         {
@@ -459,12 +453,6 @@ int com_dir_remove(const char* dir_path)
     struct dirent* ptr = NULL;
     while((ptr = readdir(dir)) != NULL)
     {
-#if __ANDROID__ != 1
-        if(ptr->d_name == NULL)
-        {
-            continue;
-        }
-#endif
         if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0)
         {
             continue;
