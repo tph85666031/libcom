@@ -376,8 +376,10 @@ ComBytes ComNetLinkGeneric::recvMessage(int timeout_ms)
     {
         size += ret;
     }
+	return ComBytes(buf, size);
+#else
+    return ComBytes();
 #endif
-    return ComBytes(buf, size);
 }
 
 void ComNetLinkGeneric::onMessage(int sender_id, const uint8* data, int data_size)
