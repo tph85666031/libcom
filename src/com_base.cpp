@@ -3218,7 +3218,11 @@ bool Message::operator==(const Message& msg)
     }
     for(auto it = this->datas.begin(); it != this->datas.end(); it++)
     {
-        if(msg.datas.count(it->first) <= 0)
+        if(msg.datas.count(it->first) != 0)
+        {
+            return false;
+        }
+        if(msg.datas.at(it->first) == it->second)
         {
             return false;
         }

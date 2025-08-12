@@ -877,7 +877,7 @@ std::string com_thread_get_name()
 ComThreadPool::ComThreadPool()
 {
     thread_mgr_running = false;
-    allow_duplicate_message = false;
+    allow_duplicate_message = true;
     min_thread_count = 2;
     max_thread_count = 10;
     queue_size_per_thread = 5;

@@ -174,7 +174,7 @@ void com_log_uninit(void)
 
 void com_log_output(int level, const char* fmt, ...)
 {
-    if(fmt == NULL)
+    if(fmt == NULL || level < log_level)
     {
         return;
     }
@@ -197,11 +197,6 @@ void com_log_output(int level, const char* fmt, ...)
     if(fc != NULL)
     {
         fc(level, str.c_str());
-        return;
-    }
-
-    if(level < log_level)
-    {
         return;
     }
 
