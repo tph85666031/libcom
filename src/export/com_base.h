@@ -157,7 +157,7 @@ COM_EXPORT bool com_strncmp_ignore_case(const char* str1, const char* str2, int 
 COM_EXPORT bool com_strncmp(const char* str1, const char* str2, int size);
 COM_EXPORT bool com_string_equal(const char* a, const char* b);
 COM_EXPORT bool com_string_equal_ignore_case(const char* a, const char* b);
-COM_EXPORT std::vector<std::string> com_string_split(const char* str, const char* delim);
+COM_EXPORT std::vector<std::string> com_string_split(const char* str, const char* delim, bool keep_empty = true);
 
 COM_EXPORT std::string& com_string_trim_left(std::string& str, const char* t = " \t\n\r\f\v");
 COM_EXPORT std::string& com_string_trim_right(std::string& str, const char* t = " \t\n\r\f\v");

@@ -365,7 +365,7 @@ bool com_run_shell_in_thread(const char* fmt, ...)
     return true;
 }
 
-std::vector<std::string> com_string_split(const char* str, const char* delim)
+std::vector<std::string> com_string_split(const char* str, const char* delim, bool keep_empty)
 {
     std::vector<std::string> vals;
     if(str != NULL && delim != NULL)
@@ -380,11 +380,17 @@ std::vector<std::string> com_string_split(const char* str, const char* delim)
             if(pos == std::string::npos)
             {
                 std::string val = orgin.substr(pos_pre);
-                vals.push_back(val);
+                if(keep_empty || val.empty() == false)
+                {
+                    vals.push_back(val);
+                }
                 break;
             }
             std::string val = orgin.substr(pos_pre, pos - pos_pre);
-            vals.push_back(val);
+            if(keep_empty || val.empty() == false)
+            {
+                vals.push_back(val);
+            }
             pos_pre = pos + delim_len;
         }
     }
