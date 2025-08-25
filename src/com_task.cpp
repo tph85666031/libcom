@@ -16,7 +16,6 @@ Task::Task(std::string name, Message msg)
 
 Task::~Task()
 {
-    stopTask();
 }
 
 void Task::startTask()
@@ -25,9 +24,18 @@ void Task::startTask()
     thread_runner = std::thread(TaskRunner, this);
 }
 
-void Task::stopTask()
+void Task::stopTask(bool force)
 {
     running = false;
+    if(force)
+    {
+        mutex_msgs.lock();
+        while(msgs.empty() == false)
+        {
+            msgs.pop();
+        }
+        mutex_msgs.unlock();
+    }
     condition.notifyOne();
     if(thread_runner.joinable())
     {
@@ -136,7 +144,7 @@ bool TaskManager::isTaskExist(const std::string& task_name)
     return isTaskExist(task_name.c_str());
 }
 
-void TaskManager::destroyTask(const char* task_name_wildcard)
+void TaskManager::destroyTask(const char* task_name_wildcard, bool force)
 {
     if(task_name_wildcard == NULL)
     {
@@ -157,19 +165,19 @@ void TaskManager::destroyTask(const char* task_name_wildcard)
             it++;
             continue;
         }
-        t->stopTask();
+        t->stopTask(force);
         delete t;
         it = tasks.erase(it);
     }
     mutex_tasks.unlock();
 }
 
-void TaskManager::destroyTask(const std::string& task_name_wildcard)
+void TaskManager::destroyTask(const std::string& task_name_wildcard, bool force)
 {
-    destroyTask(task_name_wildcard.c_str());
+    destroyTask(task_name_wildcard.c_str(), force);
 }
 
-void TaskManager::destroyTaskAll()
+void TaskManager::destroyTaskAll(bool force)
 {
     LOG_D("called");
     mutex_tasks.lock();
@@ -179,7 +187,7 @@ void TaskManager::destroyTaskAll()
         Task* t = it->second;
         if(t != NULL)
         {
-            t->stopTask();
+            t->stopTask(force);
             delete t;
         }
     }

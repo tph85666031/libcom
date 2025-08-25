@@ -53,7 +53,7 @@ protected:
 private:
     void pushTaskMessage(const Message& msg);
     void startTask();
-    void stopTask();
+    void stopTask(bool force = false);
     static void TaskRunner(Task* task);
 private:
     std::string name;
@@ -74,9 +74,9 @@ public:
     virtual ~TaskManager();
     bool isTaskExist(const char* task_name);
     bool isTaskExist(const std::string& task_name);
-    void destroyTask(const char* task_name_wildcard);
-    void destroyTask(const std::string& task_name_wildcard);
-    void destroyTaskAll();
+    void destroyTask(const char* task_name_wildcard, bool force = false);
+    void destroyTask(const std::string& task_name_wildcard, bool force = false);
+    void destroyTaskAll(bool force = false);
     ComBytes sendMessageAndWait(const char* task_name, Message& msg, int timeout_ms = 1000);
     ComBytes sendMessageAndWait(const std::string& task_name, Message& msg, int timeout_ms = 1000);
     void sendMessage(const char* task_name_wildcard, const Message& msg);
