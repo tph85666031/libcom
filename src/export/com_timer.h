@@ -42,7 +42,7 @@ private:
 };
 typedef ComTimer DEPRECATED("Use ComTimer instead") CPPTimer;
 
-class COM_EXPORT ComTimerManager : public ComThreadPool
+class COM_EXPORT ComTimerManager : public ComThreadPool<Message>
 {
     friend class ComTimer;
 public:
