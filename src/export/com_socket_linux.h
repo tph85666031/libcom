@@ -5,7 +5,7 @@
 #include "com_base.h"
 #include "com_thread.h"
 
-class COM_EXPORT ComTcpServer: public ComThreadPool
+class COM_EXPORT ComTcpServer: public ComThreadPool<Message>
 {
 public:
     ComTcpServer();
