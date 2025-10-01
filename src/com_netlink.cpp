@@ -233,12 +233,13 @@ int ComNetLinkGeneric::openLink(const char* name, int id)
         return -1;
     }
     this->name = name;
+    this->id = (id <= 0 ? com_process_get_pid() : id);
 
 #if __linux__==1
-    sd = socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
-    if(sd <= 0)
+    sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
+    if(sock <= 0)
     {
-        LOG_E("failed to open netlink socket,ret=%d", sd);
+        LOG_E("failed to open netlink socket,ret=%d", sock);
         return -1;
     }
 
@@ -246,9 +247,9 @@ int ComNetLinkGeneric::openLink(const char* name, int id)
     memset(&addr_local, 0, sizeof(struct sockaddr_nl));
     addr_local.nl_family = AF_NETLINK;
     addr_local.nl_groups = 0;
-    addr_local.nl_pid = (id <= 0 ? com_process_get_pid() : id);
+    addr_local.nl_pid = this->id;
 
-    int ret = bind(sd, (struct sockaddr*)&addr_local, sizeof(sockaddr_nl));
+    int ret = bind(sock, (struct sockaddr*)&addr_local, sizeof(sockaddr_nl));
     if(ret < 0)
     {
         LOG_E("bind failed,ret=%d", ret);
@@ -273,10 +274,10 @@ int ComNetLinkGeneric::openLink(const char* name, int id)
 void ComNetLinkGeneric::closeLink()
 {
 #if __linux__==1
-    if(sd > 0)
+    if(sock > 0)
     {
-        close(sd);
-        sd = 0;
+        close(sock);
+        sock = 0;
     }
     thread_rx_running = false;
     if(thread_rx.joinable())
@@ -297,7 +298,7 @@ bool ComNetLinkGeneric::sendMessage(int remote_id, int family_id, int cmd,
     nl_header->nlmsg_len = NLMSG_LENGTH(gnl_data_size);
     nl_header->nlmsg_type = family_id;
     nl_header->nlmsg_flags = NLM_F_REQUEST;
-    nl_header->nlmsg_pid = com_process_get_pid();
+    nl_header->nlmsg_pid = this->id;
     nl_header->nlmsg_seq = 0;
 
     struct genlmsghdr* gnl_header = (struct genlmsghdr*)NLMSG_DATA(nl_header);
@@ -318,7 +319,7 @@ bool ComNetLinkGeneric::sendMessage(int remote_id, int family_id, int cmd,
     int size_sent = 0;
     do
     {
-        int ret = sendto(sd, buf + size_sent, total_size - size_sent, 0, (struct sockaddr*)&addr_remote, sizeof(addr_remote));
+        int ret = sendto(sock, buf + size_sent, total_size - size_sent, 0, (struct sockaddr*)&addr_remote, sizeof(addr_remote));
         if(ret <= 0)
         {
             delete[] buf;
@@ -355,11 +356,11 @@ ComBytes ComNetLinkGeneric::recvMessage(int timeout_ms)
     }
     fd_set readfds;
     FD_ZERO(&readfds);
-    FD_SET(sd, &readfds);
+    FD_SET(sock, &readfds);
     struct timeval tv;
     tv.tv_sec = timeout_ms / 1000;
     tv.tv_usec = (timeout_ms % 1000) * 1000;
-    int select_rtn = select(sd + 1, &readfds, NULL, NULL, &tv);
+    int select_rtn = select(sock + 1, &readfds, NULL, NULL, &tv);
     //如果对端关闭了连接,select的返回值可能为1,且errno为2
     if(select_rtn < 0)
     {
@@ -371,7 +372,7 @@ ComBytes ComNetLinkGeneric::recvMessage(int timeout_ms)
         LOG_T("select() timeout");
         return ComBytes();
     }
-    if(FD_ISSET(sd, &readfds) == 0)
+    if(FD_ISSET(sock, &readfds) == 0)
     {
         LOG_D("select() no data");
         return ComBytes();
@@ -379,7 +380,7 @@ ComBytes ComNetLinkGeneric::recvMessage(int timeout_ms)
 
     int size = 0;
     int ret = 0;
-    while((ret = recvfrom(sd, buf + size, buf_size - size, MSG_DONTWAIT, NULL, NULL)) > 0)
+    while((ret = recvfrom(sock, buf + size, buf_size - size, MSG_DONTWAIT, NULL, NULL)) > 0)
     {
         size += ret;
     }
@@ -405,30 +406,38 @@ void ComNetLinkGeneric::ThreadRx(ComNetLinkGeneric* ctx)
     while(ctx->thread_rx_running)
     {
         ComBytes result = ctx->recvMessage(1000);
-        if(result.getDataSize() <= (int)(NLMSG_HDRLEN + GENL_HDRLEN + NLA_HDRLEN))
+        uint8* data = result.getData();
+        int data_size = result.getDataSize();
+        if(data == NULL || data_size <= (int)(NLMSG_HDRLEN + GENL_HDRLEN + NLA_HDRLEN))
         {
             continue;
         }
-        struct nlmsghdr* nl_header = (struct nlmsghdr*)result.getData();
-        if(nl_header == NULL)
+        do
         {
-            LOG_E("failed");
-            continue;
-        }
-        struct genlmsghdr* gnl_header = (struct genlmsghdr*)NLMSG_DATA(nl_header);
-        if(gnl_header == NULL)
-        {
-            LOG_E("failed");
-            continue;
-        }
+            struct nlmsghdr* nl_header = (struct nlmsghdr*)data;
+            if(nl_header == NULL || nl_header->nlmsg_len <= NLMSG_HDRLEN)
+            {
+                LOG_E("failed");
+                break;
+            }
+            struct genlmsghdr* gnl_header = (struct genlmsghdr*)NLMSG_DATA(nl_header);
+            if(gnl_header == NULL)
+            {
+                LOG_E("failed");
+                break;
+            }
 
-        struct nlattr* nla = (struct nlattr*)((char*)gnl_header + GENL_HDRLEN);
-        if(nla == NULL || nla->nla_len < NLA_HDRLEN)
-        {
-            LOG_E("failed");
-            continue;
+            struct nlattr* nla = (struct nlattr*)((char*)gnl_header + GENL_HDRLEN);
+            if(nla == NULL || nla->nla_len < NLA_HDRLEN)
+            {
+                LOG_E("failed");
+                break;
+            }
+            ctx->onMessage(nl_header->nlmsg_pid, (uint8*)nla + NLA_HDRLEN, nla->nla_len - NLA_HDRLEN);
+            data_size -= nl_header->nlmsg_len;
+            data += nl_header->nlmsg_len;
         }
-        ctx->onMessage(nl_header->nlmsg_pid, (uint8*)nla + NLA_HDRLEN, nla->nla_len - NLA_HDRLEN);
+        while(data_size > 0);
     }
 #endif
 }

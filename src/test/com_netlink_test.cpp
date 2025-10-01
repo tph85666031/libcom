@@ -17,6 +17,16 @@ void com_netlink_unit_test_suit(void** state)
     MyComNetLinkGeneric lnkg;
     lnkg.openLink("generic_test", 133);
     lnkg.sendMessage("message from user", sizeof("message from user"));
+    
+
+    MyComNetLinkGeneric lnkg2;
+    lnkg2.openLink("generic_test", 134);
+    lnkg2.sendMessage("message from user", sizeof("message from user"));
+
+    lnkg.sendMessage(134, "[1]message from 133", sizeof("[1]message from 133"));
+    lnkg.sendMessage(134, "[1]message from 133", sizeof("[1]message from 133"));
+    lnkg2.sendMessage(133, "[2]message from 134", sizeof("[2]message from 134"));
+    lnkg2.sendMessage(133, "[3]message from 134", sizeof("[2]message from 134"));
     getchar();
 #endif
 }

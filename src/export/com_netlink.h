@@ -43,7 +43,8 @@ private:
     virtual void onMessage(int sender_id, const uint8* data, int data_size);
 
 private:
-    int sd = 0;
+    int sock = 0;
+    int id = 0;
     uint8* buf;
     int buf_size = 8192;
     int family_id;
