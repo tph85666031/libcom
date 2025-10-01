@@ -31,8 +31,9 @@ public:
     ComNetLinkGeneric();
     ComNetLinkGeneric(const char* name);
     virtual ~ComNetLinkGeneric();
-    int openLink(const char* name);
+    int openLink(const char* name, int id = 0);
     void closeLink();
+    bool sendMessage(const void* data, int data_size);
     bool sendMessage(int remote_id, const void* data, int data_size);
 private:
     int getFamilyID();

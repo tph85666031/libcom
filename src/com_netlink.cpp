@@ -178,6 +178,7 @@ ComNetLinkGeneric::~ComNetLinkGeneric()
 int ComNetLinkGeneric::getFamilyID()
 {
 #if __linux__==1
+    //向内核的GENL_ID_CTRL family查询name对应的familyID
     if(sendMessage(0, GENL_ID_CTRL, CTRL_CMD_GETFAMILY, CTRL_ATTR_FAMILY_NAME, name.c_str(), name.length() + 1) == false)
     {
         LOG_E("failed");
@@ -225,7 +226,7 @@ int ComNetLinkGeneric::getFamilyID()
     return -1;
 }
 
-int ComNetLinkGeneric::openLink(const char* name)
+int ComNetLinkGeneric::openLink(const char* name, int id)
 {
     if(name == NULL)
     {
@@ -245,7 +246,7 @@ int ComNetLinkGeneric::openLink(const char* name)
     memset(&addr_local, 0, sizeof(struct sockaddr_nl));
     addr_local.nl_family = AF_NETLINK;
     addr_local.nl_groups = 0;
-    addr_local.nl_pid = com_process_get_pid();
+    addr_local.nl_pid = (id <= 0 ? com_process_get_pid() : id);
 
     int ret = bind(sd, (struct sockaddr*)&addr_local, sizeof(sockaddr_nl));
     if(ret < 0)
@@ -285,7 +286,7 @@ void ComNetLinkGeneric::closeLink()
 #endif
 }
 
-bool ComNetLinkGeneric::sendMessage(int remote_id, int type, int cmd,
+bool ComNetLinkGeneric::sendMessage(int remote_id, int family_id, int cmd,
                                     int data_type, const void* data, int data_size)
 {
 #if __linux__==1
@@ -294,7 +295,7 @@ bool ComNetLinkGeneric::sendMessage(int remote_id, int type, int cmd,
     uint8* buf = new uint8[total_size]();
     struct nlmsghdr* nl_header = (struct nlmsghdr*)buf;
     nl_header->nlmsg_len = NLMSG_LENGTH(gnl_data_size);
-    nl_header->nlmsg_type = type;
+    nl_header->nlmsg_type = family_id;
     nl_header->nlmsg_flags = NLM_F_REQUEST;
     nl_header->nlmsg_pid = com_process_get_pid();
     nl_header->nlmsg_seq = 0;
@@ -334,8 +335,14 @@ bool ComNetLinkGeneric::sendMessage(int remote_id, int type, int cmd,
 #endif
 }
 
+bool ComNetLinkGeneric::sendMessage(const void* data, int data_size)
+{
+    return sendMessage(0, family_id, 1, 1, data, data_size);
+}
+
 bool ComNetLinkGeneric::sendMessage(int remote_id, const void* data, int data_size)
 {
+    //本实现不使用Generic Netlink内置的cmd和data_type，完全由上层用户在data中自行定义
     return sendMessage(remote_id, family_id, 1, 1, data, data_size);
 }
 
@@ -376,7 +383,7 @@ ComBytes ComNetLinkGeneric::recvMessage(int timeout_ms)
     {
         size += ret;
     }
-	return ComBytes(buf, size);
+    return ComBytes(buf, size);
 #else
     return ComBytes();
 #endif

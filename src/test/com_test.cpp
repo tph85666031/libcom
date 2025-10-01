@@ -37,6 +37,7 @@ extern void com_plist_unit_test_suit(void** state);
 extern void com_sync_unit_test_suit(void** state);
 extern void com_itp_log_unit_test_suit(void** state);
 extern void com_socket_stringipc_unit_test_suit(void** state);
+extern void com_netlink_unit_test_suit(void** state);
 
 CMUnitTest test_cases_com_lib[] =
 {
@@ -71,7 +72,7 @@ CMUnitTest test_cases_com_lib[] =
     cmocka_unit_test(com_sync_unit_test_suit),
     cmocka_unit_test(com_socket_stringipc_unit_test_suit)
 #else
-    cmocka_unit_test(com_task_unit_test_suit)
+    cmocka_unit_test(com_netlink_unit_test_suit)
 #endif
 };
 
