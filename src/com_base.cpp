@@ -2198,6 +2198,21 @@ bool com_sem_wait(Sem* sem, int timeout_ms)
 #endif
 }
 
+void com_sem_reset(Sem* sem)
+{
+    if(sem == NULL)
+    {
+        return;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    ResetEvent(sem->handle);
+#else
+    while(sem_trywait(&sem->handle) == 0)
+    {
+    }
+#endif
+}
+
 bool com_sem_destroy(Sem* sem)
 {
     if(sem == NULL)
@@ -3237,6 +3252,11 @@ bool ComSem::post()
 bool ComSem::wait(int timeout_ms)
 {
     return com_sem_wait(&sem, timeout_ms);
+}
+
+void ComSem::reset()
+{
+    com_sem_reset(&sem);
 }
 
 ComCondition::ComCondition(const char* name)

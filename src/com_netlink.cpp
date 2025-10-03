@@ -408,6 +408,7 @@ void ComNetLinkGeneric::ThreadRx(ComNetLinkGeneric* ctx)
         ComBytes result = ctx->recvMessage(1000);
         uint8* data = result.getData();
         int data_size = result.getDataSize();
+        LOG_I("data=%p,data_size=%d", data, data_size);
         if(data == NULL || data_size <= (int)(NLMSG_HDRLEN + GENL_HDRLEN + NLA_HDRLEN))
         {
             continue;

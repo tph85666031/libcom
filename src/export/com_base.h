@@ -232,6 +232,7 @@ COM_EXPORT bool com_sem_uninit(Sem* sem);//通过init创建的由uninit删除
 COM_EXPORT Sem* com_sem_create(const char* name = "Unknown");//通过create（malloc）来创建
 COM_EXPORT bool com_sem_post(Sem* sem);
 COM_EXPORT bool com_sem_wait(Sem* sem, int timeout_ms = 0);
+COM_EXPORT void com_sem_reset(Sem* sem);
 COM_EXPORT bool com_sem_destroy(Sem* sem);//通过create创建的由destroy删除
 
 COM_EXPORT std::string com_get_bin_name();
@@ -353,6 +354,7 @@ public:
     const char* getName();
     bool post();
     bool wait(int timeout_ms = 0);
+    void reset();
 private :
     Sem sem;
 };

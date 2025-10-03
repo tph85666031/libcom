@@ -180,6 +180,7 @@ bool SyncAdapter::syncPost(uint64 uuid, const void* data, int data_size)
     }
     if(data != NULL && data_size > 0)
     {
+        sync.data.clear();
         sync.data.append((uint8*)data, data_size);
     }
     return sync.sem->post();
@@ -211,6 +212,7 @@ void SyncAdapter::pushSem(ComSem* sem)
     }
     else
     {
+        sem->reset();
         sem_cache.push(sem);
     }
 }
