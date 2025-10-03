@@ -1578,6 +1578,140 @@ std::string com_string_from_ipv6(uint16 ipv6[8])
     return str;
 }
 
+bool com_string_to_sockaddr(const char* ip, uint16 port, struct sockaddr_storage* addr)
+{
+    if(ip == NULL || addr == NULL)
+    {
+        return false;
+    }
+    memset(addr, 0, sizeof(struct sockaddr_storage));
+#if defined(_WIN32) || defined(_WIN64)
+    // Windows系统使用WSAStringToAddressA
+    socklen_t addr_len = 0;
+    int ret = WSAStringToAddressA((LPSTR)ip, AF_UNSPEC, NULL, (LPSOCKADDR)addr, (LPDWORD)&addr_len);
+    if(ret != 0)
+    {
+        return false;
+    }
+    if(addr->ss_family != AF_INET && addr->ss_family != AF_INET6)
+    {
+        return false;
+    }
+    if(port != 0)
+    {
+        if(addr->ss_family == AF_INET)
+        {
+            ((struct sockaddr_in*)addr)->sin_port = htons(port);
+        }
+        else if(addr->ss_family == AF_INET6)
+        {
+            ((struct sockaddr_in6*)addr)->sin6_port = htons(port);
+        }
+    }
+#else
+    if(inet_pton(AF_INET, ip, &((struct sockaddr_in*)addr)->sin_addr) == 1)
+    {
+        // 检测为IPv4
+        addr->ss_family = AF_INET;
+        ((struct sockaddr_in*)addr)->sin_port = htons(port);
+        //addr_len = sizeof(struct sockaddr_in);
+    }
+    else if(inet_pton(AF_INET6, ip, &((struct sockaddr_in6*)addr)->sin6_addr) == 1)
+    {
+        // 检测为IPv6
+        addr->ss_family = AF_INET6;
+        ((struct sockaddr_in6*)addr)->sin6_port = htons(port);
+        //addr_len = sizeof(struct sockaddr_in6);
+    }
+    else
+    {
+        // 无效地址
+        return false;
+    }
+#endif
+    return true;
+}
+
+bool com_string_to_sockaddr(const char* ip_port, struct sockaddr_storage& addr)
+{
+#if __linux__==1
+    if(ip_port == NULL)
+    {
+        return false;
+    }
+    uint16 port = 0;
+    char ip_str[INET6_ADDRSTRLEN] = {0};
+    do
+    {
+        // 尝试解析带括号的IPv6格式：[ip]:port
+        if(sscanf(ip_port, "[%39[^]]]:%hu", ip_str, &port) == 2)
+        {
+            // 成功匹配IPv6带括号格式（39是IPv6最大长度）
+            break;
+        }
+
+        // 尝试解析IPv4格式：ip:port（如192.168.1.1:80）
+        if(sscanf(ip_port, "%15[^:]:%hu", ip_str, &port) == 2)
+        {
+            // 成功匹配IPv4格式（15是IPv4最大长度）
+            break;
+        }
+
+        // 尝试解析不带括号的IPv6格式：ip:port（如2001:db8::1:8080）
+        // 注意：这种格式可能有歧义（IPv6地址本身含冒号），仅在最后一段是端口时有效
+        if(sscanf(ip_port, "%39[^:]:%hu", ip_str, &port) == 2)
+        {
+            break;
+        }
+        return false;
+    }
+    while(0);
+    return com_string_to_sockaddr(ip_str, port, &addr);
+#else
+    return com_string_to_sockaddr(ip_port, 0, &addr);
+#endif
+}
+
+bool com_string_to_sockaddr(const char* ip, uint16 port, struct sockaddr_storage& addr)
+{
+    return com_string_to_sockaddr(ip, port, &addr);
+}
+
+std::string com_string_from_sockaddr(struct sockaddr_storage* addr)
+{
+    if(addr == NULL)
+    {
+        return std::string();
+    }
+    uint16 port = 0;
+    char ip_str[INET6_ADDRSTRLEN];
+    memset(ip_str, 0, sizeof(ip_str));
+    if(addr->ss_family == AF_INET)
+    {
+        const struct sockaddr_in* ipv4 = (const struct sockaddr_in*)addr;
+        port = ntohs(ipv4->sin_port);
+        if(inet_ntop(AF_INET, &ipv4->sin_addr, ip_str, sizeof(ip_str)) != NULL)
+        {
+            return com_string_format("%s:%u", ip_str, port);
+        }
+    }
+    else if(addr->ss_family == AF_INET6)
+    {
+        const struct sockaddr_in6* ipv6 = (const struct sockaddr_in6*)addr;
+        port = ntohs(ipv6->sin6_port);
+        if(inet_ntop(AF_INET6, &ipv6->sin6_addr, ip_str, sizeof(ip_str)) != NULL)
+        {
+            return com_string_format("[%s]:%u", ip_str, port);
+        }
+    }
+    return std::string();
+}
+
+std::string com_string_from_sockaddr(struct sockaddr_storage& addr)
+{
+    return com_string_from_sockaddr(&addr);
+}
+
 //返回值为已写入buf的长度，不包括末尾的\0
 int com_snprintf(char* buf, int buf_size, const char* fmt, ...)
 {
