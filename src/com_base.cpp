@@ -1677,7 +1677,7 @@ bool com_string_to_sockaddr(const char* ip, uint16 port, struct sockaddr_storage
     return com_string_to_sockaddr(ip, port, &addr);
 }
 
-std::string com_string_from_sockaddr(struct sockaddr_storage* addr)
+std::string com_string_from_sockaddr(const struct sockaddr_storage* addr)
 {
     if(addr == NULL)
     {
@@ -1707,7 +1707,7 @@ std::string com_string_from_sockaddr(struct sockaddr_storage* addr)
     return std::string();
 }
 
-std::string com_string_from_sockaddr(struct sockaddr_storage& addr)
+std::string com_string_from_sockaddr(const struct sockaddr_storage& addr)
 {
     return com_string_from_sockaddr(&addr);
 }

@@ -192,8 +192,8 @@ COM_EXPORT std::string com_string_from_ipv4(uint32 ipv4);
 COM_EXPORT std::string com_string_from_ipv6(uint16 ipv6[8]);
 COM_EXPORT bool com_string_to_sockaddr(const char* ip, uint16 port, struct sockaddr_storage* addr);
 COM_EXPORT bool com_string_to_sockaddr(const char* ip, uint16 port, struct sockaddr_storage& addr);
-COM_EXPORT std::string com_string_from_sockaddr(struct sockaddr_storage* addr);
-COM_EXPORT std::string com_string_from_sockaddr(struct sockaddr_storage& addr);
+COM_EXPORT std::string com_string_from_sockaddr(const struct sockaddr_storage* addr);
+COM_EXPORT std::string com_string_from_sockaddr(const struct sockaddr_storage& addr);
 
 COM_EXPORT int com_snprintf(char* buf, int buf_size, const char* fmt, ...) __attribute__((format(printf, 3, 4)));
 COM_EXPORT std::string com_bytes_to_hexstring(const uint8* data, int size);
