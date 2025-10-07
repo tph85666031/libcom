@@ -4,6 +4,9 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <time.h>
 #include <direct.h>
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
 #else
 #include <unistd.h> //usleep readlink
 #include <sys/time.h>
@@ -894,7 +897,7 @@ std::string com_string_ansi_to_utf8(const char* ansi)
     if(size)
     {
         str_utf16.resize(size);
-        MultiByteToWideChar(CP_ACP, 0, ansi, -1, &str_utf16[0], str_utf16.size());
+        MultiByteToWideChar(CP_ACP, 0, ansi, -1, &str_utf16[0], (int)str_utf16.size());
     }
 
     return com_wstring_to_utf8(str_utf16).toString();
@@ -921,7 +924,7 @@ std::string com_string_utf8_to_ansi(const char* utf8)
     if(size > 0)
     {
         str_ansi.resize(size);
-        WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, &str_ansi[0], str_ansi.size(), NULL, NULL);
+        WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, &str_ansi[0], (int)str_ansi.size(), NULL, NULL);
     }
     return str_ansi;
 #else
@@ -1023,12 +1026,12 @@ ComBytes com_wstring_to_utf8(const wchar_t* wstr)
     ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
-        result.append((uint8*)wstr, wcslen(wstr) * 2);
+        result.append((uint8*)wstr, (int)wcslen(wstr) * 2);
         result = com_string_utf16_to_utf8(result);
     }
     else
     {
-        result.append((uint8*)wstr, wcslen(wstr) * 4);
+        result.append((uint8*)wstr, (int)wcslen(wstr) * 4);
         result = com_string_utf32_to_utf8(result);
     }
 
@@ -1040,12 +1043,12 @@ ComBytes com_wstring_to_utf8(const std::wstring& wstr)
     ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
-        result.append((uint8*)wstr.data(), wstr.length() * 2);
+        result.append((uint8*)wstr.data(), (int)wstr.length() * 2);
         result = com_string_utf16_to_utf8(result);
     }
     else
     {
-        result.append((uint8*)wstr.data(), wstr.length() * 4);
+        result.append((uint8*)wstr.data(),(int)wstr.length() * 4);
         result = com_string_utf32_to_utf8(result);
     }
 
@@ -1061,11 +1064,11 @@ ComBytes com_wstring_to_utf16(const wchar_t* wstr)
     ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
-        result.append((uint8*)wstr, wcslen(wstr) * 2);
+        result.append((uint8*)wstr, (int)wcslen(wstr) * 2);
     }
     else
     {
-        result.append((uint8*)wstr, wcslen(wstr) * 4);
+        result.append((uint8*)wstr, (int)wcslen(wstr) * 4);
         result = com_string_utf32_to_utf16(result);
     }
 
@@ -1077,11 +1080,11 @@ ComBytes com_wstring_to_utf16(const std::wstring& wstr)
     ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
-        result.append((uint8*)wstr.data(), wstr.length() * 2);
+        result.append((uint8*)wstr.data(), (int)wstr.length() * 2);
     }
     else
     {
-        result.append((uint8*)wstr.data(), wstr.length() * 4);
+        result.append((uint8*)wstr.data(), (int)wstr.length() * 4);
         result = com_string_utf32_to_utf16(result);
     }
 
@@ -1097,12 +1100,12 @@ ComBytes com_wstring_to_utf32(const wchar_t* wstr)
     ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
-        result.append((uint8*)wstr, wcslen(wstr) * 2);
+        result.append((uint8*)wstr, (int)wcslen(wstr) * 2);
         result = com_string_utf16_to_utf32(result);
     }
     else
     {
-        result.append((uint8*)wstr, wcslen(wstr) * 4);
+        result.append((uint8*)wstr, (int)wcslen(wstr) * 4);
     }
 
     return result;
@@ -1113,12 +1116,12 @@ ComBytes com_wstring_to_utf32(const std::wstring& wstr)
     ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
-        result.append((uint8*)wstr.data(), wstr.length() * 2);
+        result.append((uint8*)wstr.data(), (int)wstr.length() * 2);
         result = com_string_utf16_to_utf32(result);
     }
     else
     {
-        result.append((uint8*)wstr.data(), wstr.length() * 4);
+        result.append((uint8*)wstr.data(), (int)wstr.length() * 4);
     }
 
     return result;
@@ -1154,7 +1157,7 @@ ComBytes com_hexstring_to_bytes(const char* str)
     for(size_t i = 0; i < val.length(); i = i + 2)
     {
         memcpy(tmp, val.data() + i, 2);
-        bytes.append(strtoul(tmp, NULL, 16));
+        bytes.append((uint8)strtoul(tmp, NULL, 16));
     }
 
     return bytes;
@@ -1164,7 +1167,7 @@ int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size)
 {
     char* strEnd;
     int m = 0;
-    int len = strlen(str) / 2;
+    int len = (int)strlen(str) / 2;
     int i = 0;
     char tmp[4] = {0};
     if(size < len)
@@ -1175,7 +1178,7 @@ int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size)
     {
         m = i * 2;
         memcpy(tmp, str + m, 2);
-        bytes[i] = strtol(tmp, &strEnd, 16);
+        bytes[i] = (uint8)strtol(tmp, &strEnd, 16);
     }
     return i;
 }
@@ -1235,7 +1238,7 @@ int com_string_len(const char* str)
     {
         return 0;
     }
-    return strlen(str);
+    return (int)strlen(str);
 }
 
 int com_string_size(const char* str)
@@ -1254,7 +1257,7 @@ bool com_string_is_empty(const char* str)
 
 bool com_string_is_utf8(const std::string& str)
 {
-    return com_string_is_utf8(str.c_str(), str.length());
+    return com_string_is_utf8(str.c_str(), (int)str.length());
 }
 
 bool com_string_is_utf8(const char* str, int len)
@@ -1587,8 +1590,8 @@ bool com_string_to_sockaddr(const char* ip, uint16 port, struct sockaddr_storage
     memset(addr, 0, sizeof(struct sockaddr_storage));
 #if defined(_WIN32) || defined(_WIN64)
     // Windows系统使用WSAStringToAddressA
-    socklen_t addr_len = 0;
-    int ret = WSAStringToAddressA((LPSTR)ip, AF_UNSPEC, NULL, (LPSOCKADDR)addr, (LPDWORD)&addr_len);
+    int addr_len = 0;
+    int ret = WSAStringToAddressA((LPSTR)ip, AF_UNSPEC, NULL, (LPSOCKADDR)addr, &addr_len);
     if(ret != 0)
     {
         return false;
@@ -1756,7 +1759,7 @@ void com_sleep_s(uint32 val)
 uint32 com_rand(uint32 min, uint32 max)
 {
     static uint32 seed = 0;
-    srand(com_time_cpu_ms() + (seed++));
+    srand((uint32)com_time_cpu_ms() + (seed++));
     return (uint32)(rand() % ((uint64)max - min + 1) + min);
 }
 
@@ -1779,7 +1782,7 @@ bool com_gettimeofday(struct timeval* tp)
     tm.tm_sec   = wtm.wSecond;
     tm.tm_isdst  = -1;
     clock = mktime(&tm);
-    tp->tv_sec = clock;
+    tp->tv_sec = (long)clock;
     tp->tv_usec = wtm.wMilliseconds * 1000;
     return true;
 #else
@@ -2522,7 +2525,7 @@ std::string com_uuid_generator()
                                         com_time_rtc_us(),
                                         com_time_cpu_us(),
                                         com_rand(0, 0xFFFFFFFF));
-    return ComMD5::Digest(val.data(), val.size()).toHexString(false);
+    return ComMD5::Digest(val.data(), (int)val.size()).toHexString(false);
 }
 
 //计算最大公约数
@@ -2960,7 +2963,7 @@ const uint8* ComBytes::getData() const
 
 int ComBytes::getDataSize() const
 {
-    return buf.size();
+    return (int)buf.size();
 }
 
 bool ComBytes::empty() const
@@ -2995,7 +2998,7 @@ ComBytes& ComBytes::append(const char* data)
 
 ComBytes& ComBytes::append(const std::string& data)
 {
-    return append((uint8*)data.data(), data.size());
+    return append((uint8*)data.data(), (int)data.size());
 }
 
 ComBytes& ComBytes::append(const ComBytes& bytes)
@@ -3092,7 +3095,7 @@ void ComBytes::removeHead(int count)
     }
     if(count > (int)buf.size())
     {
-        count = buf.size();
+        count = (int)buf.size();
     }
     buf.erase(buf.begin(), buf.begin() + count);
 }
@@ -3122,10 +3125,10 @@ bool ComBytes::toFile(const char* file)
     {
         return false;
     }
-    int ret = com_file_write(f, getData(), getDataSize());
+    int64 ret = com_file_write(f, getData(), getDataSize());
     com_file_flush(f);
     com_file_close(f);
-    return (ret == (int)buf.size());
+    return (ret == (int64)buf.size());
 }
 
 std::string ComBytes::toString() const
@@ -3143,7 +3146,7 @@ std::string ComBytes::toHexString(bool upper) const
     std::string str;
     if(buf.size() > 0)
     {
-        str = com_bytes_to_hexstring(&buf[0], buf.size());
+        str = com_bytes_to_hexstring(&buf[0], (int)buf.size());
         if(upper)
         {
             com_string_to_upper(str);
@@ -3469,7 +3472,7 @@ Message& Message::set(const char* key, const std::vector<std::string>& array)
         data.reserve(array.size() * 64);
         for(size_t i = 0; i < array.size(); i++)
         {
-            data += com_bytes_to_hexstring((uint8*)array[i].c_str(), array[i].length()) + ";";
+            data += com_bytes_to_hexstring((uint8*)array[i].c_str(), (int)array[i].length()) + ";";
         }
         if(data.back() == ';')
         {
@@ -3646,7 +3649,7 @@ ComBytes Message::getBytes(const char* key) const
         return bytes;
     }
     const std::string& val = datas.at(key);
-    return ComBytes((uint8*)val.data(), val.length());
+    return ComBytes((uint8*)val.data(), (int)val.length());
 }
 
 uint8* Message::getBytes(const char* key, int& size)
@@ -3656,7 +3659,7 @@ uint8* Message::getBytes(const char* key, int& size)
         return NULL;
     }
     const std::string& val = datas.at(key);
-    size = val.size();
+    size = (int)val.size();
     return (uint8*)val.data();
 }
 
