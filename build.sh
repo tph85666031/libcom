@@ -62,15 +62,12 @@ fi
 #清理环境
 if [ x"${PROJECT_CLEAN}" == x"true" ];then
 	rm -rf ${DIR_ROOT}/tmp/ 2>&1 > /dev/null
-	rm -rf ${DIR_ROOT}/out/ 2>&1 > /dev/null
 	show_message "clean done"
 	echo ""
 	exit 0
 fi
 
 #环境准备
-rm -rf ${DIR_ROOT}/out/* > /dev/null 2>&1
-mkdir -pv ${DIR_ROOT}/out/ > /dev/null 2>&1
 mkdir -pv ${DIR_ROOT}/tmp/ > /dev/null 2>&1
 
 #编译
@@ -85,9 +82,9 @@ fi
 cd ${DIR_ROOT}/tmp
 if [ -d ${DIR_ROOT} ];then
   if [ x"$OS_TYPE" == x"Windows" ];then
-      cmake -A ${BUILD_ARCH} -DBUILD_ARCH=${BUILD_ARCH} -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DOS_TYPE=${OS_TYPE} ${DIR_ROOT} -DCMAKE_WIN32_WINNT=0x0600 && cmake --build . --target package --config ${BUILD_TYPE}
+      cmake -A ${BUILD_ARCH} -DBUILD_ARCH=${BUILD_ARCH} -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DOS_TYPE=${OS_TYPE} ${DIR_ROOT} -DCMAKE_WIN32_WINNT=0x0600 && cmake --build . --target package --config ${BUILD_TYPE} && cmake --install . --config ${BUILD_TYPE}
   else
-      cmake -DBUILD_ARCH=${BUILD_ARCH} -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DOS_TYPE=${OS_TYPE} ${DIR_ROOT} && make -j${JOBS} && make package
+      cmake -DBUILD_ARCH=${BUILD_ARCH} -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DOS_TYPE=${OS_TYPE} ${DIR_ROOT} && make -j${JOBS} && make install && make package
   fi
   if [ $? != 0 ]; then
     show_message "failed to make project"
