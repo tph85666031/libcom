@@ -532,6 +532,7 @@ public:
     ComBytes readUntil(const uint8* key, int key_size);
     ComBytes readUntil(std::function<bool(uint8)> func);
 
+    int64 size();
     int64 getPos();
     void setPos(int64 pos);
     void stepPos(int count);

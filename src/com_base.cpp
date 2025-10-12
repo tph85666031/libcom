@@ -1048,7 +1048,7 @@ ComBytes com_wstring_to_utf8(const std::wstring& wstr)
     }
     else
     {
-        result.append((uint8*)wstr.data(),(int)wstr.length() * 4);
+        result.append((uint8*)wstr.data(), (int)wstr.length() * 4);
         result = com_string_utf32_to_utf8(result);
     }
 
@@ -3115,7 +3115,7 @@ void ComBytes::removeTail(int count)
 
 bool ComBytes::toFile(const char* file)
 {
-    if(buf.size() <= 0)
+    if(file == NULL || file[0] == '\0' || buf.size() <= 0)
     {
         return false;
     }
@@ -4034,6 +4034,15 @@ void ByteStreamReader::stepPos(int count)
     {
         buffer_pos += count;
     }
+}
+
+int64 ByteStreamReader::size()
+{
+    if(fp != NULL)
+    {
+       return com_file_size(fp);
+    }
+    return buffer.getDataSize();
 }
 
 void ByteStreamReader::reset()
