@@ -247,7 +247,7 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
         return std::string();
     }
 
-    if(com_string_len(interface_name) <= 0)
+    if(com_string_length(interface_name) <= 0)
     {
         addrinfo hints;
         addrinfo* res = NULL;

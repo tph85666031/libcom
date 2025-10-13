@@ -263,7 +263,7 @@ void ComMD5::appendFile(const char* file_path, int64 offset, int64 size)
     }
     if(offset > 0)
     {
-        com_file_seek_set(file, offset);
+        com_file_seek_from_head(file, offset);
     }
     uint8 buf[READ_DATA_SIZE];
     int64 size_readed = 0;

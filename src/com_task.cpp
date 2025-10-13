@@ -220,7 +220,7 @@ void TaskManager::sendMessage(const char* task_name_wildcard, const Message& msg
         return;
     }
     bool has_wildcard = false;
-    for(int i = 0; i < com_string_len(task_name_wildcard); i++)
+    for(int i = 0; i < com_string_length(task_name_wildcard); i++)
     {
         if(task_name_wildcard[i] == '?' || task_name_wildcard[i] == '*')
         {

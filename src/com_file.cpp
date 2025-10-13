@@ -937,7 +937,7 @@ bool com_file_truncate(FILE* file, int64 size)
         return false;
     }
     int64 pos = com_file_seek_get(file);
-    com_file_seek_tail(file);
+    com_file_seek_to_tail(file);
     int64 total_size = com_file_seek_get(file);
     if(size < 0)
     {
@@ -946,18 +946,18 @@ bool com_file_truncate(FILE* file, int64 size)
 #if defined(_WIN32) || defined(_WIN64)
     if(_chsize_s(com_file_get_fd(file), total_size - size) != 0)
     {
-        com_file_seek_set(file, pos);
+        com_file_seek_from_head(file, pos);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
         return false;
     }
 #else
     if(ftruncate(com_file_get_fd(file), total_size - size) != 0)
     {
-        com_file_seek_set(file, pos);
+        com_file_seek_from_head(file, pos);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
         return false;
     }
-    com_file_seek_set(file, pos);
+    com_file_seek_from_head(file, pos);
 #endif
     return true;
 }
@@ -975,7 +975,7 @@ bool com_file_truncate(const char* file_path, int64 size)
         LOG_E("failed to open file,errno=%d", errno);
         return false;
     }
-    com_file_seek_tail(file);
+    com_file_seek_to_tail(file);
     int64 total_size = com_file_seek_get(file);
     if(size < 0)
     {
@@ -1015,7 +1015,7 @@ bool com_file_erase(const char* file_path, uint8 val)
         LOG_E("failed to open file,errno=%d", errno);
         return false;
     }
-    com_file_seek_tail(fp);
+    com_file_seek_to_tail(fp);
     int64 total_size = com_file_seek_get(fp);
     if(total_size <= 0)
     {
@@ -1023,7 +1023,7 @@ bool com_file_erase(const char* file_path, uint8 val)
         LOG_E("file is empty:%s", file_path);
         return false;
     }
-    com_file_seek_head(fp);
+    com_file_seek_to_head(fp);
     uint8 buf[1024];
     memset(buf, val, sizeof(buf));
     for(int64 i = 0; i < total_size / (int64)sizeof(buf); i++)
@@ -1039,7 +1039,7 @@ bool com_file_erase(const char* file_path, uint8 val)
     return true;
 }
 
-bool com_file_seek_head(FILE* file)
+bool com_file_seek_to_head(FILE* file)
 {
     if(file == NULL)
     {
@@ -1048,7 +1048,7 @@ bool com_file_seek_head(FILE* file)
     return (fseek(file, 0L, SEEK_SET) == 0);
 }
 
-bool com_file_seek_head(int fd)
+bool com_file_seek_to_head(int fd)
 {
     if(fd < 0)
     {
@@ -1061,7 +1061,7 @@ bool com_file_seek_head(int fd)
 #endif
 }
 
-bool com_file_seek_tail(FILE* file)
+bool com_file_seek_to_tail(FILE* file)
 {
     if(file == NULL)
     {
@@ -1070,7 +1070,7 @@ bool com_file_seek_tail(FILE* file)
     return (fseek(file, 0L, SEEK_END) == 0);
 }
 
-bool com_file_seek_tail(int fd)
+bool com_file_seek_to_tail(int fd)
 {
     if(fd < 0)
     {
@@ -1105,46 +1105,47 @@ bool com_file_seek_step(int fd, int64 pos)
 #endif
 }
 
-bool com_file_seek_set(FILE* file, int64 pos)
+bool com_file_seek_from_head(FILE* file, int64 pos)
+{
+    if(file == NULL || pos < 0)
+    {
+        return false;
+    }
+    return (fseek(file, pos, SEEK_SET) == 0);
+}
+
+bool com_file_seek_from_head(int fd, int64 pos)
+{
+    if(fd < 0 || pos < 0)
+    {
+        return false;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    return (_lseeki64(fd, pos, SEEK_SET) != -1);
+#else
+    return (lseek(fd, pos, SEEK_SET) != -1);
+#endif
+}
+
+bool com_file_seek_from_tail(FILE* file, int64 pos)
 {
     if(file == NULL)
     {
         return false;
     }
-    if(pos >= 0)
-    {
-        return (fseek(file, pos, SEEK_SET) == 0);
-    }
-    else
-    {
-        return (fseek(file, pos, SEEK_END) == 0);
-    }
+    return (fseek(file, pos, SEEK_END) == 0);
 }
 
-bool com_file_seek_set(int fd, int64 pos)
+bool com_file_seek_from_tail(int fd, int64 pos)
 {
     if(fd < 0)
     {
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(pos >= 0)
-    {
-        return (_lseeki64(fd, pos, SEEK_SET) != -1);
-    }
-    else
-    {
-        return (_lseeki64(fd, pos, SEEK_END) != -1);
-    }
+    return (_lseeki64(fd, pos, SEEK_END) != -1);
 #else
-    if(pos >= 0)
-    {
-        return (lseek(fd, pos, SEEK_SET) != -1);
-    }
-    else
-    {
-        return (lseek(fd, pos, SEEK_END) != -1);
-    }
+    return (lseek(fd, pos, SEEK_END) != -1);
 #endif
 }
 
@@ -1167,6 +1168,28 @@ int64 com_file_seek_get(int fd)
     return _lseeki64(fd, 0, SEEK_CUR);
 #else
     return lseek(fd, 0, SEEK_CUR);
+#endif
+}
+
+bool com_file_seek(FILE* file, int64 pos, int whence)
+{
+    if(file == NULL)
+    {
+        return false;
+    }
+    return (fseek(file, pos, whence) == 0);
+}
+
+bool com_file_seek(int fd, int64 pos, int whence)
+{
+    if(fd < 0)
+    {
+        return false;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    return (_lseeki64(fd, pos, whence) != -1);
+#else
+    return (lseek(fd, pos, whence) != -1);
 #endif
 }
 
@@ -1221,7 +1244,7 @@ ComBytes com_file_read(const char* file, int size, int64 offset)
     }
     if(offset >= 0)
     {
-        com_file_seek_set(fp, offset);
+        com_file_seek_from_head(fp, offset);
     }
 
     ComBytes data;
@@ -1383,7 +1406,7 @@ int64 com_file_read(int fd, void* buf, int64 size)
 
 ComBytes com_file_read_until(FILE* file, const char* str)
 {
-    return com_file_read_until(file, (const uint8*)str, com_string_len(str));
+    return com_file_read_until(file, (const uint8*)str, com_string_length(str));
 }
 
 ComBytes com_file_read_until(FILE* file, const uint8* data, int data_size)
@@ -1449,7 +1472,7 @@ int64 com_file_find(const char* file, const char* key, int64 offset)
     FILE* fp = com_file_open(file, "rb");
     if(offset >= 0)
     {
-        com_file_seek_set(fp, offset);
+        com_file_seek_from_head(fp, offset);
     }
     int64 ret = com_file_find(fp, key);
     com_file_close(fp);
@@ -1461,7 +1484,7 @@ int64 com_file_find(const char* file, const uint8* key, int key_size, int64 offs
     FILE* fp = com_file_open(file, "rb");
     if(offset >= 0)
     {
-        com_file_seek_set(fp, offset);
+        com_file_seek_from_head(fp, offset);
     }
     int64 ret = com_file_find(fp, key, key_size);
     com_file_close(fp);
@@ -1470,7 +1493,7 @@ int64 com_file_find(const char* file, const uint8* key, int key_size, int64 offs
 
 int64 com_file_find(FILE* file, const char* key)
 {
-    return com_file_find(file, (const uint8*)key, com_string_len(key));
+    return com_file_find(file, (const uint8*)key, com_string_length(key));
 }
 
 int64 com_file_find(FILE* file, const uint8* key, int key_size)
@@ -1507,7 +1530,7 @@ int64 com_file_rfind(const char* file, const char* key, int64 offset)
     FILE* fp = com_file_open(file, "rb");
     if(offset < 0)
     {
-        com_file_seek_set(fp, offset);
+        com_file_seek_from_tail(fp, offset);
     }
     int64 ret = com_file_rfind(fp, key);
     com_file_close(fp);
@@ -1519,7 +1542,7 @@ int64 com_file_rfind(const char* file, const uint8* key, int key_size, int64 off
     FILE* fp = com_file_open(file, "rb");
     if(offset < 0)
     {
-        com_file_seek_set(fp, offset);
+        com_file_seek_from_tail(fp, offset);
     }
     int64 ret = com_file_rfind(fp, key, key_size);
     com_file_close(fp);
@@ -1528,7 +1551,7 @@ int64 com_file_rfind(const char* file, const uint8* key, int key_size, int64 off
 
 int64 com_file_rfind(FILE* file, const char* key)
 {
-    return com_file_rfind(file, (const uint8*)key, com_string_len(key));
+    return com_file_rfind(file, (const uint8*)key, com_string_length(key));
 }
 
 int64 com_file_rfind(FILE* file, const uint8* key, int key_size)
@@ -1537,7 +1560,7 @@ int64 com_file_rfind(FILE* file, const uint8* key, int key_size)
     {
         return -1;
     }
-    com_file_seek_tail(file);
+    com_file_seek_to_tail(file);
     if(fseek(file, -1, SEEK_CUR) != 0)
     {
         return -2;
@@ -1560,7 +1583,7 @@ int64 com_file_rfind(FILE* file, const uint8* key, int key_size)
             }
 
             checked_first_char = true;
-            com_file_seek_head(file);
+            com_file_seek_to_head(file);
         }
         if(val != key[key_size - match_count - 1])
         {
@@ -1640,7 +1663,7 @@ ComBytes com_file_readall(const char* file_path, int64 offset)
     }
     if(offset >= 0)
     {
-        com_file_seek_set(file, offset);
+        com_file_seek_from_head(file, offset);
     }
     uint8 buf[1024];
     int size = 0;
@@ -1823,75 +1846,6 @@ void com_file_sync(FILE* file)
         fsync(com_file_get_fd(file));
     }
 #endif
-}
-
-bool com_file_crop(const char* file_name, uint8 start_percent_keepd, uint8 end_percent_keeped)
-{
-    if(file_name == NULL || start_percent_keepd >= 100 || end_percent_keeped == 0)
-    {
-        return false;
-    }
-    if(end_percent_keeped > 100)
-    {
-        end_percent_keeped = 100;
-    }
-    uint64 file_size = com_file_size(file_name);
-    if(file_size == 0)
-    {
-        return false;
-    }
-    FILE* file_in = com_file_open(file_name, "rb");
-    if(file_in == NULL)
-    {
-        return false;
-    }
-    char file_temp[256];
-    snprintf(file_temp, sizeof(file_temp), "%s.bak", file_name);
-    FILE* file_out = com_file_open(file_temp, "w+");
-    if(file_out == NULL)
-    {
-        com_file_close(file_in);
-        return false;
-    }
-    uint64 start_size = file_size * start_percent_keepd / 100;
-    uint64 end_size = file_size * end_percent_keeped / 100;
-    uint64 block_size = file_size / 100;
-    if(block_size > 1024 * 1024)
-    {
-        block_size = 1024 * 1024;
-    }
-    uint8* buf = (uint8*)calloc(1, block_size);
-    if(buf == NULL)
-    {
-        com_file_close(file_in);
-        com_file_close(file_out);
-        return false;
-    }
-    uint64 total_size = 0;
-    int size = 0;
-    while(true)
-    {
-        size = com_file_read(file_in, buf, sizeof(buf));
-        if(size <= 0)
-        {
-            break;
-        }
-        total_size += size;
-        if(total_size > start_size && total_size < end_size)
-        {
-            com_file_write(file_out, buf, size);
-        }
-        else if(total_size >= end_size)
-        {
-            break;
-        }
-    }
-    free(buf);
-    com_file_flush(file_out);
-    com_file_close(file_out);
-    com_file_close(file_in);
-    com_file_remove(file_name);
-    return com_file_rename(file_name, file_temp);
 }
 
 bool com_file_remove(const char* file_name)

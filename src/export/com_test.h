@@ -3,7 +3,9 @@
 
 #include <setjmp.h>
 #include <float.h>
+#include "com_log.h"
 #include "cmocka.h"
+
 
 #define ASSERT_TRUE(c)                   assert_true((c))
 #define ASSERT_FALSE(c)                  assert_false((c))

@@ -9,8 +9,11 @@ typedef signed long long   int64;
 
 typedef unsigned char      uint8;
 typedef unsigned short     uint16;
+typedef unsigned short     uint16_be;
 typedef unsigned int       uint32;
+typedef unsigned int       uint32_be;
 typedef unsigned long long uint64;
+typedef unsigned long long uint64_be;
 
 #include <iostream>
 #include <string>
@@ -175,8 +178,8 @@ COM_EXPORT char* com_string_to_upper(char* str);
 COM_EXPORT char* com_string_to_lower(char* str);
 COM_EXPORT bool com_string_replace(char* str, char from, char to);
 COM_EXPORT bool com_string_replace(std::string& str, const char* from, const char* to);
-COM_EXPORT int com_string_len_utf8(const char* str);
-COM_EXPORT int com_string_len(const char* str);
+COM_EXPORT int com_string_length_utf8(const char* str);
+COM_EXPORT int com_string_length(const char* str);
 COM_EXPORT int com_string_size(const char* str);
 COM_EXPORT bool com_string_is_empty(const char* str);
 COM_EXPORT bool com_string_is_utf8(const std::string& str);
@@ -186,10 +189,10 @@ COM_EXPORT std::wstring com_wstring_format(const wchar_t* fmt, ...);
 
 COM_EXPORT bool com_string_is_ipv4(const char* str);
 COM_EXPORT bool com_string_is_ipv6(const char* str);
-COM_EXPORT bool com_string_to_ipv4(const char* str, uint32& ipv4);
-COM_EXPORT bool com_string_to_ipv6(const char* str, uint16 ipv6[8]);
-COM_EXPORT std::string com_string_from_ipv4(uint32 ipv4);
-COM_EXPORT std::string com_string_from_ipv6(uint16 ipv6[8]);
+COM_EXPORT bool com_string_to_ipv4(const char* str, uint32_be& ipv4);
+COM_EXPORT bool com_string_to_ipv6(const char* str, uint16_be ipv6[8]);
+COM_EXPORT std::string com_string_from_ipv4(uint32_be ipv4);
+COM_EXPORT std::string com_string_from_ipv6(uint16_be ipv6[8]);
 COM_EXPORT bool com_string_to_sockaddr(const char* ip, uint16 port, struct sockaddr_storage* addr);
 COM_EXPORT bool com_string_to_sockaddr(const char* ip, uint16 port, struct sockaddr_storage& addr);
 COM_EXPORT std::string com_string_from_sockaddr(const struct sockaddr_storage* addr);
@@ -532,10 +535,11 @@ public:
     ComBytes readUntil(const uint8* key, int key_size);
     ComBytes readUntil(std::function<bool(uint8)> func);
 
-    int64 size();
     int64 getPos();
-    void setPos(int64 pos);
-    void stepPos(int count);
+    bool setPos(int64 pos);
+    void stepPos(int64 count);
+    bool seek(int64 offset, int whence);
+    int64 size();
     void reset();
 private:
     FILE* fp = NULL;

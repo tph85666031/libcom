@@ -768,7 +768,7 @@ void com_base_option_unit_test_suit(void** state)
     ASSERT_TRUE(opt.valueExist("-s"));
     ASSERT_TRUE(opt.valueExist("-s1"));
     ASSERT_TRUE(opt.valueExist("-e"));
-    
+
     ASSERT_FALSE(opt.valueExist("-x1"));
     ASSERT_FALSE(opt.valueExist("-x2"));
     ASSERT_FALSE(opt.valueExist("-x3"));

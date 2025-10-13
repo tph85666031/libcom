@@ -491,7 +491,7 @@ int ComUnixDomainServer::send(const char* client_file_name_wildcard, const void*
         return 0;
     }
     bool has_wildcard = false;
-    for(int i = 0; i < com_string_len(client_file_name_wildcard); i++)
+    for(int i = 0; i < com_string_length(client_file_name_wildcard); i++)
     {
         if(client_file_name_wildcard[i] == '?' || client_file_name_wildcard[i] == '*')
         {

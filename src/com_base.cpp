@@ -504,7 +504,7 @@ char* com_string_trim_left(char* str, const char* t)
     }
     char* p1 = str;
     char* p2 = str;
-    int len_t = com_string_len(t);
+    int len_t = com_string_length(t);
     do
     {
         bool match = false;
@@ -541,9 +541,9 @@ char* com_string_trim_right(char* str, const char* t)
     {
         return str;
     }
-    int len_t = com_string_len(t);
+    int len_t = com_string_length(t);
     int i = 0;
-    for(i = com_string_len(str) - 1; i >= 0; i--)
+    for(i = com_string_length(str) - 1; i >= 0; i--)
     {
         bool match = false;
         for(int j = 0; j < len_t; j++)
@@ -590,8 +590,8 @@ bool com_string_end_with(const char* str, const char* tail)
     {
         return false;
     }
-    int l1 = com_string_len(str);
-    int l2 = com_string_len(tail);
+    int l1 = com_string_length(str);
+    int l2 = com_string_length(tail);
     if(l1 >= l2)
     {
         if(com_string_equal(str + l1 - l2, tail))
@@ -1144,19 +1144,29 @@ std::string com_bytes_to_hexstring(const uint8* data, int size)
 
 ComBytes com_hexstring_to_bytes(const char* str)
 {
-    ComBytes bytes;
     if(str == NULL)
     {
-        return bytes;
+        return ComBytes();
     }
     std::string val = str;
     com_string_replace(val, " ", "");
 
-    char tmp[4];
-    memset(tmp, 0, sizeof(tmp));
+    if(val.length() % 2 != 0)
+    {
+        return ComBytes();
+    }
+
+    ComBytes bytes;
+    char tmp[3] = {0};
     for(size_t i = 0; i < val.length(); i = i + 2)
     {
-        memcpy(tmp, val.data() + i, 2);
+        tmp[0] = val[i];
+        tmp[1] = val[i + 1];
+
+        if(!isxdigit((unsigned char)tmp[0]) || !isxdigit((unsigned char)tmp[1]))
+        {
+            return ComBytes();
+        }
         bytes.append((uint8)strtoul(tmp, NULL, 16));
     }
 
@@ -1185,7 +1195,7 @@ int com_hexstring_to_bytes(const char* str, unsigned char* bytes, int size)
 
 bool com_string_replace(char* str, char from, char to)
 {
-    int len = com_string_len(str);
+    int len = com_string_length(str);
     if(len <= 0)
     {
         return false;
@@ -1208,8 +1218,8 @@ bool com_string_replace(std::string& str, const char* from, const char* to)
     }
 
     std::string::size_type pos = 0;
-    int from_len = com_string_len(from);
-    int to_len = com_string_len(to);
+    int from_len = com_string_length(from);
+    int to_len = com_string_length(to);
     while((pos = str.find(from, pos)) != std::string::npos)
     {
         str.replace(pos, from_len, to);
@@ -1218,7 +1228,7 @@ bool com_string_replace(std::string& str, const char* from, const char* to)
     return true;
 }
 
-int com_string_len_utf8(const char* str)
+int com_string_length_utf8(const char* str)
 {
     int i = 0, j = 0;
     while(str[i])
@@ -1232,7 +1242,7 @@ int com_string_len_utf8(const char* str)
     return j;
 }
 
-int com_string_len(const char* str)
+int com_string_length(const char* str)
 {
     if(str == NULL)
     {
@@ -1247,7 +1257,7 @@ int com_string_size(const char* str)
     {
         return 0;
     }
-    return com_string_len(str) + 1;
+    return com_string_length(str) + 1;
 }
 
 bool com_string_is_empty(const char* str)
@@ -1274,7 +1284,7 @@ bool com_string_is_utf8(const char* str, int len)
     }
     if(len <= 0)
     {
-        len = com_string_len(str);
+        len = com_string_length(str);
     }
 
     for(i = 0; i < len; i++)
@@ -1385,7 +1395,8 @@ bool com_string_is_ipv4(const char* str)
         return false;
     }
     int ip_val[4];
-    if(sscanf(str, "%d.%d.%d.%d", ip_val, ip_val + 1, ip_val + 2, ip_val + 3) != 4)
+    char extra = 0;
+    if(sscanf(str, "%d.%d.%d.%d%c", ip_val, ip_val + 1, ip_val + 2, ip_val + 3, &extra) != 4)
     {
         return false;
     }
@@ -1402,10 +1413,23 @@ bool com_string_is_ipv4(const char* str)
 
 bool com_string_is_ipv6(const char* str)
 {
+    if(str == NULL)
+    {
+        return false;
+    }
+
     int seg_count = 0;
     int double_colon = 0;
-    char copy[40];
-    strncpy(copy, str, 39);
+    char copy[64];
+    strncpy(copy, str, sizeof(copy) - 1);
+    for(size_t i = 0; i < strlen(copy); i++)
+    {
+        if(copy[i] == '%')
+        {
+            copy[i] = '\0';
+            break;
+        }
+    }
 
     // 检查压缩符号
     if(strstr(copy, "::"))
@@ -1448,24 +1472,32 @@ bool com_string_is_ipv6(const char* str)
     return seg_count == 8;
 }
 
-bool com_string_to_ipv4(const char* str, uint32& ipv4)
+bool com_string_to_ipv4(const char* str, uint32_be& ipv4)
 {
-    if(str == NULL || str[0] == '\0')
+    if(str == NULL || str[0] < '0' || str[0] > '9')
     {
         return false;
     }
-    uint32 ip_val[4];
-    int ret = sscanf(str, "%u.%u.%u.%u",
-                     &ip_val[0], &ip_val[1], &ip_val[2], &ip_val[3]);
+    int ip_val[4];
+    char extra = 0;
+    int ret = sscanf(str, "%d.%d.%d.%d%c",
+                     &ip_val[0], &ip_val[1], &ip_val[2], &ip_val[3], &extra);
     if(ret != 4)
     {
         return false;
     }
-    if(ip_val[0] > 255 || ip_val[1] > 255 || ip_val[2] > 255 || ip_val[3] > 255)
+    for(int i = 0; i < 4; i++)
     {
-        return false;
+        if(ip_val[i] < 0 || ip_val[i] > 255)
+        {
+            return false;
+        }
     }
-    ipv4 = (ip_val[0] << 24) | (ip_val[1] << 16) | (ip_val[2] << 8) | ip_val[3];
+    //网络字节序
+    ipv4 = ((uint32_t)ip_val[0] << 24) |
+           ((uint32_t)ip_val[1] << 16) |
+           ((uint32_t)ip_val[2] << 8) |
+           (uint32_t)ip_val[3];
     return true;
 }
 
@@ -1562,16 +1594,16 @@ bool com_string_to_ipv6(const char* str, uint16 ipv6[8])
     return true;
 }
 
-std::string com_string_from_ipv4(uint32 ipv4)
+std::string com_string_from_ipv4(uint32_be ipv4)
 {
     static char str[64];
     snprintf(str, sizeof(str),
-             "%u.%u.%u.%u", (ipv4) & 0xFF, ((ipv4) >> 8) & 0xFF,
-             ((ipv4) >> 16) & 0xFF, ((ipv4) >> 24) & 0xFF);
+             "%u.%u.%u.%u", ((ipv4) >> 24) & 0xFF, ((ipv4) >> 16) & 0xFF,
+             ((ipv4) >> 8) & 0xFF, ((ipv4) >> 0) & 0xFF);
     return str;
 }
 
-std::string com_string_from_ipv6(uint16 ipv6[8])
+std::string com_string_from_ipv6(uint16_be ipv6[8])
 {
     static char str[128];
     snprintf(str, sizeof(str),
@@ -2830,7 +2862,7 @@ ComBytes::ComBytes(const uint8* data, int data_size)
 
 ComBytes::ComBytes(const char* data)
 {
-    int len = com_string_len(data);
+    int len = com_string_length(data);
     if(len > 0)
     {
         buf.insert(buf.end(), data, data + len);
@@ -2988,7 +3020,7 @@ ComBytes& ComBytes::append(const uint8* data, int data_size)
 
 ComBytes& ComBytes::append(const char* data)
 {
-    int len = com_string_len(data);
+    int len = com_string_length(data);
     if(len > 0)
     {
         buf.insert(buf.end(), data, data + len);
@@ -3041,7 +3073,7 @@ ComBytes& ComBytes::insert(int pos, const char* data)
     {
         return *this;
     }
-    int len = com_string_len(data);
+    int len = com_string_length(data);
     if(len <= 0)
     {
         return *this;
@@ -3788,7 +3820,7 @@ ByteStreamReader::~ByteStreamReader()
 
 int64 ByteStreamReader::find(const char* key, int offset)
 {
-    return find((const uint8*)key, com_string_len(key), offset);
+    return find((const uint8*)key, com_string_length(key), offset);
 }
 
 int64 ByteStreamReader::find(const uint8* key, int key_size, int offset)
@@ -3801,7 +3833,7 @@ int64 ByteStreamReader::find(const uint8* key, int key_size, int offset)
     {
         if(offset > 0)
         {
-            com_file_seek_set(fp, offset);
+            com_file_seek_from_head(fp, offset);
         }
         return com_file_find(fp, key, key_size);
     }
@@ -3830,7 +3862,7 @@ int64 ByteStreamReader::find(const uint8* key, int key_size, int offset)
 
 int64 ByteStreamReader::rfind(const char* key, int offset)
 {
-    return rfind((const uint8*)key, com_string_len(key), offset);
+    return rfind((const uint8*)key, com_string_length(key), offset);
 }
 
 int64 ByteStreamReader::rfind(const uint8* key, int key_size, int offset)
@@ -3843,7 +3875,7 @@ int64 ByteStreamReader::rfind(const uint8* key, int key_size, int offset)
     {
         if(offset < 0)
         {
-            com_file_seek_set(fp, offset);
+            com_file_seek_from_tail(fp, offset);
         }
         return com_file_rfind(fp, key, key_size);
     }
@@ -3941,7 +3973,7 @@ int ByteStreamReader::read(uint8* buf, int buf_size)
 
 ComBytes ByteStreamReader::readUntil(const char* key)
 {
-    return readUntil((const uint8*)key, com_string_len(key));
+    return readUntil((const uint8*)key, com_string_length(key));
 }
 
 ComBytes ByteStreamReader::readUntil(const uint8* key, int key_size)
@@ -4012,19 +4044,22 @@ int64 ByteStreamReader::getPos()
     return buffer_pos;
 }
 
-void ByteStreamReader::setPos(int64 pos)
+bool ByteStreamReader::setPos(int64 pos)
 {
     if(fp != NULL)
     {
-        com_file_seek_set(fp, pos);
+        return com_file_seek_from_head(fp, pos);
     }
-    else if(pos >= 0 && pos < buffer.getDataSize())
+
+    if(pos < 0 || pos >= buffer.getDataSize())
     {
-        buffer_pos = pos;
+        return false;
     }
+    buffer_pos = pos;
+    return true;
 }
 
-void ByteStreamReader::stepPos(int count)
+void ByteStreamReader::stepPos(int64 count)
 {
     if(fp != NULL)
     {
@@ -4036,18 +4071,76 @@ void ByteStreamReader::stepPos(int count)
     }
 }
 
+bool ByteStreamReader::seek(int64 offset, int whence)
+{
+    if(fp != NULL)
+    {
+        return com_file_seek(fp, offset, whence);
+    }
+
+    if(whence == SEEK_SET)
+    {
+        if(offset < 0)
+        {
+            offset = 0;
+        }
+        else if(offset > buffer.getDataSize())
+        {
+            offset = buffer.getDataSize() - 1;
+        }
+        buffer_pos = offset;
+        return true;
+    }
+
+    if(whence == SEEK_CUR)
+    {
+        if(buffer_pos + offset < 0)
+        {
+            buffer_pos = 0;
+        }
+        else if(buffer_pos + offset >= buffer.getDataSize())
+        {
+            buffer_pos = buffer.getDataSize() - 1;
+        }
+        else
+        {
+            buffer_pos += offset;
+        }
+        return true;
+    }
+
+    if(whence == SEEK_END)
+    {
+        if(offset > 0)
+        {
+            buffer_pos = buffer.getDataSize() - 1;
+        }
+        else if(-1 * offset > buffer.getDataSize())
+        {
+            buffer_pos = 0;
+        }
+        else
+        {
+            buffer_pos = buffer.getDataSize() + offset;
+        }
+        return true;
+    }
+
+    return false;
+}
+
 int64 ByteStreamReader::size()
 {
     if(fp != NULL)
     {
-       return com_file_size(fp);
+        return com_file_size(fp);
     }
     return buffer.getDataSize();
 }
 
 void ByteStreamReader::reset()
 {
-    com_file_seek_head(fp);
+    com_file_seek_to_head(fp);
     buffer_pos = 0;
 }
 
@@ -4061,7 +4154,7 @@ ComOption::~ComOption()
 
 ComOption& ComOption::addOption(const char* key, const char* description, bool need_value)
 {
-    if(com_string_len(key) >= 2 && key[0] == '-' && description != NULL)
+    if(com_string_length(key) >= 2 && key[0] == '-' && description != NULL)
     {
         ComOptionDesc desc;
         desc.key = key;
@@ -4074,7 +4167,7 @@ ComOption& ComOption::addOption(const char* key, const char* description, bool n
 
 bool ComOption::keyExist(const char* key)
 {
-    if(com_string_len(key) <= 0)
+    if(com_string_length(key) <= 0)
     {
         return false;
     }
@@ -4084,7 +4177,7 @@ bool ComOption::keyExist(const char* key)
 
 bool ComOption::valueExist(const char* key)
 {
-    if(com_string_len(key) <= 0)
+    if(com_string_length(key) <= 0)
     {
         return false;
     }

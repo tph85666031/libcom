@@ -160,7 +160,7 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
     ComNicInfo nic;
 
 #if __linux__ == 1
-    if(com_string_len(interface_name) > 0)  //绑定到指定网卡，忽略路由
+    if(com_string_length(interface_name) > 0)  //绑定到指定网卡，忽略路由
     {
         if(com_net_get_nic(interface_name, nic) == false)
         {
@@ -294,7 +294,7 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
 
     ComNicInfo nic;
 #if __linux__ == 1
-    if(com_string_len(interface_name) > 0)  //绑定到指定网卡，忽略路由
+    if(com_string_length(interface_name) > 0)  //绑定到指定网卡，忽略路由
     {
         if(com_net_get_nic(interface_name, nic) == false)
         {
@@ -596,7 +596,7 @@ std::vector<std::string> com_net_get_interface_all()
     struct ifreq* p_ifr = ifc.ifc_req;
     for(int i = ifc.ifc_len / sizeof(struct ifreq); i >= 0; p_ifr++, i--)
     {
-        if(com_string_len(p_ifr->ifr_name) > 0)
+        if(com_string_length(p_ifr->ifr_name) > 0)
         {
             list.push_back(p_ifr->ifr_name);
             LOG_D("int=%s", p_ifr->ifr_name);
