@@ -15,7 +15,7 @@ typedef unsigned int       uint32_be;
 typedef unsigned long long uint64;
 typedef unsigned long long uint64_be;
 
-typedef unsigned long      ulong           
+typedef unsigned long      ulong;         
 
 #include <iostream>
 #include <string>
