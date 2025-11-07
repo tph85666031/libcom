@@ -11,7 +11,7 @@ public:
     }
     void onConnectionChanged(bool connected)
     {
-        LOG_D("%s %s", getHost().c_str(), connected ? "true" : "false");
+        LOG_D("%s %s", host.c_str(), connected ? "true" : "false");
     }
 
     void onRecv(uint8* data, int data_size)

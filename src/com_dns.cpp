@@ -180,7 +180,7 @@ std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is
 
 std::string dns_via_udp(const char* domain_name, const char* interface, const char* dns_server_ip)
 {
-    int socket_fd = com_socket_udp_open(interface, 10053, false);
+    int socket_fd = com_socket_udp_open(interface);
     if(socket_fd <= 0)
     {
         LOG_E("udp open failed");
@@ -211,7 +211,7 @@ std::string dns_via_udp(const char* domain_name, const char* interface, const ch
 std::string dns_via_tcp(const char* domain_name, const char* interface, const char* dns_server_ip)
 {
     LOG_E("called");
-    int socket_fd = com_socket_tcp_open(dns_server_ip, DNS_PORT, 5 * 1000, interface);
+    int socket_fd = com_socket_tcp_open(dns_server_ip, DNS_PORT, 5 * 1000, 0, NULL, 0, interface);
     if(socket_fd <= 0)
     {
         LOG_E("tcp open failed");
@@ -239,8 +239,11 @@ std::string dns_via_tcp(const char* domain_name, const char* interface, const ch
     return dns_query_decode(buf, ret, id, true);
 }
 
+#endif
+
 std::string com_dns_query(const char* domain_name, const char* interface_name, const char* dns_server_ip)
 {
+#if __linux__==1
     if(domain_name == NULL)
     {
         LOG_E("domain_name is NULL");
@@ -315,5 +318,71 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
 
     LOG_I("ip_pri=%s, ip_pub=%s for %s", nic.ip.c_str(), ip.c_str(), nic.name.c_str());
     return ip;
-}
+#else
+    return std::string();
 #endif
+}
+
+ComSocketAddr com_dns_resolve(const char* dns, bool ipv6_prefer)
+{
+    if(dns == NULL)
+    {
+        return ComSocketAddr();
+    }
+    addrinfo hints;
+    addrinfo* res = NULL;
+    memset(&hints, 0, sizeof(addrinfo));
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_family = ipv6_prefer ? AF_INET6 : AF_INET;
+    if(getaddrinfo(dns, NULL, &hints, &res) != 0)
+    {
+        LOG_E("failed to get ip,dns=%s", dns);
+        return ComSocketAddr();
+    }
+
+    ComSocketAddr addr;
+    if(res->ai_family == AF_INET)
+    {
+        struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)res->ai_addr;
+        addr.is_ipv6 = false;
+        addr.ipv4 = addr_ipv4->sin_addr.s_addr;
+    }
+    else if(res->ai_family == AF_INET6)
+    {
+        struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)res->ai_addr;
+        addr.is_ipv6 = true;
+        memcpy(addr.ipv6, addr_ipv6->sin6_addr.s6_addr, sizeof(addr.ipv6));
+    }
+    else
+    {
+        freeaddrinfo(res);
+        return ComSocketAddr();
+    }
+
+    return addr;
+}
+
+void* ComSocketAddr::toSockaddrStorage()
+{
+    if(valid == false)
+    {
+        return NULL;
+    }
+    if(is_ipv6)
+    {
+        struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)buf;
+        addr_ipv6->sin6_family = AF_INET6;
+        addr_ipv6->sin6_port = htons(port);
+        memcpy(addr_ipv6->sin6_addr.s6_addr, ipv6, sizeof(ipv6));
+    }
+    else
+    {
+        struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)buf;
+        addr_ipv4->sin_family = AF_INET;
+        addr_ipv4->sin_port = htons(port);
+        addr_ipv4->sin_addr.s_addr = ipv4;
+    }
+
+    return buf;
+}
+

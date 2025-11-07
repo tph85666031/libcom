@@ -13,6 +13,20 @@
 
 #define SOCKET_SERVER_MAX_CLIENTS 500
 
+class COM_EXPORT ComSocketAddr
+{
+public:
+    void* toSockaddrStorage();
+public:
+    bool valid = false;
+    bool is_ipv6 = false;
+    uint32_be ipv4 = 0;
+    uint8 ipv6[16] = {0};
+    uint16 port = 0;
+private:
+    uint8 buf[128];
+};
+
 class COM_EXPORT ComNicInfo
 {
 public:
@@ -37,9 +51,11 @@ COM_EXPORT void com_socket_set_send_timeout(int sock, int timeout_ms);
 
 COM_EXPORT int com_socket_get_tcp_connection_status(int sock);//-1获取失败,0连接断开,1=连接成功
 COM_EXPORT int com_socket_unix_domain_open(const char* my_name, const char* server_name);
-COM_EXPORT int com_socket_udp_open(const char* interface_name, uint16 recv_port, bool broadcast = false);
-COM_EXPORT int com_socket_tcp_open(const char* remote_host, uint16 remote_port,
-                                   uint32 timeout_ms = 10000, const char* interface_name = NULL);
+COM_EXPORT int com_socket_udp_open(const char* interface_name, uint32_be bind_ipv4 = 0, uint8* bind_ipv6 = NULL,
+                                   uint16 bind_port = 0, bool broadcast = false);
+COM_EXPORT int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 timeout_ms = 10000,
+                                   uint32_be bind_ipv4 = 0, uint8* bind_ipv6 = NULL, 
+                                   uint16 bind_port = 0, const char* bind_interface = NULL);
 COM_EXPORT int com_socket_udp_send(int socketfd, const char* dest_host, int dest_port,
                                    const void* data, int data_size);
 COM_EXPORT int com_socket_tcp_send(int socketfd, const void* data, int data_size);
@@ -65,22 +81,50 @@ public:
     virtual ~ComSocket();
     void setHost(const char* host);
     void setPort(uint16 port);
-    void setSocketfd(int fd);
     void setInterface(const char* interface_name);
-    std::string getHost();
-    uint16 getPort();
-    int getSocketfd();
-    std::string getInterface();
+    void setBindIPv4(uint32_be ipv4);
+    void setBindIPv6(uint8* ipv6);
+    void setBindPort(uint16 port);
+
+    void closeSocket();
+
 protected:
-    std::atomic<uint16> port;
-    std::atomic<int> socketfd;
-    std::string interface_name;
-private:
-    std::mutex mutxe;
     std::string host;
+    uint16 port = 0;
+    int socketfd = -1;
+    std::string interface_name;
+    uint32 bind_port = 0;
+    uint32_be bind_ipv4 = 0;
+    uint8 bind_ipv6[16] = {0};
+    int timeout_recv_ms = 10000;
+    int timeout_send_ms = 10000;
 };
 
-class COM_EXPORT ComTcpClient : public ComSocket
+class COM_EXPORT ComSocketTcp : public ComSocket
+{
+public:
+    ComSocketTcp();
+    virtual ~ComSocketTcp();
+
+    bool openSocket();
+    int readData(uint8* buf, int buf_size, uint32 timeout_ms = 10000);
+    int writeData(const void* data, int data_size);
+};
+
+class COM_EXPORT ComSocketUdp : public ComSocket
+{
+public:
+    ComSocketUdp();
+    virtual ~ComSocketUdp();
+
+    bool openSocket(bool broadcast = false);
+    int readData(uint8* buf, int buf_size, ComSocketAddr* addr_from = NULL, uint32 timeout_ms = 10000);
+    int writeData(const void* data, int data_size);
+private:
+    ComSocketAddr addr_to;
+};
+
+class COM_EXPORT ComTcpClient : public ComSocketTcp
 {
 public:
     ComTcpClient();
@@ -101,7 +145,7 @@ protected:
     virtual void onConnectionChanged(bool connected);
     virtual void onRecv(uint8* data, int data_size);
 private:
-    static void ThreadReceiver(ComTcpClient* socket_client);
+    static void ThreadRX(ComTcpClient* socket_client);
 private:
     std::atomic<bool> thread_receiver_running;
     std::thread thread_receiver;

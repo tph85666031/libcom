@@ -20,6 +20,7 @@
 #endif
 
 #include "com_socket.h"
+#include "com_dns.h"
 
 void com_socket_global_init()
 {
@@ -137,7 +138,7 @@ int com_socket_get_tcp_connection_status(int sock)
     return 1; // tcp established
 }
 
-int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broadcast)
+int com_socket_udp_open(const char* interface_name, uint32_be bind_ipv4, uint8* bind_ipv6, uint16 bind_port, bool broadcast)
 {
     int socketfd = -1;
 #if defined(SOCK_CLOEXEC)
@@ -162,12 +163,6 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
 #if __linux__ == 1
     if(com_string_length(interface_name) > 0)  //绑定到指定网卡，忽略路由
     {
-        if(com_net_get_nic(interface_name, nic) == false)
-        {
-            com_socket_close(socketfd);
-            LOG_E("failed to get %s info", interface_name);
-            return -1;
-        }
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
         strncpy(ifr.ifr_name, interface_name, sizeof(ifr.ifr_name) - 1);
@@ -182,28 +177,36 @@ int com_socket_udp_open(const char* interface_name, uint16 local_port, bool broa
 #else
         int option = 0x01;
 #endif
-        local_port = 0;
+        bind_port = 0;
         socklen_t option_len = sizeof(option);
         setsockopt(socketfd, SOL_SOCKET, SO_BROADCAST, &option, option_len);
     }
 
-    /*填写出口地址*/
-    struct sockaddr_in local_addr;
-    memset(&local_addr, 0, sizeof(local_addr));
-    local_addr.sin_port = htons(local_port);
-    local_addr.sin_family = AF_INET;
-    if(nic.ip.empty())
+    if(bind_ipv4 != 0 || bind_ipv6 != NULL)
     {
-        local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    }
-    else
-    {
-        local_addr.sin_addr.s_addr = inet_addr(nic.ip.c_str());
-    }
-    if(bind(socketfd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0)
-    {
-        com_socket_close(socketfd);
-        return -1;
+        struct sockaddr_storage bind_addr;
+        memset(&bind_addr, 0, sizeof(struct sockaddr_storage));
+        if(bind_ipv4 != 0)
+        {
+            struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)&bind_addr;
+            addr_ipv4->sin_family = AF_INET;
+            addr_ipv4->sin_port = htons(bind_port);
+            addr_ipv4->sin_addr.s_addr = bind_ipv4;
+        }
+        else
+        {
+            struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)&bind_addr;
+            addr_ipv6->sin6_family = AF_INET6;
+            addr_ipv6->sin6_port = htons(bind_port);
+            memcpy(addr_ipv6->sin6_addr.s6_addr, bind_ipv6, sizeof(addr_ipv6->sin6_addr.s6_addr));
+        }
+
+        if(bind(socketfd, (struct sockaddr*)&bind_addr, bind_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)) < 0)
+        {
+            LOG_E("bind failed,errno=%d:%s", errno, strerror(errno));
+            com_socket_close(socketfd);
+            return false;
+        }
     }
 
     return socketfd;
@@ -255,25 +258,16 @@ int com_socket_unix_domain_open(const char* my_name, const char* server_name)
 #endif
 }
 
-int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 timeout_ms, const char* interface_name)
+int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 timeout_ms,
+                        uint32_be bind_ipv4, uint8* bind_ipv6,
+                        uint16 bind_port, const char* bind_interface)
 {
     if(remote_host == NULL)
     {
         LOG_E("arg incorrect");
         return -1;
     }
-    addrinfo hints;
-    addrinfo* res = NULL;
-    memset(&hints, 0, sizeof(addrinfo));
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_family = AF_INET;
-    if(getaddrinfo(remote_host, NULL, &hints, &res) != 0)
-    {
-        LOG_E("failed to get host ip");
-        return -1;
-    }
-    uint32 remote_ip = ((sockaddr_in*)(res->ai_addr))->sin_addr.s_addr;
-    freeaddrinfo(res);
+    ComSocketAddr addr = com_dns_resolve(remote_host);
 
     int socketfd = -1;
 #if defined(SOCK_CLOEXEC)
@@ -291,56 +285,49 @@ int com_socket_tcp_open(const char* remote_host, uint16 remote_port, uint32 time
         return -1;
     }
 
-
-    ComNicInfo nic;
 #if __linux__ == 1
-    if(com_string_length(interface_name) > 0)  //绑定到指定网卡，忽略路由
+    if(com_string_length(bind_interface) > 0)  //绑定到指定网卡，忽略路由
     {
-        if(com_net_get_nic(interface_name, nic) == false)
-        {
-            com_socket_close(socketfd);
-            LOG_E("failed to get %s info", interface_name);
-            return -1;
-        }
         struct ifreq ifr;
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, interface_name, sizeof(ifr.ifr_name) - 1);
+        strncpy(ifr.ifr_name, bind_interface, sizeof(ifr.ifr_name) - 1);
         setsockopt(socketfd, SOL_SOCKET, SO_BINDTODEVICE, (char*)&ifr, sizeof(ifr));
     }
 #endif
 
-    struct sockaddr_in local_addr;
-    memset(&local_addr, 0, sizeof(local_addr));
-    local_addr.sin_family = AF_INET;
-    if(nic.ip.empty())
+    if(bind_ipv4 != 0 || bind_ipv6 != NULL)
     {
-        local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    }
-    else
-    {
-        local_addr.sin_addr.s_addr = inet_addr(nic.ip.c_str());
-    }
+        struct sockaddr_storage bind_addr;
+        memset(&bind_addr, 0, sizeof(struct sockaddr_storage));
+        if(bind_ipv4 != 0)
+        {
+            struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)&bind_addr;
+            addr_ipv4->sin_family = AF_INET;
+            addr_ipv4->sin_port = htons(bind_port);
+            addr_ipv4->sin_addr.s_addr = bind_ipv4;
+        }
+        else
+        {
+            struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)&bind_addr;
+            addr_ipv6->sin6_port = htons(bind_port);
+            addr_ipv6->sin6_family = AF_INET6;
+            memcpy(addr_ipv6->sin6_addr.s6_addr, bind_ipv6, sizeof(addr_ipv6->sin6_addr.s6_addr));
+        }
 
-    if(bind(socketfd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0)
-    {
-        LOG_E("bind fail,errno=%d:%s,host=%s:%d!\n",
-              errno, strerror(errno), remote_host, remote_port);
-        com_socket_close(socketfd);
-        return -1;
+        if(bind(socketfd, (struct sockaddr*)&bind_addr, bind_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)) < 0)
+        {
+            LOG_E("bind failed,errno=%d:%s,host=%s:%d", errno, strerror(errno), remote_host, remote_port);
+            com_socket_close(socketfd);
+            return false;
+        }
     }
 
     com_socket_set_recv_timeout(socketfd, timeout_ms);
     com_socket_set_send_timeout(socketfd, 10 * 1000);
 
-    struct sockaddr_in remote_addr;
-    memset(&remote_addr, 0, sizeof(struct sockaddr_in));
-    remote_addr.sin_family = AF_INET;
-    remote_addr.sin_addr.s_addr = remote_ip;
-    remote_addr.sin_port = htons(remote_port);
-    if(-1 == connect(socketfd, (struct sockaddr*)(&remote_addr), sizeof(struct sockaddr)))
+    if(-1 == connect(socketfd, (struct sockaddr*)(addr.toSockaddrStorage()), addr.is_ipv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)))
     {
-        LOG_E("connect fail,errno=%d:%s,host=%s:%d!\n",
-              errno, strerror(errno), remote_host, remote_port);
+        LOG_E("connect fail,errno=%d:%s,host=%s:%d", errno, strerror(errno), remote_host, remote_port);
         com_socket_close(socketfd);
         return -1;
     }
@@ -355,36 +342,11 @@ int com_socket_udp_send(int socketfd, const char* remote_host, int remote_port,
     {
         return -1;
     }
-    addrinfo hints;
-    addrinfo* res = NULL;
-    memset(&hints, 0, sizeof(addrinfo));
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_family = AF_INET;
-    if(getaddrinfo(remote_host, NULL, &hints, &res) != 0)
-    {
-        LOG_E("failed to get host ip");
-        return -1;
-    }
-    uint32 remote_ip = ((sockaddr_in*)(res->ai_addr))->sin_addr.s_addr;
-    freeaddrinfo(res);
-
-    //设置目的地地址
-    struct sockaddr_in target_addr;
-    memset(&target_addr, 0, sizeof(target_addr));
-    target_addr.sin_family = AF_INET;
-    target_addr.sin_addr.s_addr = remote_ip;
-    target_addr.sin_port = htons(remote_port);
-#if 0
-    if(-1 == connect(socketfd, (struct sockaddr*)(&target_addr), sizeof(struct sockaddr)))
-    {
-        LOG_E("connect fail,errno=%d:%s,host=%s:%d!\n",
-              errno, strerror(errno), remote_host, remote_port);
-        return -1;
-    }
-#endif
+    ComSocketAddr addr_to = com_dns_resolve(remote_host);
+    addr_to.port = remote_port;
     return sendto(socketfd, (char*)data, data_size, 0,
-                  (struct sockaddr*)&target_addr,
-                  sizeof(struct sockaddr));
+                  (struct sockaddr*)addr_to.toSockaddrStorage(),
+                  addr_to.is_ipv6 ? sizeof(sockaddr_in6) : sizeof(sockaddr_in));
 }
 
 int com_socket_tcp_send(int socketfd, const void* data, int data_size)
@@ -725,11 +687,11 @@ ComSocket::ComSocket()
 
 ComSocket::~ComSocket()
 {
+    closeSocket();
 }
 
 void ComSocket::setHost(const char* host)
 {
-    std::lock_guard<std::mutex> lck(mutxe);
     if(host != NULL)
     {
         this->host = host;
@@ -741,40 +703,347 @@ void ComSocket::setPort(uint16 port)
     this->port = port;
 }
 
-void ComSocket::setSocketfd(int fd)
-{
-    this->socketfd = fd;
-}
-
 void ComSocket::setInterface(const char* interface_name)
 {
-    std::lock_guard<std::mutex> lck(mutxe);
     if(interface_name != NULL)
     {
         this->interface_name = interface_name;
     }
 }
 
-std::string ComSocket::getHost()
+void ComSocket::setBindIPv4(uint32_be ipv4)
 {
-    std::lock_guard<std::mutex> lck(mutxe);
-    return host.c_str();
+    this->bind_ipv4 = ipv4;
 }
 
-uint16 ComSocket::getPort()
+void ComSocket::setBindIPv6(uint8* ipv6)
 {
-    return port;
+    if(ipv6 != NULL)
+    {
+        memcpy(this->bind_ipv6, ipv6, sizeof(this->bind_ipv6));
+    }
 }
 
-int ComSocket::getSocketfd()
+void ComSocket::setBindPort(uint16 port)
 {
-    return socketfd;
+    this->bind_port = port;
 }
 
-std::string ComSocket::getInterface()
+void ComSocket::closeSocket()
 {
-    std::lock_guard<std::mutex> lck(mutxe);
-    return interface_name;
+    if(socketfd > 0)
+    {
+#if defined(_WIN32) || defined(_WIN64)
+        closesocket(socketfd);
+#else
+        close(socketfd);
+#endif
+    }
+    socketfd = -1;
+}
+
+ComSocketTcp::ComSocketTcp()
+{
+}
+
+ComSocketTcp::~ComSocketTcp()
+{
+}
+
+bool ComSocketTcp::openSocket()
+{
+    ComSocketAddr addr = com_dns_resolve(host.c_str());
+    addr.port = port;
+    if(addr.valid == false)
+    {
+        LOG_E("failed to resolve host to ip,host=%s", host.c_str());
+        return false;
+    }
+
+#if defined(SOCK_CLOEXEC)
+    socketfd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_IP);
+#elif defined(O_CLOEXEC)
+    socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if(socketfd > 0)
+    {
+        fcntl(socketfd, O_CLOEXEC);
+    }
+#endif
+    if(socketfd < 0)
+    {
+        LOG_E("failed to create socket,host=%s:%u", host.c_str(), port);
+        return false;
+    }
+
+#if __linux__ == 1
+    if(!interface_name.empty()) //绑定到指定网卡，忽略路由
+    {
+        struct ifreq ifr;
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, interface_name.c_str(), sizeof(ifr.ifr_name) - 1);
+        setsockopt(socketfd, SOL_SOCKET, SO_BINDTODEVICE, (char*)&ifr, sizeof(ifr));
+    }
+#endif
+    uint8 buf_empty[16];
+    memset(buf_empty, 0, sizeof(buf_empty));
+    if(bind_ipv4 != 0 || memcmp(bind_ipv6, buf_empty, sizeof(bind_ipv6)) != 0)
+    {
+        struct sockaddr_storage bind_addr;
+        memset(&bind_addr, 0, sizeof(struct sockaddr_storage));
+        if(bind_ipv4 != 0)
+        {
+            struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)&bind_addr;
+            addr_ipv4->sin_family = AF_INET;
+            addr_ipv4->sin_port = htons(bind_port);
+            addr_ipv4->sin_addr.s_addr = bind_ipv4;
+        }
+        else
+        {
+            struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)&bind_addr;
+            addr_ipv6->sin6_port = htons(bind_port);
+            addr_ipv6->sin6_family = AF_INET6;
+            memcpy(addr_ipv6->sin6_addr.s6_addr, bind_ipv6, sizeof(bind_ipv6));
+        }
+
+        if(bind(socketfd, (struct sockaddr*)&bind_addr, bind_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)) < 0)
+        {
+            LOG_E("bind failed,errno=%d:%s,host=%s:%d", errno, strerror(errno), host.c_str(), port);
+            com_socket_close(socketfd);
+            return false;
+        }
+    }
+
+    com_socket_set_recv_timeout(socketfd, timeout_recv_ms);
+    com_socket_set_send_timeout(socketfd, timeout_send_ms);
+
+    if(-1 == connect(socketfd, (struct sockaddr*)(addr.toSockaddrStorage()), addr.is_ipv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)))
+    {
+        LOG_E("connect failed,errno=%d:%s,host=%s:%d", errno, strerror(errno), host.c_str(), port);
+        com_socket_close(socketfd);
+        return false;
+    }
+    com_socket_set_recv_timeout(socketfd, 0);
+    return true;
+}
+
+int ComSocketTcp::readData(uint8* buf, int buf_size, uint32 timeout_ms)
+{
+    if(socketfd <= 0 || buf == NULL || buf_size <= 0)
+    {
+        LOG_E("arg incorrect");
+        return -3;
+    }
+    if(timeout_ms > 0)
+    {
+        struct timeval tv;
+        fd_set readfds;
+        int select_rtn;
+        tv.tv_sec = timeout_ms / 1000;
+        tv.tv_usec = (timeout_ms % 1000) * 1000;
+        FD_ZERO(&readfds);
+        FD_SET(socketfd, &readfds);
+        select_rtn = select(socketfd + 1, &readfds, NULL, NULL, &tv);
+        //如果对端关闭了连接,select的返回值可能为1,且errno为2
+        if(select_rtn < 0)
+        {
+            LOG_W("select() failed,ret=%d,errno=%d:%s", select_rtn, errno, strerror(errno));
+            return -1;
+        }
+        if(select_rtn == 0)
+        {
+            LOG_T("select() timeout");
+            return -2;
+        }
+        if(FD_ISSET(socketfd, &readfds) == 0)
+        {
+            LOG_D("select() no data");
+            ((char*)buf)[0] = '\0';
+            return 0;
+        }
+    }
+    //如果对端关闭了连接,recv会返回0
+    int ret = recv(socketfd, (char*)buf, buf_size, timeout_ms < 0 ? 0 : MSG_DONTWAIT);
+    if(ret <= 0)
+    {
+        LOG_E("recv failed,ret=%d", ret);
+        return -4;
+    }
+    return ret;
+}
+
+int ComSocketTcp::writeData(const void* data, int data_size)
+{
+    if(data == NULL || data_size <= 0)
+    {
+        LOG_E("arg incorrect");
+        return -2;
+    }
+    if(socketfd <= 0)
+    {
+        LOG_E("socket is incorrect,socketfd=%d", socketfd);
+        return -3;
+    }
+    return send(socketfd, (char*)data, data_size, 0);
+}
+
+ComSocketUdp::ComSocketUdp()
+{
+}
+
+ComSocketUdp::~ComSocketUdp()
+{
+}
+
+bool ComSocketUdp::openSocket(bool broadcast)
+{
+#if defined(SOCK_CLOEXEC)
+    socketfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_IP);
+#elif defined(O_CLOEXEC)
+    socketfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if(socketfd > 0)
+    {
+        fcntl(socketfd, O_CLOEXEC);
+    }
+#endif
+    if(socketfd < 0)
+    {
+        LOG_E("failed to create socket");
+        return false;
+    }
+    com_socket_set_send_timeout(socketfd, timeout_recv_ms);
+    com_socket_set_recv_timeout(socketfd, timeout_send_ms);
+
+#if __linux__ == 1
+    if(!interface_name.empty()) //绑定到指定网卡，忽略路由
+    {
+        struct ifreq ifr;
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, interface_name.c_str(), sizeof(ifr.ifr_name) - 1);
+        setsockopt(socketfd, SOL_SOCKET, SO_BINDTODEVICE, (char*)&ifr, sizeof(ifr));
+    }
+#endif
+
+    if(broadcast)
+    {
+#if defined(_WIN32) || defined(_WIN64)
+        char option = 0x01;
+#else
+        int option = 0x01;
+#endif
+        bind_port = 0;
+        socklen_t option_len = sizeof(option);
+        setsockopt(socketfd, SOL_SOCKET, SO_BROADCAST, &option, option_len);
+    }
+
+    uint8 buf_empty[16];
+    memset(buf_empty, 0, sizeof(buf_empty));
+    if(bind_ipv4 != 0 || memcmp(bind_ipv6, buf_empty, sizeof(bind_ipv6)) != 0)
+    {
+        struct sockaddr_storage bind_addr;
+        memset(&bind_addr, 0, sizeof(struct sockaddr_storage));
+        if(bind_ipv4 != 0)
+        {
+            struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)&bind_addr;
+            addr_ipv4->sin_family = AF_INET;
+            addr_ipv4->sin_port = htons(bind_port);
+            addr_ipv4->sin_addr.s_addr = bind_ipv4;
+        }
+        else
+        {
+            struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)&bind_addr;
+            addr_ipv6->sin6_family = AF_INET6;
+            addr_ipv6->sin6_port = htons(bind_port);
+            memcpy(addr_ipv6->sin6_addr.s6_addr, bind_ipv6, sizeof(bind_ipv6));
+        }
+
+        if(bind(socketfd, (struct sockaddr*)&bind_addr, bind_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)) < 0)
+        {
+            LOG_E("bind failed,errno=%d:%s,host=%s:%d", errno, strerror(errno), host.c_str(), port);
+            com_socket_close(socketfd);
+            return false;
+        }
+    }
+
+    addr_to = com_dns_resolve(host.c_str());
+    addr_to.port = port;
+    return addr_to.valid;
+}
+
+int ComSocketUdp::readData(uint8* buf, int buf_size, ComSocketAddr* addr_from, uint32 timeout_ms)
+{
+    if(socketfd <= 0 || buf == NULL || buf_size <= 0)
+    {
+        LOG_E("arg incorrect");
+        return -3;
+    }
+    if(timeout_ms > 0)
+    {
+        struct timeval tv;
+        fd_set readfds;
+        int select_rtn;
+        tv.tv_sec = timeout_ms / 1000;
+        tv.tv_usec = (timeout_ms % 1000) * 1000;
+        FD_ZERO(&readfds);
+        FD_SET(socketfd, &readfds);
+        select_rtn = select(socketfd + 1, &readfds, NULL, NULL, &tv);
+        //如果对端关闭了连接,select的返回值可能为1,且errno为2
+        if(select_rtn < 0)
+        {
+            LOG_W("select() failed,ret=%d,errno=%d:%s", select_rtn, errno, strerror(errno));
+            return -1;
+        }
+        if(select_rtn == 0)
+        {
+            LOG_T("select() timeout");
+            return -2;
+        }
+        if(FD_ISSET(socketfd, &readfds) == 0)
+        {
+            LOG_D("select() no data");
+            ((char*)buf)[0] = '\0';
+            return 0;
+        }
+    }
+    int addr_len = sizeof(struct sockaddr_storage);
+    struct sockaddr_storage addr;
+    memset(&addr, 0, sizeof(addr));
+    int ret = recvfrom(socketfd, (char*)buf, buf_size, 0, (struct sockaddr*)&addr, (socklen_t*)&addr_len);
+    if(ret < 0)
+    {
+        LOG_E("recv failed,ret=%d", ret);
+        return -4;
+    }
+    if(addr_from != NULL)
+    {
+        if(addr_len == sizeof(struct sockaddr_in))
+        {
+            struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)&addr;
+            addr_from->port = ntohs(addr_ipv4->sin_port);
+            addr_from->ipv4 = addr_ipv4->sin_addr.s_addr;
+            addr_from->is_ipv6 = false;
+            addr_from->valid = true;
+        }
+        else if(addr_len == sizeof(struct sockaddr_in6))
+        {
+            struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)&addr;
+            addr_from->port = ntohs(addr_ipv6->sin6_port);
+            memcpy(addr_from->ipv6, addr_ipv6->sin6_addr.s6_addr, sizeof(addr_from->ipv6));
+            addr_from->is_ipv6 = true;
+            addr_from->valid = true;
+        }
+    }
+    return ret;
+}
+
+int ComSocketUdp::writeData(const void* data, int data_size)
+{
+    if(data == NULL || data_size <= 0 || addr_to.valid == false)
+    {
+        return -1;
+    }
+    return sendto(socketfd, (char*)data, data_size, 0,
+                  (struct sockaddr*)addr_to.toSockaddrStorage(),
+                  addr_to.is_ipv6 ? sizeof(sockaddr_in6) : sizeof(sockaddr_in));
 }
 
 ComTcpClient::ComTcpClient()
@@ -801,21 +1070,12 @@ ComTcpClient::~ComTcpClient()
     com_socket_global_uninit();
 }
 
-void ComTcpClient::ThreadReceiver(ComTcpClient* ctx)
+void ComTcpClient::ThreadRX(ComTcpClient* ctx)
 {
     if(ctx == NULL)
     {
         LOG_E("arg incorrect");
         return;
-    }
-
-    while(ctx->thread_receiver_running)
-    {
-        if(ctx->getHost().empty() == false && ctx->getPort() > 0)
-        {
-            break;
-        }
-        com_sleep_s(1);
     }
 
     uint8 buf[4096];
@@ -825,8 +1085,7 @@ void ComTcpClient::ThreadReceiver(ComTcpClient* ctx)
         {
             com_socket_close(ctx->socketfd);
             ctx->socketfd = -1;
-            LOG_I("connection to %s:%u lost, will reconnect later",
-                  ctx->getHost().c_str(), ctx->getPort());
+            LOG_I("connection to %s:%u lost, will reconnect later", ctx->host.c_str(), ctx->port);
             ctx->connected = false;
             ctx->onConnectionChanged(ctx->connected);
             if(ctx->reconnect_now)
@@ -840,17 +1099,13 @@ void ComTcpClient::ThreadReceiver(ComTcpClient* ctx)
         }
         if(ctx->socketfd <= 0)
         {
-            ctx->socketfd = com_socket_tcp_open(ctx->getHost().c_str(),
-                                                ctx->getPort(), 10 * 1000,
-                                                ctx->getInterface().c_str());
-            if(ctx->socketfd <= 0)
+            if(ctx->openSocket() == false)
             {
-                LOG_E("connection to %s:%u failed, will retry 3 sec later",
-                      ctx->getHost().c_str(), ctx->getPort());
+                LOG_E("connection to %s:%u failed, will retry 3 sec later", ctx->host.c_str(), ctx->port);
                 com_sleep_ms(ctx->reconnect_interval_ms);
                 continue;
             }
-            LOG_I("connect to %s:%u success,fd=%d", ctx->getHost().c_str(), ctx->getPort(), ctx->socketfd.load());
+            LOG_I("connect to %s:%u success,fd=%d", ctx->host.c_str(), ctx->port, ctx->socketfd);
             ctx->connected = true;
             ctx->condition_connection.notifyAll();
             ctx->onConnectionChanged(ctx->connected);
@@ -858,7 +1113,7 @@ void ComTcpClient::ThreadReceiver(ComTcpClient* ctx)
 
         do
         {
-            int ret = com_socket_tcp_read(ctx->socketfd, buf, sizeof(buf), 1000);
+            int ret = ctx->readData(buf, sizeof(buf), 1000);
             if(ret > 0)
             {
                 ctx->onRecv(buf, ret);
@@ -881,7 +1136,7 @@ void ComTcpClient::ThreadReceiver(ComTcpClient* ctx)
 bool ComTcpClient::startClient()
 {
     thread_receiver_running = true;
-    thread_receiver = std::thread(ThreadReceiver, this);
+    thread_receiver = std::thread(ThreadRX, this);
     return true;
 }
 
@@ -892,14 +1147,10 @@ void ComTcpClient::stopClient()
     {
         thread_receiver.join();
     }
-    if(socketfd > 0)
-    {
-        com_socket_close(socketfd);
-        socketfd = -1;
-        LOG_I("connection to %s:%u quit", getHost().c_str(), getPort());
-        connected = false;
-        onConnectionChanged(connected);
-    }
+    closeSocket();
+    LOG_I("connection to %s:%u quit", host.c_str(), port);
+    connected = false;
+    onConnectionChanged(connected);
 }
 
 void ComTcpClient::reconnect()
@@ -918,7 +1169,7 @@ int ComTcpClient::send(const void* data, int data_size)
     {
         return 0;
     }
-    int ret = com_socket_tcp_send(socketfd, data, data_size);
+    int ret = writeData(data, data_size);
     if(ret == -1)
     {
         this->reconnect_now = true;
@@ -1153,7 +1404,7 @@ bool ComMulticastNode::startNode()
     }
 
     struct ip_mreq mreq; // 多播地址结构体
-    mreq.imr_multiaddr.s_addr = inet_addr(getHost().c_str());
+    mreq.imr_multiaddr.s_addr = inet_addr(host.c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     ret = setsockopt(socketfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char*)&mreq, sizeof(mreq));
     if(ret < 0)
@@ -1167,9 +1418,9 @@ bool ComMulticastNode::startNode()
 
     local_addr.sin_family = AF_INET;
     local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    local_addr.sin_port = htons(getPort());
+    local_addr.sin_port = htons(port);
 
-    ret = bind(socketfd.load(), (struct sockaddr*)&local_addr, sizeof(local_addr));
+    ret = bind(socketfd, (struct sockaddr*)&local_addr, sizeof(local_addr));
     if(ret < 0)
     {
         perror("bind failed");
@@ -1195,7 +1446,7 @@ void ComMulticastNode::stopNode()
 
 int ComMulticastNode::send(const void* data, int data_size)
 {
-    return com_socket_udp_send(socketfd, getHost().c_str(), port, data, data_size);
+    return com_socket_udp_send(socketfd, host.c_str(), port, data, data_size);
 }
 
 void ComMulticastNode::ThreadRX(ComMulticastNode* client)
