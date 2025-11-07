@@ -362,27 +362,3 @@ ComSocketAddr com_dns_resolve(const char* dns, bool ipv6_prefer)
     return addr;
 }
 
-void* ComSocketAddr::toSockaddrStorage()
-{
-    if(valid == false)
-    {
-        return NULL;
-    }
-    if(is_ipv6)
-    {
-        struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)buf;
-        addr_ipv6->sin6_family = AF_INET6;
-        addr_ipv6->sin6_port = htons(port);
-        memcpy(addr_ipv6->sin6_addr.s6_addr, ipv6, sizeof(ipv6));
-    }
-    else
-    {
-        struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)buf;
-        addr_ipv4->sin_family = AF_INET;
-        addr_ipv4->sin_port = htons(port);
-        addr_ipv4->sin_addr.s_addr = ipv4;
-    }
-
-    return buf;
-}
-

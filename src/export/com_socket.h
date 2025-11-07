@@ -17,8 +17,8 @@ class COM_EXPORT ComSocketAddr
 {
 public:
     void* toSockaddrStorage();
+    bool valid();
 public:
-    bool valid = false;
     bool is_ipv6 = false;
     uint32_be ipv4 = 0;
     uint8 ipv6[16] = {0};

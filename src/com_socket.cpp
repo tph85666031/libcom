@@ -679,10 +679,49 @@ ComNicInfo::~ComNicInfo()
 {
 }
 
+void* ComSocketAddr::toSockaddrStorage()
+{
+    if(!valid())
+    {
+        return NULL;
+    }
+    if(is_ipv6)
+    {
+        struct sockaddr_in6* addr_ipv6 = (struct sockaddr_in6*)buf;
+        addr_ipv6->sin6_family = AF_INET6;
+        addr_ipv6->sin6_port = htons(port);
+        memcpy(addr_ipv6->sin6_addr.s6_addr, ipv6, sizeof(ipv6));
+    }
+    else
+    {
+        struct sockaddr_in* addr_ipv4 = (struct sockaddr_in*)buf;
+        addr_ipv4->sin_family = AF_INET;
+        addr_ipv4->sin_port = htons(port);
+        addr_ipv4->sin_addr.s_addr = ipv4;
+    }
+
+    return buf;
+}
+
+bool ComSocketAddr::valid()
+{
+    if(is_ipv6)
+    {
+        uint8 buf_empty[16];
+        memset(buf_empty, 0, sizeof(buf_empty));
+        return (memcpy(ipv6, buf_empty, sizeof(ipv6)) == 0);
+    }
+    else
+    {
+        return ipv4 != 0;
+    }
+}
+
 ComSocket::ComSocket()
 {
     port = 0;
     socketfd = 0;
+    com_socket_global_init();
 }
 
 ComSocket::~ComSocket()
@@ -754,7 +793,7 @@ bool ComSocketTcp::openSocket()
 {
     ComSocketAddr addr = com_dns_resolve(host.c_str());
     addr.port = port;
-    if(addr.valid == false)
+    if(addr.valid() == false)
     {
         LOG_E("failed to resolve host to ip,host=%s", host.c_str());
         return false;
@@ -966,7 +1005,7 @@ bool ComSocketUdp::openSocket(bool broadcast)
 
     addr_to = com_dns_resolve(host.c_str());
     addr_to.port = port;
-    return addr_to.valid;
+    return addr_to.valid();
 }
 
 int ComSocketUdp::readData(uint8* buf, int buf_size, ComSocketAddr* addr_from, uint32 timeout_ms)
@@ -1021,7 +1060,6 @@ int ComSocketUdp::readData(uint8* buf, int buf_size, ComSocketAddr* addr_from, u
             addr_from->port = ntohs(addr_ipv4->sin_port);
             addr_from->ipv4 = addr_ipv4->sin_addr.s_addr;
             addr_from->is_ipv6 = false;
-            addr_from->valid = true;
         }
         else if(addr_len == sizeof(struct sockaddr_in6))
         {
@@ -1029,7 +1067,6 @@ int ComSocketUdp::readData(uint8* buf, int buf_size, ComSocketAddr* addr_from, u
             addr_from->port = ntohs(addr_ipv6->sin6_port);
             memcpy(addr_from->ipv6, addr_ipv6->sin6_addr.s6_addr, sizeof(addr_from->ipv6));
             addr_from->is_ipv6 = true;
-            addr_from->valid = true;
         }
     }
     return ret;
@@ -1037,7 +1074,7 @@ int ComSocketUdp::readData(uint8* buf, int buf_size, ComSocketAddr* addr_from, u
 
 int ComSocketUdp::writeData(const void* data, int data_size)
 {
-    if(data == NULL || data_size <= 0 || addr_to.valid == false)
+    if(data == NULL || data_size <= 0 || addr_to.valid() == false)
     {
         return -1;
     }
@@ -1048,7 +1085,6 @@ int ComSocketUdp::writeData(const void* data, int data_size)
 
 ComTcpClient::ComTcpClient()
 {
-    com_socket_global_init();
     reconnect_now = false;
     thread_receiver_running = false;
     connected = false;
@@ -1056,7 +1092,6 @@ ComTcpClient::ComTcpClient()
 
 ComTcpClient::ComTcpClient(const char* host, uint16 port)
 {
-    com_socket_global_init();
     reconnect_now = false;
     thread_receiver_running = false;
     connected = false;
