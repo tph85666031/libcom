@@ -48,7 +48,7 @@ COM_EXPORT void com_socket_global_uninit();
 
 COM_EXPORT void com_socket_set_recv_timeout(int sock, int timeout_ms);
 COM_EXPORT void com_socket_set_send_timeout(int sock, int timeout_ms);
-
+COM_EXPORT void com_socket_set_tcp_nonblock(int socketfd);
 COM_EXPORT int com_socket_get_tcp_connection_status(int sock);//-1获取失败,0连接断开,1=连接成功
 COM_EXPORT int com_socket_unix_domain_open(const char* my_name, const char* server_name);
 COM_EXPORT int com_socket_udp_open(const char* interface_name, uint32_be bind_ipv4 = 0, uint8* bind_ipv6 = NULL,

@@ -358,6 +358,7 @@ ComSocketAddr com_dns_resolve(const char* dns, bool ipv6_prefer)
         freeaddrinfo(res);
         return ComSocketAddr();
     }
+    freeaddrinfo(res);
 
     return addr;
 }

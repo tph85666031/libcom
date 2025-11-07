@@ -10,6 +10,7 @@
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <sys/un.h>
+#include <fcntl.h>
 #elif __linux__ == 1
 #include <unistd.h>
 #include <sys/socket.h>
@@ -17,6 +18,7 @@
 #include <net/if.h>
 #include <netdb.h>
 #include <sys/un.h>
+#include <fcntl.h>
 #endif
 
 #include "com_socket.h"
@@ -68,6 +70,16 @@ void com_socket_set_send_timeout(int sock, int timeout_ms)
     {
         LOG_E("socket set send timeout failed");
     }
+}
+
+void com_socket_set_tcp_nonblock(int socketfd)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    int mode = 1;
+    ioctlsocket(socketfd, FIONBIO, &mode);
+#else
+    fcntl(socketfd, F_SETFL, fcntl(socketfd, F_GETFL, 0) | O_NONBLOCK);
+#endif
 }
 
 /*
@@ -847,7 +859,7 @@ bool ComSocketTcp::openSocket()
         if(bind(socketfd, (struct sockaddr*)&bind_addr, bind_addr.ss_family == AF_INET ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)) < 0)
         {
             LOG_E("bind failed,errno=%d:%s,host=%s:%d", errno, strerror(errno), host.c_str(), port);
-            com_socket_close(socketfd);
+            closeSocket();
             return false;
         }
     }
@@ -858,7 +870,7 @@ bool ComSocketTcp::openSocket()
     if(-1 == connect(socketfd, (struct sockaddr*)(addr.toSockaddrStorage()), addr.is_ipv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)))
     {
         LOG_E("connect failed,errno=%d:%s,host=%s:%d", errno, strerror(errno), host.c_str(), port);
-        com_socket_close(socketfd);
+        closeSocket();
         return false;
     }
     com_socket_set_recv_timeout(socketfd, 0);
