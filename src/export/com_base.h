@@ -162,6 +162,7 @@ COM_EXPORT bool com_strncmp_ignore_case(const char* str1, const char* str2, int 
 COM_EXPORT bool com_strncmp(const char* str1, const char* str2, int size);
 COM_EXPORT bool com_string_equal(const char* a, const char* b);
 COM_EXPORT bool com_string_equal_ignore_case(const char* a, const char* b);
+COM_EXPORT std::vector<std::string> com_string_split(const char* str, int str_size, char delim, bool keep_empty = true);
 COM_EXPORT std::vector<std::string> com_string_split(const char* str, const char* delim, bool keep_empty = true);
 
 COM_EXPORT std::string& com_string_trim_left(std::string& str, const char* t = " \t\n\r\f\v");
@@ -264,6 +265,8 @@ COM_EXPORT std::string com_user_get_name_logined();
 COM_EXPORT std::string com_user_get_home_logined();
 COM_EXPORT std::string com_user_get_display_logined();
 COM_EXPORT std::string com_user_get_language();
+COM_EXPORT std::string com_system_set_env(const char* name, const char* val);
+COM_EXPORT std::string com_system_remove_env(const char* name);
 
 template <class... T>
 COM_EXPORT int com_gcd(int x, int y, T...ns)

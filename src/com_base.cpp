@@ -368,6 +368,32 @@ bool com_run_shell_in_thread(const char* fmt, ...)
     return true;
 }
 
+std::vector<std::string> com_string_split(const char* str, int str_size, char delim, bool keep_empty)
+{
+    std::vector<std::string> vals;
+    if(str != NULL)
+    {
+        std::string val;
+        for(int i = 0; i < str_size; i++)
+        {
+            if(str[i] == delim)
+            {
+                if(!val.empty() || keep_empty)
+                {
+                    vals.push_back(val);
+                }
+                val.clear();
+            }
+            else
+            {
+                val.push_back(str[i]);
+            }
+        }
+    }
+
+    return vals;
+}
+
 std::vector<std::string> com_string_split(const char* str, const char* delim, bool keep_empty)
 {
     std::vector<std::string> vals;
@@ -2819,6 +2845,36 @@ std::string com_user_get_language()
 #endif
 
     return local_lang;
+}
+
+std::string com_system_set_env(const char* name, const char* val)
+{
+    if(name == NULL || val == NULL)
+    {
+        return std::string();
+    }
+    const char* val_origin = getenv(name);
+#ifdef _WIN32
+    _putenv(com_string_format("%s=%s", name, val).c_str());
+#else
+    setenv(name, val, 1);
+#endif
+    return val_origin == NULL ? std::string() : val_origin;
+}
+
+std::string com_system_remove_env(const char* name)
+{
+    if(name == NULL)
+    {
+        return std::string();
+    }
+    const char* val_origin = getenv(name);
+#ifdef _WIN32
+    _putenv(com_string_format("%s=", name).c_str());
+#else
+    unsetenv(name);
+#endif
+    return val_origin == NULL ? std::string() : val_origin;
 }
 
 ComBytes::ComBytes()
