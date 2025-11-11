@@ -1,7 +1,6 @@
 #ifndef __COM_SOCKET_H__
 #define __COM_SOCKET_H__
 
-#include <atomic>
 #include "com_base.h"
 #include "com_thread.h"
 #include "com_err.h"
