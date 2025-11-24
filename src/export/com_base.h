@@ -622,5 +622,6 @@ COM_EXPORT ComBytes com_wstring_to_utf16(const std::wstring& wstr);
 COM_EXPORT ComBytes com_wstring_to_utf32(const wchar_t* wstr);
 COM_EXPORT ComBytes com_wstring_to_utf32(const std::wstring& wstr);
 
+CAPI COM_EXPORT char* xxx();
 #endif /* __COM_BASE_H__ */
 
