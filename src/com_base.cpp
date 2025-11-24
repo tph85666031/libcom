@@ -4369,8 +4369,3 @@ std::string ComOption::showUsage()
     return usage;
 }
 
-CAPI char* xxx()
-{
-    return "123456";
-}
-
