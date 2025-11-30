@@ -15,7 +15,7 @@ typedef unsigned int       uint32_be;
 typedef unsigned long long uint64;
 typedef unsigned long long uint64_be;
 
-typedef unsigned long      ulong;         
+typedef unsigned long      ulong;
 
 #include <iostream>
 #include <string>
@@ -25,11 +25,13 @@ typedef unsigned long      ulong;
 #include <map>
 #include <unordered_map>
 #include <set>
+#include <list>
 #include <mutex>
 #include <thread>
 #include <atomic>
 #include <functional>
 #include <condition_variable>
+#include <algorithm>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -384,6 +386,57 @@ private :
     std::condition_variable condition;
 };
 typedef ComCondition DEPRECATED("Use ComCondition instead") CPPCondition;
+
+template<class T1, class T2>
+class COM_EXPORT ComLRUMap
+{
+public:
+    ComLRUMap(size_t max_size = 1024) : max_size(std::max(max_size, size_t(1))){};
+    virtual ~ComLRUMap() = default;
+
+    bool put(const T1& key, const T2& value)
+    {
+        auto it = map.find(key);
+        if(it != map.end())
+        {
+            it->second.second = value;
+            list.erase(it->second.first);
+            list.push_back(key);
+            it->second.first = --list.end();
+            return true;
+        }
+        if(map.size() >= max_size)
+        {
+            const T1& oldest_key = list.front();
+            map.erase(oldest_key);
+            list.pop_front();
+        }
+        list.push_back(key);
+        map.emplace(key, std::make_pair(--list.end(), value));
+        return true;
+    }
+    T2& get(const T1& key)
+    {
+        auto it = map.find(key);
+        if(it == map.end())
+        {
+            throw std::out_of_range("key not found");
+        }
+        list.erase(it->second.first);
+        list.push_back(key);
+        it->second.first = --list.end();
+
+        return it->second.second;
+    }
+    T2 getCopy(const T1& key)
+    {
+        return get(key);
+    }
+private:
+    size_t max_size = 1024;
+    std::unordered_map<T1, std::pair<typename std::list<T1>::iterator, T2>> map;
+    std::list<T1> list;
+};
 
 class COM_EXPORT Message
 {

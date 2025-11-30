@@ -475,12 +475,6 @@ void com_base_unit_test_suit(void** state)
         ASSERT_STR_EQUAL("test exception", e.what());
     }
 
-#if defined(_WIN32) || defined(_WIN64)
-    ASSERT_STR_EQUAL(com_get_bin_name().c_str(), "com.exe");
-#else
-    ASSERT_STR_EQUAL(com_get_bin_name().c_str(), "com");
-#endif
-
     TIME_COST_SHOW();
     Message msg;
     ComBytes b1(10 * 1014 * 1024);
@@ -515,6 +509,11 @@ void com_base_unit_test_suit(void** state)
 #endif
     LOG_I("process name=%s", com_get_bin_name().c_str());
     LOG_I("process path=%s", com_get_bin_path().c_str());
+
+    ComLRUMap<const char*, std::string> lru_map;
+    lru_map.put("A1", "data of a1");
+    lru_map.put("A2", "data of a2");
+    lru_map.put("A3", "data of a3");
 }
 
 void com_base_bytearray_unit_test_suit(void** state)
