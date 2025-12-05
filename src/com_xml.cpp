@@ -12,15 +12,13 @@ using namespace tinyxml2;
 
 ComXmlParser::ComXmlParser()
 {
-    static XMLDocument doc;
-    doc.Parse(XML_DECLARATION);
-    ctx = &doc;
+    ctx = new XMLDocument();
+    ((XMLDocument*)ctx)->Parse(XML_DECLARATION);
 }
 
 ComXmlParser::ComXmlParser(const char* file)
 {
-    static XMLDocument doc;
-    ctx = &doc;
+    ctx = new XMLDocument();
     if(file != NULL)
     {
         this->file = file;
@@ -30,13 +28,16 @@ ComXmlParser::ComXmlParser(const char* file)
 
 ComXmlParser::ComXmlParser(const ComBytes& content)
 {
-    static XMLDocument doc;
-    ctx = &doc;
+    ctx = new XMLDocument();
     load(content);
 }
 
 ComXmlParser::~ComXmlParser()
 {
+    if(ctx != NULL)
+    {
+        delete(XMLDocument*)ctx;
+    }
 }
 
 bool ComXmlParser::load(const char* file)
@@ -415,6 +416,35 @@ std::string ComXmlParser::pathRefine(const char* path)
     }
 
     return path_str;
+}
+
+std::string ComXmlParser::extractText()
+{
+    return extractElementText(((XMLDocument*)ctx)->RootElement());
+}
+
+std::string ComXmlParser::extractElementText(void* xml_element)
+{
+    std::string result;
+    if(xml_element == NULL)
+    {
+        return std::string();
+    }
+    while(xml_element != NULL)
+    {
+        const char* text = ((XMLElement*)xml_element)->GetText();
+        if(text != NULL)
+        {
+            result.append(text);
+            if(result.back() != '\n')
+            {
+                result.append("\n");
+            }
+        }
+        result.append(extractElementText(((XMLElement*)xml_element)->FirstChildElement()));
+        xml_element = ((XMLElement*)xml_element)->NextSiblingElement();
+    }
+    return result;
 }
 
 static void plist_other_to_json(CJsonObject& json, std::string& key, XMLElement* ele)

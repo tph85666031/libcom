@@ -4,9 +4,7 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <time.h>
 #include <direct.h>
-#include <winsock2.h>
 #include <Ws2tcpip.h>
-#pragma comment(lib, "Ws2_32.lib")
 #else
 #include <unistd.h> //usleep readlink
 #include <sys/time.h>

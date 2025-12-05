@@ -33,8 +33,10 @@ public:
     };
     bool setText(const char* path, const char* value);
     bool setAttribute(const char* path, const char* attribute_name, const char* value);
-    bool isNodeExists(const char * path);
+    bool isNodeExists(const char* path);
+    std::string extractText();
 private:
+    std::string extractElementText(void* xml_element);
     void* getNode(const char* path);
     void* createNode(const char* path);
     std::string pathRefine(const char* path);

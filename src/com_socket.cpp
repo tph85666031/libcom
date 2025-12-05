@@ -1,7 +1,5 @@
 #if defined(_WIN32) || defined(_WIN64)
-#include <winsock2.h>
 #include <Ws2tcpip.h>
-#pragma comment(lib, "Ws2_32.lib")
 #define SOCK_CLOEXEC 0
 #define MSG_DONTWAIT 0
 #elif defined(__APPLE__)

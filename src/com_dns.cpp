@@ -1,9 +1,3 @@
-#if defined(_WIN32) || defined(_WIN64)
-#include <winsock2.h>
-#include <ws2tcpip.h>  // getaddrinfo 定义在此
-#pragma comment(lib, "ws2_32.lib")
-#endif
-
 #if __linux__==1
 #include <netdb.h>
 #endif

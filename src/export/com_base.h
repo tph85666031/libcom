@@ -44,6 +44,8 @@ typedef unsigned long      ulong;
 #if defined(_WIN32) || defined(_WIN64)
 #include <winsock2.h> //ntohl
 #include <windows.h>
+#include <ws2tcpip.h> //getaddrinfo
+#pragma comment(lib, "Ws2_32.lib")
 #ifdef __GNUC__
 #define COM_EXPORT __attribute__((dllexport)) extern
 #else
