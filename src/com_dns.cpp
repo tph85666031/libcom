@@ -1,5 +1,12 @@
-#if __linux__ == 1
+#if defined(_WIN32) || defined(_WIN64)
+#include <winsock2.h>
+#include <ws2tcpip.h>  // getaddrinfo 定义在此
+#pragma comment(lib, "ws2_32.lib")
+#endif
+
+#if __linux__==1
 #include <netdb.h>
+#endif
 #include "com_dns.h"
 #include "com_socket.h"
 #include "com_file.h"
@@ -166,12 +173,14 @@ std::string dns_query_decode(uint8* buf, int buf_size, uint16 id_expect, bool is
             return std::string();
         }
 
-        uint8 bytes_tmp[answer_size];
-        s.detach(bytes_tmp, sizeof(bytes_tmp));
+        uint8* bytes_tmp = new uint8[answer_size];
+        s.detach(bytes_tmp, answer_size);
 
         if(answer_type == 1 && answer_size == 4)  //ip address
         {
-            return com_string_format("%u.%u.%u.%u", bytes_tmp[0], bytes_tmp[1], bytes_tmp[2], bytes_tmp[3]);
+            std::string ip_v4 = com_string_format("%u.%u.%u.%u", bytes_tmp[0], bytes_tmp[1], bytes_tmp[2], bytes_tmp[3]);
+            delete[] bytes_tmp;
+            return ip_v4;
         }
     }
 
@@ -239,11 +248,8 @@ std::string dns_via_tcp(const char* domain_name, const char* interface, const ch
     return dns_query_decode(buf, ret, id, true);
 }
 
-#endif
-
 std::string com_dns_query(const char* domain_name, const char* interface_name, const char* dns_server_ip)
 {
-#if __linux__==1
     if(domain_name == NULL)
     {
         LOG_E("domain_name is NULL");
@@ -318,9 +324,6 @@ std::string com_dns_query(const char* domain_name, const char* interface_name, c
 
     LOG_I("ip_pri=%s, ip_pub=%s for %s", nic.ip.c_str(), ip.c_str(), nic.name.c_str());
     return ip;
-#else
-    return std::string();
-#endif
 }
 
 ComSocketAddr com_dns_resolve(const char* dns, bool ipv6_prefer)
@@ -362,4 +365,3 @@ ComSocketAddr com_dns_resolve(const char* dns, bool ipv6_prefer)
 
     return addr;
 }
-

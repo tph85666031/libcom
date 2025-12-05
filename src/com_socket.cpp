@@ -75,7 +75,7 @@ void com_socket_set_send_timeout(int sock, int timeout_ms)
 void com_socket_set_tcp_nonblock(int socketfd)
 {
 #if defined(_WIN32) || defined(_WIN64)
-    int mode = 1;
+    ulong mode = 1;
     ioctlsocket(socketfd, FIONBIO, &mode);
 #else
     fcntl(socketfd, F_SETFL, fcntl(socketfd, F_GETFL, 0) | O_NONBLOCK);
