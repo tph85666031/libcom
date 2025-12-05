@@ -448,10 +448,16 @@ void LogTimeCalc::show(int line_number)
     time_cost_ns = com_time_cpu_ns();
 }
 
-void LogTimeCalc::printTimeCost(const char* log_message)
+void LogTimeCalc::show(int line_number, int time_cost_ms, const char* msg)
 {
-    uint64 cost = com_time_cpu_ns() - this->time_cost_ns;
-    com_log_output(LOG_LEVEL_WARNING, "%s, time cost: %.4f ms",
-                   log_message, (double)cost / (1000 * 1000));
+    if((com_time_cpu_ns() - time_cost_ns) / (1000 * 1000) > (uint64)time_cost_ms)
+    {
+        com_log_output(LOG_LEVEL_WARNING, "TIME DIFF %s[%d<---%.4fms--->%d]:%s",
+                       file_name.c_str(), this->line_number,
+                       (double)(com_time_cpu_ns() - time_cost_ns) / (1000 * 1000),
+                       line_number, msg);
+        this->line_number = line_number;
+        time_cost_ns = com_time_cpu_ns();
+    }
 }
 

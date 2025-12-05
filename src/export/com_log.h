@@ -48,7 +48,7 @@ public:
     LogTimeCalc(const char* file_name, int line_number);
     ~LogTimeCalc();
     void show(int line_number);
-    void printTimeCost(const char* log_message);
+    void show(int line_number, int time_cost_ms, const char* msg);
 private:
     std::string file_name;
     int line_number;
@@ -57,7 +57,7 @@ private:
 
 #define TIME_COST()      LogTimeCalc __calc__(__FILENAME__,__LINE__)
 #define TIME_COST_SHOW() __calc__.show(__LINE__)
-#define PRINT_TIME_COST(msg) __calc__.printTimeCost(msg)
+#define TIME_COST_SHOW_MAX(time_cost_max,msg) __calc__.show(__LINE__,time_cost_max,msg)
 
 #endif /* __COM_LOG_H__ */
 

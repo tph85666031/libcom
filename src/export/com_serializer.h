@@ -3,7 +3,6 @@
 
 #include "com_base.h"
 #include "CJsonObject.h"
-#include <vector>
 
 class COM_EXPORT Serializer
 {
