@@ -3459,6 +3459,15 @@ Message& Message::operator=(Message&& msg)
     return *this;
 }
 
+Message& Message::operator+=(const Message& msg)
+{
+    if(this != &msg)
+    {
+        this->datas.insert(msg.datas.begin(), msg.datas.end());
+    }
+    return *this;
+}
+
 bool Message::operator==(const Message& msg)
 {
     if(msg.id != this->id || msg.datas.size() != this->datas.size())
