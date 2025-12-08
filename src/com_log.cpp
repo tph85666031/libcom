@@ -422,37 +422,41 @@ void com_logger_log(const char* name, int level, const char* fmt, ...)
     }
 }
 
-LogTimeCalc::LogTimeCalc(const char* file_name, int line_number)
+LogTimeCalc::LogTimeCalc(const char* file_name, int line_number, int time_cost_max_ms, const char* msg)
 {
     this->line_number = line_number;
     if(file_name != NULL)
     {
         this->file_name = file_name;
     }
+    if(msg != NULL)
+    {
+        this->msg = msg;
+    }
     time_cost_ns = com_time_cpu_ns();
+    time_cost_max_ns = time_cost_max_ms * (1000 * 1000);
 }
 
 LogTimeCalc::~LogTimeCalc()
 {
-    com_log_output(LOG_LEVEL_WARNING, "TIME DIFF %s[%d<---%.4fms--->RETUN]",
-                   file_name.c_str(), this->line_number,
-                   (double)(com_time_cpu_ns() - time_cost_ns) / (1000 * 1000));
-}
-
-void LogTimeCalc::show(int line_number)
-{
-    com_log_output(LOG_LEVEL_WARNING, "TIME DIFF %s[%d<---%.4fms--->%d]",
-                   file_name.c_str(), this->line_number,
-                   (double)(com_time_cpu_ns() - time_cost_ns) / (1000 * 1000), line_number);
-    this->line_number = line_number;
-    time_cost_ns = com_time_cpu_ns();
-}
-
-void LogTimeCalc::show(int line_number, int time_cost_ms, const char* msg)
-{
-    if((com_time_cpu_ns() - time_cost_ns) / (1000 * 1000) > (uint64)time_cost_ms)
+    if((com_time_cpu_ns() - time_cost_ns) > time_cost_max_ns)
     {
-        com_log_output(LOG_LEVEL_WARNING, "TIME DIFF %s[%d<---%.4fms--->%d]:%s",
+        com_log_output(LOG_LEVEL_WARNING, "TIME DIFF %s[%d<---%.4fms--->RETUN] %s",
+                       file_name.c_str(), this->line_number,
+                       (double)(com_time_cpu_ns() - time_cost_ns) / (1000 * 1000),
+                       msg.c_str());
+    }
+}
+
+void LogTimeCalc::show(int line_number, const char* msg)
+{
+    if(msg == NULL)
+    {
+        msg = this->msg.c_str();
+    }
+    if((com_time_cpu_ns() - time_cost_ns) > time_cost_max_ns)
+    {
+        com_log_output(LOG_LEVEL_WARNING, "TIME DIFF %s[%d<---%.4fms--->%d] %s",
                        file_name.c_str(), this->line_number,
                        (double)(com_time_cpu_ns() - time_cost_ns) / (1000 * 1000),
                        line_number, msg);

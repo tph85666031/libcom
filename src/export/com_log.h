@@ -45,19 +45,21 @@ COM_EXPORT void com_logger_log(const char* name, int level, const char* fmt, ...
 class COM_EXPORT LogTimeCalc final
 {
 public:
-    LogTimeCalc(const char* file_name, int line_number);
+    LogTimeCalc(const char* file_name, int line_number, int time_cost_max_ms = -1, const char* msg = NULL);
     ~LogTimeCalc();
-    void show(int line_number);
-    void show(int line_number, int time_cost_ms, const char* msg);
+    void show(int line_number, const char* msg = NULL);
 private:
     std::string file_name;
+    std::string msg;
     int line_number;
     uint64 time_cost_ns;
+    uint64 time_cost_max_ns;
 };
 
-#define TIME_COST()      LogTimeCalc __calc__(__FILENAME__,__LINE__)
-#define TIME_COST_SHOW() __calc__.show(__LINE__)
-#define TIME_COST_SHOW_MAX(time_cost_max,msg) __calc__.show(__LINE__,time_cost_max,msg)
+#define TIME_COST()                         LogTimeCalc __calc__(__FILENAME__,__LINE__)
+#define TIME_COST_IF(time_cost_max_ms,msg)  LogTimeCalc __calc__(__FILENAME__,__LINE__,time_cost_max_ms,msg)
+#define TIME_COST_SHOW()                __calc__.show(__LINE__)
+#define TIME_COST_SHOW_MSG(msg)         __calc__.show(__LINE__,msg)
 
 #endif /* __COM_LOG_H__ */
 
