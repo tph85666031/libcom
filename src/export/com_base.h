@@ -187,6 +187,7 @@ COM_EXPORT char* com_string_to_lower(char* str);
 COM_EXPORT bool com_string_replace(char* str, char from, char to);
 COM_EXPORT bool com_string_replace(std::string& str, const char* from, const char* to);
 COM_EXPORT int com_string_length_utf8(const char* str);
+COM_EXPORT int com_string_length_utf8(const char* str, int str_len);
 COM_EXPORT int com_string_length(const char* str);
 COM_EXPORT int com_string_size(const char* str);
 COM_EXPORT bool com_string_is_empty(const char* str);
