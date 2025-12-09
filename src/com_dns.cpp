@@ -1,5 +1,8 @@
 #if __linux__==1
 #include <netdb.h>
+#elif defined(__APPLE__)
+#include <arpa/inet.h>
+#include <netdb.h>
 #endif
 #include "com_dns.h"
 #include "com_socket.h"

@@ -22,6 +22,7 @@
 #if defined(__APPLE__)
 #include <libproc.h>
 #include <codecvt>
+#include <arpa/inet.h>
 #endif
 
 #include "ConvertUTF.h"
@@ -2164,8 +2165,12 @@ void com_sem_reset(Sem* sem)
     }
 #if defined(_WIN32) || defined(_WIN64)
     ResetEvent(sem->handle);
-#else
+#elif __linux__ == 1 
     while(sem_trywait(&sem->handle) == 0)
+    {
+    }
+#elif defined(__APPLE__)
+    while(dispatch_semaphore_wait(sem->handle, DISPATCH_TIME_NOW) == 0)
     {
     }
 #endif

@@ -348,10 +348,10 @@ int ComTcpServer::acceptClient()
         return -1;
     }
     LOG_D("accept new connection, fd=%d, client=%s:%u",
-          clientfd, com_ipv4_to_string(sin.sin_addr.s_addr).c_str(), sin.sin_port);
+          clientfd, com_string_from_ipv4(sin.sin_addr.s_addr).c_str(), sin.sin_port);
     SOCKET_CLIENT_DES des;
     des.clientfd = clientfd;
-    des.host = com_ipv4_to_string(sin.sin_addr.s_addr);
+    des.host = com_string_from_ipv4(sin.sin_addr.s_addr);
     des.port = sin.sin_port;
 
     mutex_clients.lock();
