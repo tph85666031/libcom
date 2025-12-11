@@ -45,7 +45,7 @@ COM_EXPORT void com_logger_log(const char* name, int level, const char* fmt, ...
 class COM_EXPORT LogTimeCalc final
 {
 public:
-    LogTimeCalc(const char* file_name, int line_number, int time_cost_max_ms = -1, const char* msg = NULL);
+    LogTimeCalc(const char* file_name, int line_number, int time_cost_max_ms = 0, const char* msg = NULL);
     ~LogTimeCalc();
     void show(int line_number, const char* msg = NULL);
 private:
