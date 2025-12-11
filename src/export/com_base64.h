@@ -16,7 +16,6 @@ public:
 private:
     static bool IsBase64(char c);
 };
-typedef ComBase64 DEPRECATED("Use ComBase64 instead") Base64;
 
 #endif /* __COM_BASE64_H__ */
 

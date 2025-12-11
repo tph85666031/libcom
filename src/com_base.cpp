@@ -2779,7 +2779,7 @@ std::string com_system_remove_env(const char* name)
     return val_origin == NULL ? std::string() : val_origin;
 }
 
-std::vector<std::string> com_system_get_disk_driver()
+std::vector<std::string> com_system_get_disk_drives()
 {
 #ifdef _WIN32
     DWORD val = GetLogicalDrives();
@@ -2792,7 +2792,12 @@ std::vector<std::string> com_system_get_disk_driver()
     {
         if((val >> i) & 0x01)
         {
-            drivers.push_back(com_string_format("%c:\\", 'A' + i));
+            std::string drive = com_string_format("%c:\\", 'A' + i);
+            uint32 type = GetDriveTypeA(drive.c_str());
+            if(type == DRIVE_REMOVABLE || type == DRIVE_FIXED)
+            {
+                drivers.push_back(drive);
+            }
         }
     }
     return drivers;

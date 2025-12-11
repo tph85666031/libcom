@@ -552,7 +552,6 @@ public:
 protected:
     process_sem_t sem;
 };
-typedef ComProcessSem DEPRECATED("Use ComProcessSem instead") CPPProcessSem;
 
 class COM_EXPORT ComProcessMutex
 {
@@ -571,7 +570,6 @@ public:
 protected:
     process_mutex_t mutex;
 };
-typedef ComProcessMutex DEPRECATED("Use ComProcessMutex instead") CPPProcessMutex;
 
 class COM_EXPORT ComProcessCondition
 {
@@ -590,7 +588,6 @@ public:
 private:
     process_cond_t cond;
 };
-typedef ComProcessCondition DEPRECATED("Use ComProcessCondition instead") CPPProcessCondition;
 
 class COM_EXPORT ComShareMemoryV
 {
@@ -606,7 +603,6 @@ private:
     process_share_mem_t mem;
     void* msg;
 };
-typedef ComShareMemoryV DEPRECATED("Use ComShareMemoryV instead") CPPShareMemoryV;
 
 class COM_EXPORT ComShareMemoryMap
 {
@@ -622,6 +618,5 @@ private:
     int msg_size;
     void* msg;
 };
-typedef ComShareMemoryMap DEPRECATED("Use ComShareMemoryMap instead") CPPShareMemoryMap;
 
 #endif /* __COM_THREAD_H__ */

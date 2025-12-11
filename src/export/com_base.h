@@ -273,7 +273,7 @@ COM_EXPORT std::string com_user_get_display_logined();
 COM_EXPORT std::string com_user_get_language();
 COM_EXPORT std::string com_system_set_env(const char* name, const char* val);
 COM_EXPORT std::string com_system_remove_env(const char* name);
-COM_EXPORT std::vector<std::string> com_system_get_disk_driver();
+COM_EXPORT std::vector<std::string> com_system_get_disk_drives();
 
 template <class... T>
 COM_EXPORT int com_gcd(int x, int y, T...ns)
@@ -342,7 +342,6 @@ public:
 private:
     std::vector<uint8> buf;
 };
-typedef ComBytes DEPRECATED("Use ComBytes instead") CPPBytes;
 
 class COM_EXPORT ComMutex
 {
@@ -373,7 +372,6 @@ public:
 private :
     Sem sem;
 };
-typedef ComSem DEPRECATED("Use ComSem instead") CPPSem;
 
 class COM_EXPORT ComCondition
 {
@@ -390,7 +388,6 @@ private :
     std::mutex mutex_cv;
     std::condition_variable condition;
 };
-typedef ComCondition DEPRECATED("Use ComCondition instead") CPPCondition;
 
 template<class T1, class T2>
 class COM_EXPORT ComLRUMap
