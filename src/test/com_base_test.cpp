@@ -514,6 +514,12 @@ void com_base_unit_test_suit(void** state)
     lru_map.put("A1", "data of a1");
     lru_map.put("A2", "data of a2");
     lru_map.put("A3", "data of a3");
+
+    std::vector<std::string> disk_drivers = com_system_get_disk_driver();
+    for(const std::string& val : disk_drivers)
+    {
+        LOG_I("x=%s", val.c_str());
+    }
 }
 
 void com_base_bytearray_unit_test_suit(void** state)

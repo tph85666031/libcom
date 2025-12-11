@@ -273,6 +273,7 @@ COM_EXPORT std::string com_user_get_display_logined();
 COM_EXPORT std::string com_user_get_language();
 COM_EXPORT std::string com_system_set_env(const char* name, const char* val);
 COM_EXPORT std::string com_system_remove_env(const char* name);
+COM_EXPORT std::vector<std::string> com_system_get_disk_driver();
 
 template <class... T>
 COM_EXPORT int com_gcd(int x, int y, T...ns)

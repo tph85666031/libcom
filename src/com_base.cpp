@@ -2165,7 +2165,7 @@ void com_sem_reset(Sem* sem)
     }
 #if defined(_WIN32) || defined(_WIN64)
     ResetEvent(sem->handle);
-#elif __linux__ == 1 
+#elif __linux__ == 1
     while(sem_trywait(&sem->handle) == 0)
     {
     }
@@ -2777,6 +2777,28 @@ std::string com_system_remove_env(const char* name)
     unsetenv(name);
 #endif
     return val_origin == NULL ? std::string() : val_origin;
+}
+
+std::vector<std::string> com_system_get_disk_driver()
+{
+#ifdef _WIN32
+    DWORD val = GetLogicalDrives();
+    if(val == 0)
+    {
+        return std::vector<std::string>();
+    }
+    std::vector<std::string> drivers;
+    for(int i = 2; i < 32; i++)
+    {
+        if((val >> i) & 0x01)
+        {
+            drivers.push_back(com_string_format("%c:\\", 'A' + i));
+        }
+    }
+    return drivers;
+#else
+    return std::vector<std::string>();
+#endif
 }
 
 ComBytes::ComBytes()
