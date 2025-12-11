@@ -507,6 +507,7 @@ public:
     ComBytes getBytes(const char* key) const;
     uint8* getBytes(const char* key, int& size);
 
+    std::string toString() const;
     std::string toJSON(bool pretty_style = false) const;
 
     static Message FromJSON(const char* json);

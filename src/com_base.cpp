@@ -3722,6 +3722,21 @@ Message Message::getMessage(const char* key) const
     return Message::FromJSON(datas.at(key).c_str());
 }
 
+std::string Message::toString() const
+{
+    std::string val;
+    for(auto& it : datas)
+    {
+        val += com_string_format("%s=%s,", it.first.c_str(), it.second.c_str());
+    }
+    if(val.empty() == false)
+    {
+        val.pop_back();
+    }
+
+    return val;
+}
+
 std::string Message::toJSON(bool pretty_style) const
 {
     CJsonObject cjson;
