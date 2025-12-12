@@ -912,7 +912,7 @@ std::string com_string_ansi_to_utf8(const std::string& ansi)
 
 std::string com_string_ansi_to_utf8(const char* ansi)
 {
-    if(ansi == NULL)
+    if(ansi == NULL || ansi[0] == '\0')
     {
         return std::string();
     }
@@ -938,7 +938,7 @@ std::string com_string_utf8_to_ansi(const std::string& utf8)
 
 std::string com_string_utf8_to_ansi(const char* utf8)
 {
-    if(utf8 == NULL)
+    if(utf8 == NULL || utf8[0] == '\0')
     {
         return std::string();
     }

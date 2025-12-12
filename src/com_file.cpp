@@ -502,7 +502,7 @@ bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool r
     }
     const char* p = dir_path;
     const char* p_delim = NULL;
-    /* dir_path=/a/b/c/*.txt */
+    /* dir_path=/a/b/c/a?.txt */
     do
     {
         if(*p == PATH_DELIM_CHAR)
