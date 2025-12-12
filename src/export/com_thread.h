@@ -98,7 +98,7 @@ public:
         thread_mgr_running = false;
         allow_duplicate_message = true;
         min_thread_count = 2;
-        max_thread_count = 10;
+        max_thread_count = std::max(4, (int)std::thread::hardware_concurrency());
         queue_size_per_thread = 5;
     }
     virtual ~ComThreadPool()
