@@ -496,12 +496,13 @@ void com_dir_clear(const char* dir_path)
 
 bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool recursion)
 {
-    if(dir_path == NULL || dir_path[0] == '\0')
+    if(com_string_is_empty(dir_path))
     {
         return false;
     }
     const char* p = dir_path;
     const char* p_delim = NULL;
+    /* dir_path=/a/b/c/*.txt */
     do
     {
         if(*p == PATH_DELIM_CHAR)
@@ -517,6 +518,7 @@ bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool r
         }
     }
     while(*p++);
+    /* dir_path=/a/b/c/ */
     std::string dir_pattern = dir_path;
     if(dir_pattern.back() != PATH_DELIM_CHAR)
     {

@@ -407,3 +407,12 @@ void com_system_exit(bool force)
     }
 }
 
+void com_system_pause()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    system("pause");
+#else
+    pause();
+#endif
+}
+

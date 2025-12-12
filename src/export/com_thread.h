@@ -452,15 +452,15 @@ private:
 };
 
 template <typename T>
-class COM_EXPORT ThreadRunner
+class COM_EXPORT ComThreadRunner
 {
 public:
-    ThreadRunner()
+    ComThreadRunner()
     {
         thread_runner_running = true;
         thread_runner = std::thread(ThreadLoop, this);
     };
-    virtual ~ThreadRunner()
+    virtual ~ComThreadRunner()
     {
         thread_runner_running = false;
         if(thread_runner.joinable())
@@ -502,7 +502,7 @@ public:
     };
 private:
     virtual void threadRunner(T& msg) {};
-    static void ThreadLoop(ThreadRunner<T>* ctx)
+    static void ThreadLoop(ComThreadRunner<T>* ctx)
     {
         if(ctx == NULL)
         {

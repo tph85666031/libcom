@@ -26,5 +26,6 @@ COM_EXPORT void com_stack_disable_coredump();
 COM_EXPORT void com_system_send_signal(int sig);
 COM_EXPORT void com_system_send_signal(uint64 pid, int sig);
 COM_EXPORT void com_system_exit(bool force = false);
+COM_EXPORT void com_system_pause();
 
 #endif /* __COM_STACK_H__ */
