@@ -2806,6 +2806,31 @@ std::vector<std::string> com_system_get_disk_drives()
 #endif
 }
 
+bool com_system_set_locale_to_utf8()
+{
+    const std::vector<std::string> locales =
+    {
+        ".UTF8",
+        ".utf8",
+        "C.UTF-8",
+        "zh_CN.utf8",
+        "en_US.UTF-8",
+        "en_GB.UTF-8",
+        "English_United States.65001",
+    };
+
+    for(const std::string& val : locales)
+    {
+        if(setlocale(LC_CTYPE, val.c_str()) != NULL)
+        {
+            return true;
+        }
+    }
+
+    LOG_W("failed to set system locale to utf8");
+    return false;
+}
+
 ComBytes::ComBytes()
 {
     buf.clear();
