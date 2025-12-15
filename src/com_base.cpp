@@ -4180,6 +4180,8 @@ void ByteStreamReader::reset()
 
 ComOption::ComOption()
 {
+    argc = 0;
+    argv = NULL;
 }
 
 ComOption::~ComOption()
@@ -4273,11 +4275,13 @@ bool ComOption::getBool(const char* key, bool default_val)
 
 bool ComOption::parse(int argc, const char** argv)
 {
-    if(argc <= 1 || argv == NULL)
+    if(argc <= 0 || argv == NULL)
     {
-        LOG_E("arg incorrect");
+        LOG_E("arg incorrect,argc=%d,argv=%p", argc, argv);
         return false;
     }
+    this->argc = argc;
+    this->argv = (char**)argv;
     app_name = com_path_name(argv[0]);
     for(int i = 1; i < argc; i++)
     {
@@ -4345,5 +4349,21 @@ std::string ComOption::showUsage()
     }
     LOG_I("\n%s", usage.c_str());
     return usage;
+}
+
+int ComOption::getArgc()
+{
+    return argc;
+}
+
+char** ComOption::getArgv()
+{
+    return argv;
+}
+
+ComOption& GetComOption()
+{
+    static ComOption opt;
+    return opt;
 }
 

@@ -516,16 +516,20 @@ private:
                 break;
             }
 
-            ctx->mutex_msgs.lock();
-            if(ctx->msgs.empty())
+            do
             {
+                ctx->mutex_msgs.lock();
+                if(ctx->msgs.empty())
+                {
+                    ctx->mutex_msgs.unlock();
+                    break;
+                }
+                T msg = ctx->msgs.front();
+                ctx->msgs.pop();
                 ctx->mutex_msgs.unlock();
-                continue;
+                ctx->threadRunner(msg);
             }
-            T msg = ctx->msgs.front();
-            ctx->msgs.pop();
-            ctx->mutex_msgs.unlock();
-            ctx->threadRunner(msg);
+            while(ctx->thread_runner_running);
         }
         return;
     };

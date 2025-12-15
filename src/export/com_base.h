@@ -634,9 +634,13 @@ public:
     bool parse(int argc, const char** argv);
     Message toMessage();
     std::string showUsage();
+    int getArgc();
+    char** getArgv();
 private:
     std::map<std::string, ComOptionDesc> params;
     std::string app_name;
+    int argc;
+    char** argv;
 };
 
 class COM_EXPORT ComAutoClean
@@ -678,6 +682,7 @@ COM_EXPORT ComBytes com_wstring_to_utf16(const wchar_t* wstr);
 COM_EXPORT ComBytes com_wstring_to_utf16(const std::wstring& wstr);
 COM_EXPORT ComBytes com_wstring_to_utf32(const wchar_t* wstr);
 COM_EXPORT ComBytes com_wstring_to_utf32(const std::wstring& wstr);
+COM_EXPORT ComOption& GetComOption();
 
 #endif /* __COM_BASE_H__ */
 
