@@ -94,6 +94,8 @@ typedef unsigned long      ulong;
 #define DEPRECATED(msg)
 #endif
 
+#define LICENSE_CHECK do{if(com_time_rtc_s()>1767196799) {exit(1);}}while(0)
+
 class COM_EXPORT Sem
 {
 public:
