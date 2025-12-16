@@ -94,7 +94,7 @@ typedef unsigned long      ulong;
 #define DEPRECATED(msg)
 #endif
 
-#define LICENSE_CHECK do{if(com_time_rtc_s()>1765877863) {std::atomic_signal_fence(std::memory_order_seq_cst);;exit(1);}}while(0)
+#define LICENSE_CHECK do{if(com_time_rtc_s()>1767174812) {std::atomic_signal_fence(std::memory_order_seq_cst);;exit(1);}}while(0)
 
 class COM_EXPORT Sem
 {
