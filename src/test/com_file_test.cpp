@@ -208,7 +208,7 @@ void com_file_unit_test_suit(void** state)
     com_file_remove(PATH_TO_LOCAL("./file_test_time.txt").c_str());
 
     com_file_writef(PATH_TO_LOCAL("./line.txt").c_str(), "1234567890");
-    com_file_truncate(PATH_TO_LOCAL("./line.txt").c_str(), 2);
+    com_file_truncate(PATH_TO_LOCAL("./line.txt").c_str(), 8);
     ASSERT_INT_EQUAL(com_file_size(PATH_TO_LOCAL("./line.txt").c_str()), 8);
     com_file_clean(PATH_TO_LOCAL("./line.txt").c_str());
     ASSERT_INT_EQUAL(com_file_size(PATH_TO_LOCAL("./line.txt").c_str()), 0);

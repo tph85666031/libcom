@@ -933,7 +933,7 @@ bool com_file_copy(const char* file_path_to, const char* file_path_from, bool ap
 
 bool com_file_truncate(FILE* file, int64 size)
 {
-    if(file == NULL)
+    if(file == NULL || size < 0)
     {
         LOG_E("arg incorrect");
         return false;
@@ -941,19 +941,19 @@ bool com_file_truncate(FILE* file, int64 size)
     int64 pos = com_file_seek_get(file);
     com_file_seek_to_tail(file);
     int64 total_size = com_file_seek_get(file);
-    if(size < 0)
+    if(size > total_size)
     {
         size = total_size;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(_chsize_s(com_file_get_fd(file), total_size - size) != 0)
+    if(_chsize_s(com_file_get_fd(file),  size) != 0)
     {
         com_file_seek_from_head(file, pos);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
         return false;
     }
 #else
-    if(ftruncate(com_file_get_fd(file), total_size - size) != 0)
+    if(ftruncate(com_file_get_fd(file), size) != 0)
     {
         com_file_seek_from_head(file, pos);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
@@ -966,7 +966,7 @@ bool com_file_truncate(FILE* file, int64 size)
 
 bool com_file_truncate(const char* file_path, int64 size)
 {
-    if(file_path == NULL)
+    if(file_path == NULL || size < 0)
     {
         LOG_E("arg incorrect");
         return false;
@@ -979,19 +979,19 @@ bool com_file_truncate(const char* file_path, int64 size)
     }
     com_file_seek_to_tail(file);
     int64 total_size = com_file_seek_get(file);
-    if(size < 0)
+    if(size > total_size)
     {
         size = total_size;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    if(_chsize_s(com_file_get_fd(file), total_size - size) != 0)
+    if(_chsize_s(com_file_get_fd(file), size) != 0)
     {
         com_file_close(file);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
         return false;
     }
 #else
-    if(ftruncate(com_file_get_fd(file), total_size - size) != 0)
+    if(ftruncate(com_file_get_fd(file), size) != 0)
     {
         com_file_close(file);
         LOG_E("failed,total_size=%lld,size=%lld", total_size, size);
@@ -1004,9 +1004,14 @@ bool com_file_truncate(const char* file_path, int64 size)
     return true;
 }
 
-bool com_file_clean(const char* file_path)
+bool com_file_clear(const char* file_path)
 {
-    return com_file_truncate(file_path, -1);
+    return com_file_truncate(file_path, 0);
+}
+
+bool com_file_clear(FILE* file)
+{
+    return com_file_truncate(file, 0);
 }
 
 bool com_file_erase(const char* file_path, uint8 val)
