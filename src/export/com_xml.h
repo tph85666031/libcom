@@ -8,10 +8,12 @@ class COM_EXPORT ComXmlParser
 public:
     ComXmlParser();
     ComXmlParser(const char* file);
+    ComXmlParser(const void* data, int data_size);
     ComXmlParser(const ComBytes& content);
     virtual ~ComXmlParser();
 
     bool load(const char* file);
+    bool load(const void* data, int data_size);
     bool load(const ComBytes& content);
     bool save();
     bool saveAs(const char* file);

@@ -26,6 +26,12 @@ ComXmlParser::ComXmlParser(const char* file)
     }
 }
 
+ComXmlParser::ComXmlParser(const void* data, int data_size)
+{
+    ctx = new XMLDocument();
+    load(data, data_size);
+}
+
 ComXmlParser::ComXmlParser(const ComBytes& content)
 {
     ctx = new XMLDocument();
@@ -42,7 +48,7 @@ ComXmlParser::~ComXmlParser()
 
 bool ComXmlParser::load(const char* file)
 {
-    if(file == NULL)
+    if(ctx == NULL || file == NULL)
     {
         return false;
     }
@@ -59,18 +65,23 @@ bool ComXmlParser::load(const char* file)
     return true;
 }
 
-bool ComXmlParser::load(const ComBytes& content)
+bool ComXmlParser::load(const void* data, int data_size)
 {
-    if(content.empty())
+    if(ctx == NULL || data == NULL || data_size <= 0)
     {
         return false;
     }
-    if(((XMLDocument*)ctx)->Parse((const char*)content.getData(), content.getDataSize()) != XML_SUCCESS)
+    if(((XMLDocument*)ctx)->Parse((const char*)data, data_size) != XML_SUCCESS)
     {
         LOG_E("failed to load xml content");
         return false;
     }
     return true;
+}
+
+bool ComXmlParser::load(const ComBytes& content)
+{
+    return load(content.getData(), content.getDataSize());
 }
 
 bool ComXmlParser::save()
@@ -420,6 +431,10 @@ std::string ComXmlParser::pathRefine(const char* path)
 
 std::string ComXmlParser::extractText()
 {
+    if(ctx == NULL)
+    {
+        return std::string();
+    }
     return extractElementText(((XMLDocument*)ctx)->RootElement());
 }
 
