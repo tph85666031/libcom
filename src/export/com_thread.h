@@ -202,6 +202,13 @@ public:
     {
         LOG_I("stop thread pool enter");
         thread_mgr_running = false;
+        if(force)
+        {
+            mutex_msgs.lock();
+            msgs.clear();
+            mutex_msgs.unlock();
+        }
+        LOG_I("msg cleared");
         do
         {
             bool all_finished = true;
@@ -219,7 +226,7 @@ public:
             }
             mutex_threads.unlock();
 
-            if(force || all_finished)
+            if(all_finished)
             {
                 break;
             }
@@ -243,6 +250,8 @@ public:
             }
         }
 
+        LOG_I("all threads stopped");
+        LOG_I("stop mgr thread");
         mutex_threads.lock();
         threads.clear();
         mutex_threads.unlock();
@@ -251,6 +260,7 @@ public:
         {
             thread_mgr.join();
         }
+        LOG_I("mgr thread stopped");
     }
     virtual void threadPoolRunner(T& msg) {};
 private:
