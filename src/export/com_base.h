@@ -276,6 +276,38 @@ COM_EXPORT std::string com_system_remove_env(const char* name);
 COM_EXPORT std::vector<std::string> com_system_get_disk_drives();
 COM_EXPORT bool com_system_set_locale_to_utf8();
 
+template <class T>
+COM_EXPORT bool com_float_equal(const T& a, const T& b, const T& tolerance = 1e-6)
+{
+    const T abs_diff = std::fabs(a - b);
+    const T abs_max = std::fmax(std::fabs(a), std::fabs(b));
+    return (abs_diff <= abs_max * tolerance) || (abs_diff < tolerance);
+}
+
+template <class T>
+COM_EXPORT bool com_float_less(const T& a, const T& b, const T& tolerance = 1e-6)
+{
+    return !com_float_equal(a, b, tolerance) && (a < b);
+}
+
+template <class T>
+COM_EXPORT bool com_float_less_equal(const T& a, const T& b, const T& tolerance = 1e-6)
+{
+    return com_float_equal(a, b, tolerance) || (a < b);
+}
+
+template <class T>
+COM_EXPORT bool com_float_greater(const T& a, const T& b, const T& tolerance = 1e-6)
+{
+    return !com_float_equal(a, b, tolerance) && (a > b);
+}
+
+template <class T>
+COM_EXPORT bool com_float_greater_equal(const T& a, const T& b, const T& tolerance = 1e-6)
+{
+    return com_float_equal(a, b, tolerance) || (a > b);
+}
+
 template <class... T>
 COM_EXPORT int com_gcd(int x, int y, T...ns)
 {
@@ -394,7 +426,7 @@ template<class T1, class T2>
 class COM_EXPORT ComLRUMap
 {
 public:
-    ComLRUMap(size_t max_size = 1024) : max_size(std::max(max_size, size_t(1))){};
+    ComLRUMap(size_t max_size = 1024) : max_size(std::max(max_size, size_t(1))) {};
     virtual ~ComLRUMap() = default;
 
     bool put(const T1& key, const T2& value)
