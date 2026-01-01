@@ -2278,7 +2278,7 @@ int FileDetail::getType()
     return type;
 }
 
-uint64 FileDetail::getSize()
+int64 FileDetail::getSize()
 {
     return size;
 }

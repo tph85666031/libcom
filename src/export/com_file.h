@@ -54,7 +54,7 @@ public:
     virtual ~FileDetail();
 
     int getType();
-    uint64 getSize();
+    int64 getSize();
     uint32 getAccessTimeS();
     uint32 getChangeTimeS();
     uint32 getModifyTimeS();
@@ -64,7 +64,7 @@ public:
 private:
     std::string path;
     int type = FILE_TYPE_UNKNOWN;
-    uint64 size = 0;
+    int64 size = 0;
     uint32 time_change_s = 0;//文件属性修改时间(非内容)时间戳，秒，带时区
     uint32 time_access_s = 0;//文件访问时间(非实时)时间戳，秒，带时区
     uint32 time_modify_s = 0;//文件内容修改时间,时间戳，秒，带时区
