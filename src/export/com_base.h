@@ -247,8 +247,9 @@ COM_EXPORT bool com_sem_wait(Sem* sem, int timeout_ms = 0);
 COM_EXPORT void com_sem_reset(Sem* sem);
 COM_EXPORT bool com_sem_destroy(Sem* sem);//通过create创建的由destroy删除
 
-COM_EXPORT std::string com_get_bin_name();
 COM_EXPORT std::string com_get_bin_path();
+COM_EXPORT std::string com_get_bin_name();
+COM_EXPORT std::string com_get_bin_dir();
 
 COM_EXPORT uint64 com_ptr_to_number(const void* ptr);
 COM_EXPORT void* com_number_to_ptr(const uint64 val);
@@ -275,6 +276,7 @@ COM_EXPORT std::string com_system_set_env(const char* name, const char* val);
 COM_EXPORT std::string com_system_remove_env(const char* name);
 COM_EXPORT std::vector<std::string> com_system_get_disk_drives();
 COM_EXPORT bool com_system_set_locale_to_utf8();
+COM_EXPORT std::string com_system_get_device_uuid();
 
 template <class T>
 COM_EXPORT bool com_float_equal(const T& a, const T& b, const T& tolerance = 1e-6)

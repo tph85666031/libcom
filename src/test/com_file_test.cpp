@@ -23,7 +23,7 @@ void com_file_lock_unit_test_suit(void** state)
 
 void com_file_unit_test_suit(void** state)
 {
-    ComBytes bytes = com_file_readall(PATH_TO_LOCAL(com_get_bin_path() + com_get_bin_name()).c_str());
+    ComBytes bytes = com_file_readall(PATH_TO_LOCAL(com_get_bin_dir() + com_get_bin_name()).c_str());
     ASSERT_FALSE(bytes.empty());
 
     com_dir_create(PATH_TO_LOCAL("./1").c_str());

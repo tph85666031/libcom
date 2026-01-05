@@ -34,8 +34,6 @@
 #include "com_log.h"
 #include "com_serializer.h"
 
-static std::mutex mutex_app_path;
-
 #define XFNM_PATHNAME    (1 << 0)        /* No wildcard can ever match `/'.  */
 #define XFNM_NOESCAPE    (1 << 1)        /* Backslashes don't quote special chars.  */
 #define XFNM_PERIOD      (1 << 2)        /* Leading `.' is matched only explicitly.  */
@@ -2330,71 +2328,15 @@ GPS com_gps_gcj02_to_bd09(double longitude, double latitude)
     return gps;
 }
 
-std::string com_get_bin_name()
-{
-    mutex_app_path.lock();
-    static std::string name;
-    if(name.empty())
-    {
-#if defined(_WIN32) || defined(_WIN64)
-        wchar_t name_buf[MAX_PATH] = { 0 };
-        GetModuleFileNameW(NULL, name_buf, sizeof(name_buf) / sizeof(wchar_t));
-        name = com_wstring_to_utf8(name_buf).toString();
-        wchar_t* pos = wcsrchr(name_buf, L'\\');
-        if(pos != NULL)
-        {
-            pos++;
-            name = com_wstring_to_utf8(pos).toString();
-        }
-        else
-        {
-            name = com_wstring_to_utf8(name_buf).toString();
-        }
-#elif defined(__APPLE__)
-        char buf[256];
-        memset(buf, 0, sizeof(buf));
-        int ret = proc_name(getpid(), buf, sizeof(buf));
-        if(ret > 0)
-        {
-            name = buf;
-        }
-#else
-        char buf[256];
-        memset(buf, 0, sizeof(buf));
-        int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-        if(ret < 0 || (ret >= (int)sizeof(buf) - 1))
-        {
-            mutex_app_path.unlock();
-            return std::string();
-        }
-        for(int i = ret; i >= 0; i--)
-        {
-            if(buf[i] == '/')
-            {
-                name = buf + i + 1;
-                break;
-            }
-        }
-#endif
-    }
-    mutex_app_path.unlock();
-    return name;
-}
-
 std::string com_get_bin_path()
 {
-    mutex_app_path.lock();
-    static std::string path;
-    if(path.empty())
+    static std::string path = []()
     {
+        std::string val;
 #if defined(_WIN32) || defined(_WIN64)
         wchar_t name_buf[MAX_PATH] = { 0 };
         GetModuleFileNameW(NULL, name_buf, sizeof(name_buf) / sizeof(wchar_t));
-        wchar_t* pos = wcsrchr(name_buf, L'\\');
-        if(pos)
-        {
-            path = com_wstring_to_utf8(std::wstring(name_buf).assign(name_buf, wcslen(name_buf) - wcslen(pos) + 1)).toString();
-        }
+        val = com_wstring_to_utf8(name_buf).toString();
 #elif defined(__APPLE__)
         char buf[PROC_PIDPATHINFO_MAXSIZE];
         memset(buf, 0, sizeof(buf));
@@ -2402,15 +2344,14 @@ std::string com_get_bin_path()
         if(ret > 0)
         {
             buf[sizeof(buf) - 1] = '\0';
-            path = buf;
+            val = buf;
 
             std::string prefix = ".app/";
             auto iter = path.find(prefix);
             if(iter != std::string::npos)
             {
-                path = path.substr(0, iter + prefix.size());
+                val = val.substr(0, iter + prefix.size());
             }
-            path = com_path_dir(path.c_str());
         }
 #else
         char buf[256];
@@ -2418,22 +2359,37 @@ std::string com_get_bin_path()
         int ret = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
         if(ret < 0 || (ret >= (int)sizeof(buf) - 1))
         {
-            mutex_app_path.unlock();
             return std::string();
         }
-        for(int i = ret; i >= 0; i--)
-        {
-            if(buf[i] == '/')
-            {
-                buf[i + 1] = '\0';
-                path = buf;
-                break;
-            }
-        }
+        val = buf;
 #endif
+        return val;
     }
-    mutex_app_path.unlock();
+    ();
     return path;
+}
+
+std::string com_get_bin_name()
+{
+    static std::string name = []()
+    {
+        std::string path = com_get_bin_path();
+        return com_path_name(path.c_str());
+    }
+    ();
+
+    return name;
+}
+
+std::string com_get_bin_dir()
+{
+    static std::string dir = []()
+    {
+        std::string path = com_get_bin_path();
+        return com_path_dir(path.c_str());
+    }
+    ();
+    return dir;
 }
 
 std::string com_get_cwd()
@@ -2485,7 +2441,15 @@ std::string com_uuid_generator()
                                         com_time_rtc_us(),
                                         com_time_cpu_us(),
                                         com_rand(0, 0xFFFFFFFF));
-    return ComMD5::Digest(val.data(), (int)val.size()).toHexString(false);
+    std::string uuid = ComMD5::Digest(val.data(), (int)val.size()).toHexString(false);
+    if(uuid.length() == 32)
+    {
+        uuid.insert(20, "-");
+        uuid.insert(16, "-");
+        uuid.insert(12, "-");
+        uuid.insert(8, "-");
+    }
+    return uuid;
 }
 
 //计算最大公约数
@@ -2829,6 +2793,33 @@ bool com_system_set_locale_to_utf8()
 
     LOG_W("failed to set system locale to utf8");
     return false;
+}
+
+std::string com_system_get_device_uuid()
+{
+    static std::string uuid = []()
+    {
+#ifdef _WIN32
+        std::string val = com_run_shell_with_output("wmic csproduct get uuid");
+        ByteStreamReader bsr(val);
+        std::string line;
+        while(bsr.readLine(line))
+        {
+            if(line.length() == 36)
+            {
+                return line;
+            }
+        }
+        return std::string();
+#else
+        std::string val = com_file_readall("/sys/devices/virtual/dmi/id/product_uuid").toString();
+        com_string_trim(val);
+        return val;
+#endif
+    }
+    ();
+
+    return uuid;
 }
 
 ComBytes::ComBytes()

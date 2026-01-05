@@ -76,8 +76,8 @@ void com_config_unit_test_suit(void** state)
     com_file_remove("测试配置文件.ini");
     LOG_D("bin name=%s", com_get_bin_name().c_str());
     LOG_D("bin name=%s", com_get_bin_name().c_str());
-    LOG_D("bin path=%s", com_get_bin_path().c_str());
-    LOG_D("bin path=%s", com_get_bin_path().c_str());
+    LOG_D("bin path=%s", com_get_bin_dir().c_str());
+    LOG_D("bin path=%s", com_get_bin_dir().c_str());
 
     config.removeSection("group_3");
     config.removeItem("group_2", "bool");

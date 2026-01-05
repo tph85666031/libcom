@@ -132,7 +132,7 @@ static std::string search_file_addr2line()
         return path;
     }
 
-    path = com_string_format("%s/%s", com_get_bin_path().c_str(), FILE_ADDR2LINE);
+    path = com_string_format("%s/%s", com_get_bin_dir().c_str(), FILE_ADDR2LINE);
     if(com_file_type(path.c_str()) == FILE_TYPE_FILE)
     {
         return path;
@@ -156,7 +156,7 @@ static std::string search_file_objdump()
         return path;
     }
 
-    path = com_string_format("%s/%s", com_get_bin_path().c_str(), FILE_OBJDUMP);
+    path = com_string_format("%s/%s", com_get_bin_dir().c_str(), FILE_OBJDUMP);
     if(com_file_type(path.c_str()) == FILE_TYPE_FILE)
     {
         return path;

@@ -508,7 +508,7 @@ void com_base_unit_test_suit(void** state)
     LOG_I("reault=%s", result.c_str());
 #endif
     LOG_I("process name=%s", com_get_bin_name().c_str());
-    LOG_I("process path=%s", com_get_bin_path().c_str());
+    LOG_I("process path=%s", com_get_bin_dir().c_str());
 
     ComLRUMap<const char*, std::string> lru_map;
     lru_map.put("A1", "data of a1");
