@@ -372,6 +372,7 @@ public:
     void removeTail(int count = 1);
     bool toFile(const char* file);
     std::string toString() const;
+    std::string toBase64() const;
     std::string toHexString(bool upper = false) const;
     static ComBytes FromHexString(const char* hex_str);
 private:

@@ -29,6 +29,7 @@
 #include "CJsonObject.h"
 #include "com_base.h"
 #include "com_md5.h"
+#include "com_base64.h"
 #include "com_file.h"
 #include "com_thread.h"
 #include "com_log.h"
@@ -3184,6 +3185,16 @@ std::string ComBytes::toHexString(bool upper) const
         {
             com_string_to_upper(str);
         }
+    }
+    return str;
+}
+
+std::string ComBytes::toBase64() const
+{
+    std::string str;
+    if(buf.size() > 0)
+    {
+        str = ComBase64::Encode(&buf[0], (int)buf.size());
     }
     return str;
 }
