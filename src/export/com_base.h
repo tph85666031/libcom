@@ -666,16 +666,16 @@ public:
     int64 getNumber(const char* key, int64 default_val = 0);
     double getDouble(const char* key, double default_val = 0.0f);
     bool getBool(const char* key, bool default_val = false);
-    bool parse(int argc, const char** argv);
+    bool parse(int argc, char** argv);
     Message toMessage();
     std::string showUsage();
-    int getArgc();
+    int& getArgc();
     char** getArgv();
 private:
     std::map<std::string, ComOptionDesc> params;
     std::string app_name;
-    int argc;
-    char** argv;
+    int argc = 0;
+    char** argv = NULL;
 };
 
 class COM_EXPORT ComAutoClean

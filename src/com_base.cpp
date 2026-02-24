@@ -4230,6 +4230,10 @@ std::string ComOption::getString(const char* key, std::string default_val)
     }
 
     ComOptionDesc& desc = params[key];
+    if(desc.value.empty())
+    {
+        return default_val;
+    }
     return desc.value;
 }
 
@@ -4275,7 +4279,7 @@ bool ComOption::getBool(const char* key, bool default_val)
     }
 }
 
-bool ComOption::parse(int argc, const char** argv)
+bool ComOption::parse(int argc, char** argv)
 {
     if(argc <= 0 || argv == NULL)
     {
@@ -4283,7 +4287,7 @@ bool ComOption::parse(int argc, const char** argv)
         return false;
     }
     this->argc = argc;
-    this->argv = (char**)argv;
+    this->argv = argv;
     app_name = com_path_name(argv[0]);
     for(int i = 1; i < argc; i++)
     {
@@ -4353,7 +4357,7 @@ std::string ComOption::showUsage()
     return usage;
 }
 
-int ComOption::getArgc()
+int& ComOption::getArgc()
 {
     return argc;
 }
