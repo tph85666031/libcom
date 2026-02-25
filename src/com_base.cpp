@@ -2806,6 +2806,7 @@ std::string com_system_get_device_uuid()
         std::string line;
         while(bsr.readLine(line))
         {
+            com_string_trim(line);
             if(line.length() == 36)
             {
                 return line;
