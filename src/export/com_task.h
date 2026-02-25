@@ -50,8 +50,8 @@ protected:
     virtual void onStart();
     virtual void onStop();
     virtual void onMessage(Message& msg);
-private:
     void pushTaskMessage(const Message& msg);
+private:
     void startTask();
     void stopTask(bool force = false);
     static void TaskRunner(Task* task);
