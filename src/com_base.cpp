@@ -296,7 +296,7 @@ std::string com_run_shell_with_output(const char* fmt, ...)
     {
         return result;
     }
-    std::string cmd;
+
     va_list args;
     va_start(args, fmt);
     int len = vsnprintf(NULL, 0, fmt, args);
@@ -305,37 +305,56 @@ std::string com_run_shell_with_output(const char* fmt, ...)
     {
         return result;
     }
-    len += 1;  //上面返回的长度不包含\0，这里加上
-    std::vector<char> cmd_buf(len);
+
+    std::vector<char> cmd_buf(len + 1);
     va_start(args, fmt);
-    len = vsnprintf(cmd_buf.data(), len, fmt, args);
+    vsnprintf(cmd_buf.data(), cmd_buf.size(), fmt, args);
     va_end(args);
-    if(len <= 0)
-    {
-        return result;
-    }
-    cmd.assign(cmd_buf.data(), len);
+    std::string cmd(cmd_buf.data());
 
 #if defined(_WIN32) || defined(_WIN64)
-    FILE* fp = _popen(cmd.c_str(), "r");
-#else
-    FILE* fp = popen(cmd.c_str(), "r");
-#endif
-    if(fp == NULL)
+    // Use CreateProcess to hide the window
+    HANDLE hRead, hWrite;
+    SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+    if(!CreatePipe(&hRead, &hWrite, &sa, 0))
     {
         return result;
     }
-    char buf[1024];
-    memset(buf, 0, sizeof(buf));
-    while(fgets(buf, sizeof(buf), fp) != NULL)
+
+    STARTUPINFOA si = { sizeof(STARTUPINFOA) };
+    si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+    si.wShowWindow = SW_HIDE; // Hide window
+    si.hStdOutput = hWrite;
+    si.hStdError = hWrite;
+
+    PROCESS_INFORMATION pi = { 0 };
+    // CREATE_NO_WINDOW is the key to preventing the CMD flash
+    if(CreateProcessA(NULL, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
-        result.append(buf);
-        memset(buf, 0, sizeof(buf));
+        CloseHandle(hWrite); // Close write end so read doesn't block
+        char buffer[1024];
+        DWORD bytesRead;
+        while(ReadFile(hRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
+        {
+            buffer[bytesRead] = '\0';
+            result.append(buffer);
+        }
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
     }
-#if defined(_WIN32) || defined(_WIN64)
-    _pclose(fp);
+    CloseHandle(hRead);
 #else
-    pclose(fp);
+    FILE* fp = popen(cmd.c_str(), "r");
+    if(fp)
+    {
+        char buf[1024];
+        while(fgets(buf, sizeof(buf), fp))
+        {
+            result.append(buf);
+        }
+        pclose(fp);
+    }
 #endif
     return result;
 }
