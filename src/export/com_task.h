@@ -51,6 +51,8 @@ protected:
     virtual void onStop();
     virtual void onMessage(Message& msg);
     void pushTaskMessage(const Message& msg);
+protected:
+    std::atomic<bool> running;
 private:
     void startTask();
     void stopTask(bool force = false);
@@ -60,7 +62,6 @@ private:
     std::thread thread_runner;
     std::mutex mutex_msgs;
     std::queue<Message> msgs;
-    std::atomic<bool> running;
     std::mutex mutex_listeners;
     std::map<uint32, uint32> listeners;
     ComCondition condition = {"TASK:condition"};

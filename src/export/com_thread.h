@@ -165,7 +165,25 @@ public:
             return false;
         }
         mutex_msgs.lock();
-        msgs.push_back(msg);
+        if(allow_duplicate_message == false)
+        {
+            for(size_t i = 0; i < msgs.size(); i++)
+            {
+                if(msgs[i] == msg)
+                {
+                    mutex_msgs.unlock();
+                    return false;
+                }
+            }
+        }
+        if(urgent)
+        {
+            msgs.push_front(msg);
+        }
+        else
+        {
+            msgs.push_back(msg);
+        }
         mutex_msgs.unlock();
         return condition.notifyOne();
     };
@@ -348,7 +366,7 @@ private:
             int threads_count = threads_running_count + threads_pause_count;
             //LOG_D("threads_running_count=%d,threads_pause_count=%d",threads_running_count,threads_pause_count);
             int msg_count = poll->getMessageCount();
-            if(threads_count < poll->max_thread_count &&  poll->queue_size_per_thread > 0)
+            if(threads_count < poll->max_thread_count && poll->queue_size_per_thread > 0)
             {
                 int increase_count = (msg_count / poll->queue_size_per_thread) - threads_count;
                 if(increase_count > poll->max_thread_count - threads_count)
