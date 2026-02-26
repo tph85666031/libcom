@@ -213,7 +213,7 @@ private:
                 Message msg(ctx->message_id);
                 msg.set("key", item.key);
                 msg.set("flag", item.flag);
-                GetTaskManager().sendMessage(it->c_str(), msg);
+                GetComTaskManager().sendMessage(it->c_str(), msg);
             }
 
             for(auto it = cbs.begin(); it != cbs.end(); it++)

@@ -9,6 +9,37 @@
 #include "com_thread.h"
 #include <iostream>
 
+class COM_EXPORT ComWorker
+{
+    friend class ComWorkerManager;
+public:
+    ComWorker(std::string name);
+    virtual ~ComWorker();
+    std::string getName();
+private:
+    void stopWorker();
+private:
+    std::string name;
+    std::thread thread_runner;
+    std::atomic<bool> running;
+};;
+
+class COM_EXPORT ComWorkerManager
+{
+public:
+    ComWorkerManager();
+    virtual ~ComWorkerManager();
+    bool isWorkerExist(const char* worker_name);
+    bool isWorkerExist(const std::string& worker_name);
+    void destroyWorker(const char* worker_name_wildcard);
+    void destroyWorker(const std::string& worker_name_wildcard);
+    void destroyWorkerAll();
+    bool createWorker(const char* worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg = Message());
+private:
+    std::mutex mutex_workers;
+    std::map<std::string, ComWorker*> workers;
+};
+
 class COM_EXPORT ComTask
 {
     friend class ComTaskManager;
@@ -71,8 +102,8 @@ private:
 class COM_EXPORT ComTaskManager
 {
 public:
-    TaskManager();
-    virtual ~TaskManager();
+    ComTaskManager();
+    virtual ~ComTaskManager();
     bool isTaskExist(const char* task_name);
     bool isTaskExist(const std::string& task_name);
     void destroyTask(const char* task_name_wildcard, bool force = false);
@@ -132,6 +163,7 @@ private:
     std::map<std::string, ComTask*> tasks;
 };
 
+COM_EXPORT ComWorkerManager& GetComWorkerManager();
 COM_EXPORT ComTaskManager& GetComTaskManager();
 
 #endif /* __COM_TASK_H__ */

@@ -2,11 +2,128 @@
 #include "com_sync.h"
 #include "com_log.h"
 
-ComTaskManager& GetComTaskManager()
+ComWorker::ComWorker(std::string name)
 {
-    static ComTaskManager task_manager;
-    return task_manager;
+    this->name = name;
 }
+
+ComWorker::~ComWorker()
+{
+}
+
+std::string ComWorker::getName()
+{
+    return name;
+}
+
+void ComWorker::stopWorker()
+{
+    running = false;
+    if(thread_runner.joinable())
+    {
+        thread_runner.join();
+    }
+}
+
+ComWorkerManager::ComWorkerManager()
+{
+}
+
+ComWorkerManager::~ComWorkerManager()
+{
+    LOG_D("called");
+    destroyWorkerAll();
+}
+
+bool ComWorkerManager::isWorkerExist(const char* task_name)
+{
+    if(task_name == NULL)
+    {
+        return false;
+    }
+    mutex_workers.lock();
+    bool exist = workers.count(task_name) > 0;
+    mutex_workers.unlock();
+    return exist;
+}
+
+bool ComWorkerManager::isWorkerExist(const std::string& task_name)
+{
+    return isWorkerExist(task_name.c_str());
+}
+
+void ComWorkerManager::destroyWorker(const char* worker_name_wildcard)
+{
+    if(worker_name_wildcard == NULL)
+    {
+        return;
+    }
+    mutex_workers.lock();
+    std::map<std::string, ComWorker*>::iterator it;
+    for(it = workers.begin(); it != workers.end();)
+    {
+        ComWorker* t = it->second;
+        if(t == NULL)
+        {
+            it = workers.erase(it);
+            continue;
+        }
+        if(com_string_match(t->getName().c_str(), worker_name_wildcard) == false)
+        {
+            it++;
+            continue;
+        }
+        t->stopWorker();
+        delete t;
+        it = workers.erase(it);
+    }
+    mutex_workers.unlock();
+}
+
+void ComWorkerManager::destroyWorker(const std::string& task_name_wildcard)
+{
+    destroyWorker(task_name_wildcard.c_str());
+}
+
+void ComWorkerManager::destroyWorkerAll()
+{
+    LOG_D("called");
+    mutex_workers.lock();
+    std::map<std::string, ComWorker*>::iterator it;
+    for(it = workers.begin(); it != workers.end(); it++)
+    {
+        ComWorker* t = it->second;
+        if(t != NULL)
+        {
+            t->stopWorker();
+            delete t;
+        }
+    }
+    workers.clear();
+    mutex_workers.unlock();
+}
+
+bool ComWorkerManager::createWorker(const char* worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg)
+{
+    if(worker_name == NULL || worker_name[0] == '\0' || runner == NULL)
+    {
+        return false;
+    }
+    mutex_workers.lock();
+    size_t count = workers.count(worker_name);
+    if(count > 0)
+    {
+        mutex_workers.unlock();
+        LOG_W("worker_name %s already exist", worker_name);
+        return false;
+    }
+    ComWorker* worker = new ComWorker(worker_name);
+    worker->running = true;
+    worker->thread_runner = std::thread(runner, msg, std::ref(worker->running));
+    workers[worker_name] = worker;
+    mutex_workers.unlock();
+    return true;
+};
 
 ComTask::ComTask(std::string name, Message msg)
 {
@@ -43,7 +160,7 @@ void ComTask::stopTask(bool force)
     }
 }
 
-void ComTask::TaskRunner(Task* task)
+void ComTask::TaskRunner(ComTask* task)
 {
     if(task == NULL)
     {
@@ -117,11 +234,11 @@ std::string ComTask::getName()
     return name;
 }
 
-ComTaskManager::TaskManager()
+ComTaskManager::ComTaskManager()
 {
 }
 
-ComTaskManager::~TaskManager()
+ComTaskManager::~ComTaskManager()
 {
     LOG_D("called");
     destroyTaskAll();
@@ -301,5 +418,17 @@ void ComTaskManager::sendBroadcastMessage(const Message& msg)
         }
     }
     mutex_tasks.unlock();
+}
+
+ComWorkerManager& GetComWorkerManager()
+{
+    static ComWorkerManager worker_manager;
+    return worker_manager;
+}
+
+ComTaskManager& GetComTaskManager()
+{
+    static ComTaskManager task_manager;
+    return task_manager;
 }
 

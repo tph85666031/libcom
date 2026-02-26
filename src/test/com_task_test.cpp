@@ -4,7 +4,7 @@
 class TestTask : public ComTask
 {
 public:
-    TestTask(std::string name, Message msg) : Task(name, msg)
+    TestTask(std::string name, Message msg) : ComTask(name, msg)
     {
         pid = 0;
         count = 0;
@@ -45,7 +45,7 @@ private:
         //LOG_D("%s got message,id=%u,val=%s", getName().c_str(), msg.getID(), msg.getString("data").c_str());
         count++;
         flag |= 0x02;
-        GetTaskManager().sendAck(msg, "this is reply", sizeof("this is reply"));
+        GetComTaskManager().sendAck(msg, "this is reply", sizeof("this is reply"));
     }
     void onStart()
     {
@@ -80,7 +80,7 @@ static void test_thread(std::string name, int count)
     {
         msg.setID(1);
         msg.set("data", std::to_string(i));
-        GetTaskManager().sendMessage(name.c_str(), msg);
+        GetComTaskManager().sendMessage(name.c_str(), msg);
     }
 }
 
@@ -88,23 +88,23 @@ void com_task_unit_test_suit(void** state)
 {
     Message msg;
     msg.set("host", "127.0.0.1");
-    GetTaskManager().createTask<TestTask>("task1", msg);
+    GetComTaskManager().createTask<TestTask>("task1", msg);
     msg.set("port", 3610);
-    GetTaskManager().createTask<TestTask>("task2", msg);
-    GetTaskManager().createTask<TestTask>("task3", msg);
+    GetComTaskManager().createTask<TestTask>("task2", msg);
+    GetComTaskManager().createTask<TestTask>("task3", msg);
 #if 0
     Message msg(1);
     msg.set("data", "test message");
-    GetTaskManager().sendMessage("task1", msg);
-    GetTaskManager().sendMessage("task2", msg);
-    GetTaskManager().sendMessage("task3", msg);
-    GetTaskManager().sendMessage("task1", msg);
-    GetTaskManager().sendMessage("task2", msg);
-    GetTaskManager().sendMessage("task3", msg);
-    GetTaskManager().sendBroadcastMessage(msg);
+    GetComTaskManager().sendMessage("task1", msg);
+    GetComTaskManager().sendMessage("task2", msg);
+    GetComTaskManager().sendMessage("task3", msg);
+    GetComTaskManager().sendMessage("task1", msg);
+    GetComTaskManager().sendMessage("task2", msg);
+    GetComTaskManager().sendMessage("task3", msg);
+    GetComTaskManager().sendBroadcastMessage(msg);
     com_sleep_ms(100);
     LOG_D("ut quit,%s", GetTaskManager().getTask("task1")->getName().c_str());
-    //GetTaskManager().destroyTask("task1");
+    //GetComTaskManager().destroyTask("task1");
 #endif
     std::thread t1(test_thread, "task1", 10000);
     std::thread t2(test_thread, "task2", 10000);
@@ -126,15 +126,28 @@ void com_task_unit_test_suit(void** state)
     }
 
 
-    ComBytes reply = GetTaskManager().sendMessageAndWait("task1", msg, 1000);
+    ComBytes reply = GetComTaskManager().sendMessageAndWait("task1", msg, 1000);
     LOG_I("reply=%s", reply.toString().c_str());
 
-    GetTaskManager().destroyTask("task1");
+    GetComTaskManager().destroyTask("task1");
 
-    ASSERT_FALSE(GetTaskManager().isTaskExist("task1"));
-    ASSERT_TRUE(GetTaskManager().isTaskExist("task2"));
-    ASSERT_TRUE(GetTaskManager().isTaskExist("task3"));
+    ASSERT_FALSE(GetComTaskManager().isTaskExist("task1"));
+    ASSERT_TRUE(GetComTaskManager().isTaskExist("task2"));
+    ASSERT_TRUE(GetComTaskManager().isTaskExist("task3"));
 
-    //GetTaskManager().destroyTaskAll();
+    //GetComTaskManager().destroyTaskAll();
+    GetComWorkerManager().createWorker("w1", [](Message msg, std::atomic<bool>& running)
+    {
+        LOG_I("w1 start");
+        while(running)
+        {
+            LOG_I("w1 running");
+            com_sleep_s(1);
+        }
+        LOG_I("w1 quit");
+    });
+    com_sleep_s(5);
+    GetComWorkerManager().destroyWorker("w1");
+    com_sleep_s(3);
 }
 

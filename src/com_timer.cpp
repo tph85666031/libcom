@@ -116,7 +116,7 @@ void ComTimerManager::ThreadTimerLoop(ComTimerManager* manager)
             void* fc = timeout_msgs[i].getPtr("fc");
             if(task_name.empty() == false)
             {
-                GetTaskManager().sendMessage(task_name.c_str(), timeout_msgs[i]);
+                GetComTaskManager().sendMessage(task_name.c_str(), timeout_msgs[i]);
             }
             
             if(fc != NULL)

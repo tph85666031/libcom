@@ -14,7 +14,7 @@ static void mem_cb_test(const std::string& key, int flag, void* ctx)
 class MyMemTestTask : public ComTask
 {
 public:
-    MyMemTestTask(std::string name, Message msg) : Task(name, msg)
+    MyMemTestTask(std::string name, Message msg) : ComTask(name, msg)
     {
     };
     void onStart()
@@ -37,7 +37,7 @@ public:
 
 void com_mem_unit_test_suit(void** state)
 {
-    GetTaskManager().createTask<MyMemTestTask>("mem task");
+    GetComTaskManager().createTask<MyMemTestTask>("mem task");
 
     com_mem_add_notify("age", mem_cb_test);
     com_mem_add_notify("name", mem_cb_test);

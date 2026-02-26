@@ -9,7 +9,7 @@ void test_timer_callback(uint8 id, void* user_arg)
 class TimerTestTask : public ComTask
 {
 public:
-    TimerTestTask(std::string name, Message init_msg) : Task(name, init_msg)
+    TimerTestTask(std::string name, Message init_msg) : ComTask(name, init_msg)
     {
     };
     ~TimerTestTask()
@@ -34,7 +34,7 @@ private:
 void com_timer_unit_test_suit(void** state)
 {
     com_log_set_level("DEBUG");
-    GetTaskManager().createTask<TimerTestTask>("timer_test_task");
+    GetComTaskManager().createTask<TimerTestTask>("timer_test_task");
     ComTimer t1(1, "timer_test_task");
     t1.setInterval(1000).setRepeat(true);
     t1.start();
