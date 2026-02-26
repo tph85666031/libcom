@@ -96,7 +96,6 @@ public:
     ComThreadPool()
     {
         thread_mgr_running = false;
-        allow_duplicate_message = true;
         min_thread_count = 2;
         max_thread_count = std::max(4, (int)std::thread::hardware_concurrency());
         queue_size_per_thread = 5;
@@ -122,11 +121,6 @@ public:
         }
         return *this;
     }
-    ComThreadPool& setAllowDuplicateMessage(bool allow)
-    {
-        this->allow_duplicate_message = allow;
-        return *this;
-    }
     bool pushPoolMessage(T&& msg, bool urgent = false)
     {
         if(thread_mgr_running == false)
@@ -135,17 +129,6 @@ public:
             return false;
         }
         mutex_msgs.lock();
-        if(allow_duplicate_message == false)
-        {
-            for(size_t i = 0; i < msgs.size(); i++)
-            {
-                if(msgs[i] == msg)
-                {
-                    mutex_msgs.unlock();
-                    return false;
-                }
-            }
-        }
         if(urgent)
         {
             msgs.push_front(msg);
@@ -165,17 +148,6 @@ public:
             return false;
         }
         mutex_msgs.lock();
-        if(allow_duplicate_message == false)
-        {
-            for(size_t i = 0; i < msgs.size(); i++)
-            {
-                if(msgs[i] == msg)
-                {
-                    mutex_msgs.unlock();
-                    return false;
-                }
-            }
-        }
         if(urgent)
         {
             msgs.push_front(msg);
@@ -476,7 +448,6 @@ private:
     std::atomic<int> queue_size_per_thread;
     std::atomic<bool> thread_mgr_running;
     std::thread thread_mgr;
-    bool allow_duplicate_message;
 };
 
 template <typename T>

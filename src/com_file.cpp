@@ -544,7 +544,6 @@ bool com_dir_list(const char* dir_path, std::function<bool(std::string& path, in
             path.append("/");
         }
         path.append(ptr->d_name);
-        int file_type = FILE_TYPE_UNKNOWN;
         if(ptr->d_type == DT_DIR)
         {
             if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0)

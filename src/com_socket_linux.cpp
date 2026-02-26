@@ -17,7 +17,6 @@ ComTcpServer::ComTcpServer()
     epollfd = -1;
     thread_listener_running = false;
     epoll_timeout_ms = 3000;
-    setAllowDuplicateMessage(false);
 }
 
 ComTcpServer::ComTcpServer(uint16 port)
