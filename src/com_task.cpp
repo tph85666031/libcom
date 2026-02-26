@@ -125,6 +125,11 @@ bool ComWorkerManager::createWorker(const char* worker_name, std::function<void(
     return true;
 };
 
+bool ComWorkerManager::createWorker(const std::string& worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg)
+{
+    return createWorker(worker_name.c_str(), runner, msg);
+};
+
 ComTask::ComTask(std::string name, Message msg)
 {
     this->name = name;

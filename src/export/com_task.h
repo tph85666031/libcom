@@ -35,6 +35,7 @@ public:
     void destroyWorker(const std::string& worker_name_wildcard);
     void destroyWorkerAll();
     bool createWorker(const char* worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg = Message());
+    bool createWorker(const std::string& worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg = Message());
 private:
     std::mutex mutex_workers;
     std::map<std::string, ComWorker*> workers;
