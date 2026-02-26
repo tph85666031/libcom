@@ -1,7 +1,7 @@
 #include "com_task.h"
 #include "com_test.h"
 
-class TestTask : public Task
+class TestTask : public ComTask
 {
 public:
     TestTask(std::string name, Message msg) : Task(name, msg)

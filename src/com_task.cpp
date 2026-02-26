@@ -2,29 +2,29 @@
 #include "com_sync.h"
 #include "com_log.h"
 
-TaskManager& GetTaskManager()
+ComTaskManager& GetComTaskManager()
 {
-    static TaskManager task_manager;
+    static ComTaskManager task_manager;
     return task_manager;
 }
 
-Task::Task(std::string name, Message msg)
+ComTask::ComTask(std::string name, Message msg)
 {
     this->name = name;
     running = false;
 }
 
-Task::~Task()
+ComTask::~ComTask()
 {
 }
 
-void Task::startTask()
+void ComTask::startTask()
 {
     running = true;
     thread_runner = std::thread(TaskRunner, this);
 }
 
-void Task::stopTask(bool force)
+void ComTask::stopTask(bool force)
 {
     running = false;
     if(force)
@@ -43,7 +43,7 @@ void Task::stopTask(bool force)
     }
 }
 
-void Task::TaskRunner(Task* task)
+void ComTask::TaskRunner(Task* task)
 {
     if(task == NULL)
     {
@@ -75,19 +75,19 @@ void Task::TaskRunner(Task* task)
     task->onStop();
 }
 
-void Task::onMessage(Message& msg)
+void ComTask::onMessage(Message& msg)
 {
 }
 
-void Task::onStart()
+void ComTask::onStart()
 {
 }
 
-void Task::onStop()
+void ComTask::onStop()
 {
 }
 
-void Task::pushTaskMessage(const Message& msg)
+void ComTask::pushTaskMessage(const Message& msg)
 {
     mutex_msgs.lock();
     msgs.push(msg);
@@ -95,12 +95,12 @@ void Task::pushTaskMessage(const Message& msg)
     condition.notifyOne();
 }
 
-void Task::setProtectMode(bool enable)
+void ComTask::setProtectMode(bool enable)
 {
     this->protect_mode = enable;
 }
 
-bool Task::isListenerExist(uint32 id)
+bool ComTask::isListenerExist(uint32 id)
 {
     if(protect_mode == false)
     {
@@ -112,22 +112,22 @@ bool Task::isListenerExist(uint32 id)
     return exist;
 }
 
-std::string Task::getName()
+std::string ComTask::getName()
 {
     return name;
 }
 
-TaskManager::TaskManager()
+ComTaskManager::TaskManager()
 {
 }
 
-TaskManager::~TaskManager()
+ComTaskManager::~TaskManager()
 {
     LOG_D("called");
     destroyTaskAll();
 }
 
-bool TaskManager::isTaskExist(const char* task_name)
+bool ComTaskManager::isTaskExist(const char* task_name)
 {
     if(task_name == NULL)
     {
@@ -139,22 +139,22 @@ bool TaskManager::isTaskExist(const char* task_name)
     return exist;
 }
 
-bool TaskManager::isTaskExist(const std::string& task_name)
+bool ComTaskManager::isTaskExist(const std::string& task_name)
 {
     return isTaskExist(task_name.c_str());
 }
 
-void TaskManager::destroyTask(const char* task_name_wildcard, bool force)
+void ComTaskManager::destroyTask(const char* task_name_wildcard, bool force)
 {
     if(task_name_wildcard == NULL)
     {
         return;
     }
     mutex_tasks.lock();
-    std::map<std::string, Task*>::iterator it;
+    std::map<std::string, ComTask*>::iterator it;
     for(it = tasks.begin(); it != tasks.end();)
     {
-        Task* t = it->second;
+        ComTask* t = it->second;
         if(t == NULL)
         {
             it = tasks.erase(it);
@@ -172,19 +172,19 @@ void TaskManager::destroyTask(const char* task_name_wildcard, bool force)
     mutex_tasks.unlock();
 }
 
-void TaskManager::destroyTask(const std::string& task_name_wildcard, bool force)
+void ComTaskManager::destroyTask(const std::string& task_name_wildcard, bool force)
 {
     destroyTask(task_name_wildcard.c_str(), force);
 }
 
-void TaskManager::destroyTaskAll(bool force)
+void ComTaskManager::destroyTaskAll(bool force)
 {
     LOG_D("called");
     mutex_tasks.lock();
-    std::map<std::string, Task*>::iterator it;
+    std::map<std::string, ComTask*>::iterator it;
     for(it = tasks.begin(); it != tasks.end(); it++)
     {
-        Task* t = it->second;
+        ComTask* t = it->second;
         if(t != NULL)
         {
             t->stopTask(force);
@@ -195,12 +195,12 @@ void TaskManager::destroyTaskAll(bool force)
     mutex_tasks.unlock();
 }
 
-void TaskManager::sendAck(uint64 uuid, const void* data, int data_size)
+void ComTaskManager::sendAck(uint64 uuid, const void* data, int data_size)
 {
     GetSyncManager().getAdapter("com_task").syncPost(uuid, data, data_size);
 }
 
-void TaskManager::sendAck(const Message& msg_received, const void* data, int data_size)
+void ComTaskManager::sendAck(const Message& msg_received, const void* data, int data_size)
 {
     if(msg_received.getBool("need_ack"))
     {
@@ -208,12 +208,12 @@ void TaskManager::sendAck(const Message& msg_received, const void* data, int dat
     }
 }
 
-void TaskManager::sendMessage(const std::string& task_name_wildcard, const Message& msg)
+void ComTaskManager::sendMessage(const std::string& task_name_wildcard, const Message& msg)
 {
     sendMessage(task_name_wildcard.c_str(), msg);
 }
 
-void TaskManager::sendMessage(const char* task_name_wildcard, const Message& msg)
+void ComTaskManager::sendMessage(const char* task_name_wildcard, const Message& msg)
 {
     if(task_name_wildcard == NULL)
     {
@@ -232,7 +232,7 @@ void TaskManager::sendMessage(const char* task_name_wildcard, const Message& msg
     mutex_tasks.lock();
     for(auto it = tasks.begin(); it != tasks.end(); it++)
     {
-        Task* t = it->second;
+        ComTask* t = it->second;
         if((has_wildcard && com_string_match(t->getName().c_str(), task_name_wildcard))
                 || t->getName() == task_name_wildcard)
         {
@@ -250,12 +250,12 @@ void TaskManager::sendMessage(const char* task_name_wildcard, const Message& msg
     return;
 }
 
-ComBytes TaskManager::sendMessageAndWait(const std::string& task_name, Message& msg, int timeout_ms)
+ComBytes ComTaskManager::sendMessageAndWait(const std::string& task_name, Message& msg, int timeout_ms)
 {
     return sendMessageAndWait(task_name.c_str(), msg, timeout_ms);
 }
 
-ComBytes TaskManager::sendMessageAndWait(const char* task_name, Message& msg, int timeout_ms)
+ComBytes ComTaskManager::sendMessageAndWait(const char* task_name, Message& msg, int timeout_ms)
 {
     if(task_name == NULL)
     {
@@ -267,7 +267,7 @@ ComBytes TaskManager::sendMessageAndWait(const char* task_name, Message& msg, in
     uint64 uuid = GetSyncManager().getAdapter("com_task").createUUID();
     for(auto it = tasks.begin(); it != tasks.end(); it++)
     {
-        Task* t = it->second;
+        ComTask* t = it->second;
         if(t->getName() == task_name)
         {
             if(t->isListenerExist(msg.getID()))
@@ -289,12 +289,12 @@ ComBytes TaskManager::sendMessageAndWait(const char* task_name, Message& msg, in
     return GetSyncManager().getAdapter("com_task").syncWait(uuid, timeout_ms);
 }
 
-void TaskManager::sendBroadcastMessage(const Message& msg)
+void ComTaskManager::sendBroadcastMessage(const Message& msg)
 {
     mutex_tasks.lock();
     for(auto it = tasks.begin(); it != tasks.end(); it++)
     {
-        Task* t = it->second;
+        ComTask* t = it->second;
         if(t->isListenerExist(msg.getID()))
         {
             t->pushTaskMessage(msg);

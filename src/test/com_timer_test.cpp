@@ -6,7 +6,7 @@ void test_timer_callback(uint8 id, void* user_arg)
     LOG_D("timer_fc %d timeout,user_arg=%p", id, user_arg);
 }
 
-class TimerTestTask : public Task
+class TimerTestTask : public ComTask
 {
 public:
     TimerTestTask(std::string name, Message init_msg) : Task(name, init_msg)

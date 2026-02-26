@@ -9,12 +9,12 @@
 #include "com_thread.h"
 #include <iostream>
 
-class COM_EXPORT Task
+class COM_EXPORT ComTask
 {
-    friend class TaskManager;
+    friend class ComTaskManager;
 public:
-    Task(std::string name, Message msg = Message());
-    virtual ~Task();
+    ComTask(std::string name, Message msg = Message());
+    virtual ~ComTask();
 protected:
     std::string getName();
     void setProtectMode(bool enable);
@@ -54,7 +54,7 @@ protected:
 private:
     void startTask();
     void stopTask(bool force = false);
-    static void TaskRunner(Task* task);
+    static void TaskRunner(ComTask* task);
 private:
     std::string name;
     std::thread thread_runner;
@@ -67,7 +67,7 @@ private:
     std::atomic<bool> protect_mode = {false};
 };
 
-class COM_EXPORT TaskManager
+class COM_EXPORT ComTaskManager
 {
 public:
     TaskManager();
@@ -128,10 +128,10 @@ public:
     };
 private:
     std::mutex mutex_tasks;
-    std::map<std::string, Task*> tasks;
+    std::map<std::string, ComTask*> tasks;
 };
 
-COM_EXPORT TaskManager& GetTaskManager();
+COM_EXPORT ComTaskManager& GetComTaskManager();
 
 #endif /* __COM_TASK_H__ */
 

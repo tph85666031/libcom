@@ -11,7 +11,7 @@ static void mem_cb_test(const std::string& key, int flag, void* ctx)
     LOG_W("%s detected,flag=%s", key.c_str(), mem_db_opt_type[flag + 2]);
 }
 
-class MyMemTestTask : public Task
+class MyMemTestTask : public ComTask
 {
 public:
     MyMemTestTask(std::string name, Message msg) : Task(name, msg)
