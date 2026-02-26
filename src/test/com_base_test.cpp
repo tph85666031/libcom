@@ -717,7 +717,7 @@ void com_base_lock_unit_test_suit(void** state)
 
 void com_base_option_unit_test_suit(void** state)
 {
-    const char* argv[] =
+    char* argv[] =
     {
         "com",
         "-a", "5",

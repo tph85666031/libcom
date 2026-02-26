@@ -23,7 +23,8 @@ void com_file_lock_unit_test_suit(void** state)
 
 void com_file_unit_test_suit(void** state)
 {
-    ComBytes bytes = com_file_readall(PATH_TO_LOCAL(com_get_bin_dir() + com_get_bin_name()).c_str());
+    LOG_I("bin=%s", PATH_TO_LOCAL(com_get_bin_dir() + PATH_DELIM_STR + com_get_bin_name()).c_str());
+    ComBytes bytes = com_file_readall(PATH_TO_LOCAL(com_get_bin_dir() + PATH_DELIM_STR + com_get_bin_name()).c_str());
     ASSERT_FALSE(bytes.empty());
 
     com_dir_create(PATH_TO_LOCAL("./1").c_str());
@@ -210,7 +211,7 @@ void com_file_unit_test_suit(void** state)
     com_file_writef(PATH_TO_LOCAL("./line.txt").c_str(), "1234567890");
     com_file_truncate(PATH_TO_LOCAL("./line.txt").c_str(), 8);
     ASSERT_INT_EQUAL(com_file_size(PATH_TO_LOCAL("./line.txt").c_str()), 8);
-    com_file_clean(PATH_TO_LOCAL("./line.txt").c_str());
+    com_file_clear(PATH_TO_LOCAL("./line.txt").c_str());
     ASSERT_INT_EQUAL(com_file_size(PATH_TO_LOCAL("./line.txt").c_str()), 0);
 
     com_file_remove(PATH_TO_LOCAL("./line.txt").c_str());
@@ -268,5 +269,11 @@ void com_file_unit_test_suit(void** state)
     com_file_close(file);
     com_file_remove(PATH_TO_LOCAL("./1.rtf").c_str());
     com_dir_remove("./1");
+
+    com_dir_list("D:\\Downloads", [&](std::string & path, int type)->bool
+    {
+        LOG_I("file=%s,type=%d", path.c_str(), type);
+        return true;
+    }, true);
 }
 

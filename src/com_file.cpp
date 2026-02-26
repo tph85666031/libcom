@@ -107,28 +107,10 @@ static bool dir_list(const char* dir_root, std::map<std::string, int>& list, con
                 }
                 dir_list(path.c_str(), list, path_pattern, pattern_as_path);
                 break;
-            case DT_REG:
-                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-                {
-                    list[path] = FILE_TYPE_FILE;
-                }
-                break;
-            case DT_SOCK:
-                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-                {
-                    list[path] = FILE_TYPE_SOCK;
-                }
-                break;
-            case DT_LNK:
-                if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
-                {
-                    list[path] = FILE_TYPE_LINK;
-                }
-                break;
             default:
                 if(com_string_match(path.c_str(), path_pattern, pattern_as_path))
                 {
-                    list[path] = FILE_TYPE_UNKNOWN;
+                    list[path] = ptr->d_type;
                 }
                 break;
         }
@@ -492,6 +474,104 @@ void com_dir_clear(const char* dir_path)
             com_file_remove(it->first.c_str());
         }
     }
+}
+
+bool com_dir_list(const char* dir_path, std::function<bool(std::string& path, int type)> cb, bool recursion)
+{
+    if(com_string_is_empty(dir_path) || cb == NULL)
+    {
+        return false;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    struct _wfinddata_t file_info;
+    std::wstring dir_root_w = com_wstring_from_utf8(dir_path);
+    if(dir_root_w.back() != PATH_DELIM_WCHAR)
+    {
+        dir_root_w.append(PATH_DELIM_WSTR);
+    }
+    intptr_t handle = _wfindfirst(com_wstring_format(L"%s%c*.*", dir_root_w.c_str(), PATH_DELIM_WCHAR).c_str(), &file_info);
+    if(handle == -1)
+    {
+        return false;
+    }
+    do
+    {
+        std::string path = dir_path;
+        if(path.back() != PATH_DELIM_CHAR)
+        {
+            path.append(PATH_DELIM_STR);
+        }
+        path.append(com_wstring_to_utf8(file_info.name).toString());
+        if(file_info.attrib & _A_SUBDIR)
+        {
+            if(wcscmp(file_info.name, L".") == 0 || wcscmp(file_info.name, L"..") == 0)
+            {
+                continue;
+            }
+            if(cb(path, FILE_TYPE_DIR) == false)
+            {
+                break;
+            }
+            if(recursion)
+            {
+                com_dir_list(path.c_str(), cb, true);
+            }
+        }
+        else
+        {
+            if(cb(path, FILE_TYPE_FILE) == false)
+            {
+                break;
+            }
+        }
+    }
+    while(_wfindnext(handle, &file_info) == 0);
+    _findclose(handle);
+    return true;
+#else
+    DIR* dir = opendir(dir_path);
+    if(dir == NULL)
+    {
+        return false;
+    }
+
+    struct dirent* ptr = NULL;
+    while((ptr = readdir(dir)) != NULL)
+    {
+        std::string path = dir_path;
+        if(path.back() != '/')
+        {
+            path.append("/");
+        }
+        path.append(ptr->d_name);
+        int file_type = FILE_TYPE_UNKNOWN;
+        if(ptr->d_type == DT_DIR)
+        {
+            if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0)
+            {
+                continue;
+            }
+            if(cb(path, FILE_TYPE_DIR) == false)
+            {
+                break;
+            }
+            if(recursion)
+            {
+                com_dir_list(path.c_str(), cb, true);
+            }
+        }
+        else
+        {
+            if(cb(path, ptr->d_type) == false)
+            {
+                break;
+            }
+        }
+    }
+
+    closedir(dir);
+    return true;
+#endif
 }
 
 bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool recursion)

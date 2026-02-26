@@ -7,11 +7,10 @@
 #ifndef FILE_TYPE_UNKNOWN
 #define FILE_TYPE_UNKNOWN     0
 #endif
-#define FILE_TYPE_DIR         1
-#define FILE_TYPE_LINK        2
-#define FILE_TYPE_FILE        3
-#define FILE_TYPE_SOCK        4
-#define FILE_TYPE_SYS         10
+#define FILE_TYPE_DIR         4
+#define FILE_TYPE_FILE        8
+#define FILE_TYPE_LINK        10
+#define FILE_TYPE_SOCK        12
 #define FILE_TYPE_NOT_EXIST   0xFF
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -79,6 +78,7 @@ COM_EXPORT bool com_dir_create(const char* full_path);
 COM_EXPORT void com_dir_clear(const char* dir_path);
 COM_EXPORT bool com_file_erase(const char* file_path, uint8 val = 0);
 COM_EXPORT int com_dir_remove(const char* dir_path);
+COM_EXPORT bool com_dir_list(const char* dir_path, std::function<bool(std::string& path, int type)> cb, bool recursion = false);
 COM_EXPORT bool com_dir_list(const char* dir_path, std::map<std::string, int>& list, bool recursion = false);
 
 COM_EXPORT std::string com_path_name(const char* path);
