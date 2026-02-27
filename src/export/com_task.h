@@ -24,7 +24,7 @@ private:
     std::atomic<bool> running;
 };;
 
-class COM_EXPORT ComWorkerManager
+class COM_EXPORT ComWorkerManager : public ComThreadRunner<Message>
 {
 public:
     ComWorkerManager();
@@ -36,6 +36,8 @@ public:
     void destroyWorkerAll();
     bool createWorker(const char* worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg = Message());
     bool createWorker(const std::string& worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg = Message());
+private:
+    void threadRunner(Message& msg);
 private:
     std::mutex mutex_workers;
     std::map<std::string, ComWorker*> workers;

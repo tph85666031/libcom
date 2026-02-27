@@ -2,6 +2,8 @@
 #include "com_sync.h"
 #include "com_log.h"
 
+#define CMD_WORKER_DESTROY 0x01
+
 ComWorker::ComWorker(std::string name)
 {
     this->name = name;
@@ -9,20 +11,16 @@ ComWorker::ComWorker(std::string name)
 
 ComWorker::~ComWorker()
 {
-}
-
-std::string ComWorker::getName()
-{
-    return name;
-}
-
-void ComWorker::stopWorker()
-{
     running = false;
     if(thread_runner.joinable())
     {
         thread_runner.join();
     }
+}
+
+std::string ComWorker::getName()
+{
+    return name;
 }
 
 ComWorkerManager::ComWorkerManager()
@@ -33,6 +31,15 @@ ComWorkerManager::~ComWorkerManager()
 {
     LOG_D("called");
     destroyWorkerAll();
+}
+
+void ComWorkerManager::threadRunner(Message& msg)
+{
+    if(msg.getID() == CMD_WORKER_DESTROY)
+    {
+        std::string worker_name = msg.getString("name");
+        destroyWorker(worker_name);
+    }
 }
 
 bool ComWorkerManager::isWorkerExist(const char* task_name)
@@ -73,7 +80,6 @@ void ComWorkerManager::destroyWorker(const char* worker_name_wildcard)
             it++;
             continue;
         }
-        t->stopWorker();
         delete t;
         it = workers.erase(it);
     }
@@ -95,7 +101,6 @@ void ComWorkerManager::destroyWorkerAll()
         ComWorker* t = it->second;
         if(t != NULL)
         {
-            t->stopWorker();
             delete t;
         }
     }
@@ -109,26 +114,35 @@ bool ComWorkerManager::createWorker(const char* worker_name, std::function<void(
     {
         return false;
     }
+    return createWorker(worker_name, runner, msg);
+}
+
+bool ComWorkerManager::createWorker(const std::string& worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg)
+{
+    if(worker_name.empty() || runner == NULL)
+    {
+        return false;
+    }
     mutex_workers.lock();
-    size_t count = workers.count(worker_name);
-    if(count > 0)
+    if(workers.count(worker_name) > 0)
     {
         mutex_workers.unlock();
-        LOG_W("worker_name %s already exist", worker_name);
+        LOG_W("worker_name %s already exist", worker_name.c_str());
         return false;
     }
     ComWorker* worker = new ComWorker(worker_name);
     worker->running = true;
-    worker->thread_runner = std::thread(runner, msg, std::ref(worker->running));
+    worker->thread_runner = std::thread([ = ]()
+    {
+        runner(msg, worker->running);
+        Message msg(CMD_WORKER_DESTROY);
+        msg.set("name", worker_name);
+        pushRunnerMessage(msg);
+    });
     workers[worker_name] = worker;
     mutex_workers.unlock();
     return true;
-};
-
-bool ComWorkerManager::createWorker(const std::string& worker_name, std::function<void(Message msg, std::atomic<bool>& running)> runner, Message msg)
-{
-    return createWorker(worker_name.c_str(), runner, msg);
-};
+}
 
 ComTask::ComTask(std::string name, Message msg)
 {

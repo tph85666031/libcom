@@ -198,7 +198,6 @@ public:
             msgs.clear();
             mutex_msgs.unlock();
         }
-        LOG_I("msg cleared");
         do
         {
             bool all_finished = true;
@@ -314,12 +313,12 @@ private:
         {
             THREAD_POLL_INFO& des = poll->threads[tid];
             des.running_flag = -1;
-            LOG_D("pool thread exit set flag -1");
+            LOG_T("pool thread[%llu] exit, set flag -1", com_thread_get_tid());
         }
 
         poll->mutex_threads.unlock();
 
-        LOG_D("thread pool quit[%llu]", com_thread_get_tid());
+        LOG_D("pool thread[%llu] quit", com_thread_get_tid());
         return;
     }
     static void ThreadManager(ComThreadPool* poll)

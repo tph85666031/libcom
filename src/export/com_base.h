@@ -453,6 +453,10 @@ public:
         map.emplace(key, std::make_pair(--list.end(), value));
         return true;
     }
+    bool exist(const T1& key)
+    {
+        return (map.count(key) > 0);
+    }
     T2& get(const T1& key)
     {
         auto it = map.find(key);

@@ -508,9 +508,9 @@ bool com_mem_to_file(std::string file)
         return false;
     }
     std::string json = com_mem_to_json();
-    int ret = com_file_write(file_fd, json.data(), (int)json.size());
+    int64 ret = com_file_write(file_fd, json.data(), (int)json.size());
     com_file_close(file_fd);
-    return (ret == (int)json.size());
+    return (ret == (int64)json.size());
 }
 
 void com_mem_from_file(std::string file)
