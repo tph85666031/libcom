@@ -426,11 +426,11 @@ private :
 };
 
 template<class T1, class T2>
-class COM_EXPORT ComLRUMap
+class COM_EXPORT ComMapLRU
 {
 public:
-    ComLRUMap(size_t max_size = 1024) : max_size(std::max(max_size, size_t(1))) {};
-    virtual ~ComLRUMap() = default;
+    ComMapLRU(size_t max_size = 1024) : max_size(std::max(max_size, size_t(1))) {};
+    virtual ~ComMapLRU() = default;
 
     bool put(const T1& key, const T2& value)
     {
