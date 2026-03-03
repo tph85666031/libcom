@@ -35,7 +35,6 @@ extern void com_socket_multicast_unit_test_suit(void** state);
 extern void com_xml_unit_test_suit(void** state);
 extern void com_plist_unit_test_suit(void** state);
 extern void com_sync_unit_test_suit(void** state);
-extern void com_itp_log_unit_test_suit(void** state);
 extern void com_socket_stringipc_unit_test_suit(void** state);
 extern void com_netlink_unit_test_suit(void** state);
 
