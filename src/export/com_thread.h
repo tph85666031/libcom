@@ -159,6 +159,12 @@ public:
         mutex_msgs.unlock();
         return condition.notifyOne();
     };
+    void clearPoolMessage()
+    {
+        mutex_msgs.lock();
+        msgs.clear();
+        mutex_msgs.unlock();
+    }
     void waitAllDone(int timeout_ms = 0)
     {
         if(thread_mgr.joinable() == false)
