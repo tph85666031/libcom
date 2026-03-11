@@ -416,23 +416,23 @@ std::vector<std::string> com_string_split(const char* str, const char* delim, bo
     std::vector<std::string> vals;
     if(str != NULL && delim != NULL)
     {
-        std::string orgin = str;
+        std::string origin = str;
         int delim_len = (int)strlen(delim);
         std::string::size_type pos = 0;
         std::string::size_type pos_pre = 0;
         while(true)
         {
-            pos = orgin.find_first_of(delim, pos_pre);
+            pos = origin.find(delim, pos_pre);
             if(pos == std::string::npos)
             {
-                std::string val = orgin.substr(pos_pre);
+                std::string val = origin.substr(pos_pre);
                 if(keep_empty || val.empty() == false)
                 {
                     vals.push_back(val);
                 }
                 break;
             }
-            std::string val = orgin.substr(pos_pre, pos - pos_pre);
+            std::string val = origin.substr(pos_pre, pos - pos_pre);
             if(keep_empty || val.empty() == false)
             {
                 vals.push_back(val);
