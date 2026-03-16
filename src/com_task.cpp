@@ -80,6 +80,7 @@ void ComWorkerManager::destroyWorker(const char* worker_name_wildcard)
             it++;
             continue;
         }
+        t->thread_runner.detach();
         delete t;
         it = workers.erase(it);
     }
