@@ -1311,7 +1311,7 @@ FILE* com_file_open(const char* file_path, const char* flag)
         return NULL;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    return _wfopen(com_wstring_from_utf8(file_path).c_str(), com_wstring_from_utf8(flag).c_str());
+    return _wfsopen(com_wstring_from_utf8(file_path).c_str(), com_wstring_from_utf8(flag).c_str(), _SH_DENYNO);
 #else
     return fopen(file_path, flag);
 #endif

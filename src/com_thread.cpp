@@ -644,6 +644,7 @@ std::string com_process_get_path(int pid)
         pid = com_process_get_pid();
     }
 #if defined(_WIN32) || defined(_WIN64)
+#if 0
     HANDLE handle_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS | TH32CS_SNAPALL, pid);
     if(INVALID_HANDLE_VALUE == handle_snapshot)
     {
@@ -662,6 +663,20 @@ std::string com_process_get_path(int pid)
     }
     CloseHandle(handle_snapshot);
     return std::string();
+#else
+    HANDLE handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if(handle == NULL)
+    {
+        LOG_E("failed");
+        return std::string();
+    }
+
+    wchar_t path[MAX_PATH] = {0};
+    DWORD size = MAX_PATH;
+    QueryFullProcessImageNameW(handle, 0, path, &size);
+    CloseHandle(handle);
+    return com_wstring_to_utf8(path).toString();
+#endif
 #else
     std::vector<char> app(4096);
     int ret = readlink(com_string_format("/proc/%d/exe", pid).c_str(), &app[0], app.size() - 1);
