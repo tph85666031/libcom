@@ -2553,7 +2553,17 @@ std::string com_user_get_home(int uid)
 std::string com_user_get_home(const char* user)
 {
 #if defined(_WIN32) || defined(_WIN64)
-    LOG_E("api not support yet");
+    if(user == NULL || user[0] == '\0')
+    {
+        PWSTR pszPath = NULL;
+        // FOLDERID_Profile 对应 Linux 的 $HOME (C:\Users\Name)
+        if(SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Profile, 0, NULL, &pszPath)))
+        {
+            return com_wstring_to_utf32(pszPath).toString();
+        }
+    }
+
+    LOG_E("Specific user home not support yet on Windows");
     return std::string();
 #else
     if(user == NULL || user[0] == '\0')//获取当前用户的主目录
