@@ -13,18 +13,13 @@
 #endif
 #endif
 
-typedef bool (*signal_cb)(int sig, void* ctx);
-
-COM_EXPORT void com_stack_init();
-COM_EXPORT void com_stack_uninit();
-COM_EXPORT std::string com_stack_get();
-COM_EXPORT void com_stack_print();
-COM_EXPORT void com_stack_set_hook(signal_cb cb, void* user_data = NULL);
 COM_EXPORT void com_stack_enable_coredump();
 COM_EXPORT void com_stack_disable_coredump();
 
-COM_EXPORT void com_system_send_signal(int sig);
-COM_EXPORT void com_system_send_signal(uint64 pid, int sig);
+COM_EXPORT void com_system_signal_reset(int sig);
+COM_EXPORT void com_system_signal_ignore(int sig);
+COM_EXPORT void com_system_signal_send(int sig);
+COM_EXPORT void com_system_signal_send(uint64 pid, int sig);
 COM_EXPORT void com_system_exit(bool force = false);
 COM_EXPORT void com_system_pause();
 

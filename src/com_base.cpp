@@ -3071,7 +3071,7 @@ ComBytes& ComBytes::append(const ComBytes& bytes)
 
 ComBytes& ComBytes::insert(int pos, uint8 val)
 {
-    if(pos < 0 || pos >= (int)buf.size())
+    if(pos < 0 || pos > (int)buf.size())
     {
         return *this;
     }
@@ -3081,7 +3081,7 @@ ComBytes& ComBytes::insert(int pos, uint8 val)
 
 ComBytes& ComBytes::insert(int pos, const uint8* data, int data_size)
 {
-    if(pos < 0 || pos >= (int)buf.size() || data == NULL || data_size <= 0)
+    if(pos < 0 || pos > (int)buf.size() || data == NULL || data_size <= 0)
     {
         return *this;
     }
@@ -3091,7 +3091,7 @@ ComBytes& ComBytes::insert(int pos, const uint8* data, int data_size)
 
 ComBytes& ComBytes::insert(int pos, const char* data)
 {
-    if(pos < 0 || pos >= (int)buf.size())
+    if(pos < 0 || pos > (int)buf.size())
     {
         return *this;
     }
@@ -3106,7 +3106,7 @@ ComBytes& ComBytes::insert(int pos, const char* data)
 
 ComBytes& ComBytes::insert(int pos, ComBytes& bytes)
 {
-    if(pos < 0 || pos >= (int)buf.size() || this == &bytes)
+    if(pos < 0 || pos > (int)buf.size() || this == &bytes)
     {
         return *this;
     }

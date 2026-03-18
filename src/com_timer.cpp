@@ -118,7 +118,7 @@ void ComTimerManager::ThreadTimerLoop(ComTimerManager* manager)
             {
                 GetComTaskManager().sendMessage(task_name.c_str(), timeout_msgs[i]);
             }
-            
+
             if(fc != NULL)
             {
                 manager->pushPoolMessage(timeout_msgs[i]);
@@ -162,7 +162,7 @@ void ComTimerManager::removeTimer(std::string uuid)
     return;
 }
 
-void ComTimerManager::updateTimer(ComTimer& timer)
+void ComTimerManager::updateTimer(ComTimer& timer, bool immediate)
 {
     mutex_timers.lock();
     for(size_t i = 0; i < timers.size(); i++)
@@ -173,7 +173,7 @@ void ComTimerManager::updateTimer(ComTimer& timer)
             break;
         }
     }
-    timer.interval_ms = timer.interval_set_ms;
+    timer.interval_ms = immediate ? 0 : timer.interval_set_ms;
     timers.push_back(timer);
     mutex_timers.unlock();
     return;
@@ -277,7 +277,7 @@ ComTimer& ComTimer::setRepeat(bool repeat)
     return *this;
 }
 
-bool ComTimer::start()
+bool ComTimer::start(bool immediate)
 {
     LOG_D("timer start, uuid=%s", uuid.c_str());
     if(interval_set_ms <= 0 || id == 0)
@@ -290,7 +290,7 @@ bool ComTimer::start()
         LOG_E("task OR fc is not set");
         return false;
     }
-    GetTimerManager().updateTimer(*this);
+    GetTimerManager().updateTimer(*this, immediate);
     return true;
 }
 

@@ -178,6 +178,11 @@ void com_log_output(int level, const char* fmt, ...)
     {
         return;
     }
+    auto my_logger = spdlog::default_logger();
+    if(my_logger == NULL)
+    {
+        return;
+    }
     std::string str;
     va_list args;
     va_start(args, fmt);
@@ -200,11 +205,6 @@ void com_log_output(int level, const char* fmt, ...)
         return;
     }
 
-    auto my_logger = spdlog::default_logger();
-    if(my_logger == NULL)
-    {
-        return;
-    }
     if(level == LOG_LEVEL_TRACE)
     {
         my_logger->trace(str);
@@ -228,7 +228,6 @@ void com_log_output(int level, const char* fmt, ...)
     else if(level == LOG_LEVEL_FATAL)
     {
         my_logger->critical(str);
-        my_logger->critical(com_stack_get().c_str());
     }
 }
 

@@ -22,7 +22,7 @@ public:
     ComTimer& setID(uint8 id);
     ComTimer& setInterval(int interval_ms);
     ComTimer& setRepeat(bool repeat);
-    bool start();
+    bool start(bool immediate = false);
     void stop();
     bool restart();
 
@@ -47,12 +47,12 @@ class COM_EXPORT ComTimerManager : public ComThreadPool<Message>
 public:
     ComTimerManager();
     virtual ~ComTimerManager();
-    
+
     void setMessageID(uint32 id);
     uint32 getMessageID();
     void stopTimerManager();
 private:
-    void updateTimer(ComTimer& timer);
+    void updateTimer(ComTimer& timer, bool immediate = false);
     void removeTimer(std::string uuid);
     bool isTimerExist(std::string uuid);
     void startTimerManager();

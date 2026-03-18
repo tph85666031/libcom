@@ -65,26 +65,32 @@ void ComWorkerManager::destroyWorker(const char* worker_name_wildcard)
     {
         return;
     }
+    ComWorker* target = NULL;
     mutex_workers.lock();
-    std::map<std::string, ComWorker*>::iterator it;
-    for(it = workers.begin(); it != workers.end();)
+    for(auto it = workers.begin(); it != workers.end();)
     {
-        ComWorker* t = it->second;
-        if(t == NULL)
+        target = it->second;
+        if(target == NULL)
         {
             it = workers.erase(it);
             continue;
         }
-        if(com_string_match(t->getName().c_str(), worker_name_wildcard) == false)
+        if(com_string_match(target->getName().c_str(), worker_name_wildcard))
         {
-            it++;
-            continue;
+            it = workers.erase(it);
+            break;
         }
-        t->thread_runner.detach();
-        delete t;
-        it = workers.erase(it);
     }
     mutex_workers.unlock();
+    if(target != NULL)
+    {
+        target->running = false;
+        if(target->thread_runner.joinable())
+        {
+            target->thread_runner.join();
+        }
+        delete target;
+    }
 }
 
 void ComWorkerManager::destroyWorker(const std::string& task_name_wildcard)
