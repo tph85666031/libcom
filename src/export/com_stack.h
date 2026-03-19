@@ -5,6 +5,9 @@
 #include "com_base.h"
 
 #if defined(_WIN32) || defined(_WIN64)
+#ifndef SIGPIPE
+#define SIGPIPE -1
+#endif
 #ifndef SIGUSR1
 #define SIGUSR1 191
 #endif

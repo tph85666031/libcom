@@ -5,6 +5,7 @@
 #include <time.h>
 #include <direct.h>
 #include <Ws2tcpip.h>
+#include <shlobj.h>
 #else
 #include <unistd.h> //usleep readlink
 #include <sys/time.h>

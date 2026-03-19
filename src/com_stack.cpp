@@ -33,21 +33,37 @@ void com_stack_disable_coredump()
 
 void com_system_signal_reset(int sig)
 {
+    if(sig <= 0)
+    {
+        return;
+    }
     signal(sig, SIG_DFL);
 }
 
 void com_system_signal_ignore(int sig)
 {
+    if(sig <= 0)
+    {
+        return;
+    }
     signal(sig, SIG_IGN);
 }
 
 void com_system_signal_send(int sig)
 {
+    if(sig <= 0)
+    {
+        return;
+    }
     raise(sig);
 }
 
 void com_system_signal_send(uint64 pid, int sig)
 {
+    if(sig <= 0)
+    {
+        return;
+    }
 #if __linux__ == 1
     kill(pid, sig);
 #endif
