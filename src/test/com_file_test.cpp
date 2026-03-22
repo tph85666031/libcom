@@ -272,7 +272,15 @@ void com_file_unit_test_suit(void** state)
 
     com_dir_list("D:\\Downloads", [&](std::string & path, int type)->bool
     {
-        LOG_I("file=%s,type=%d", path.c_str(), type);
+        if(type != FILE_TYPE_FILE)
+        {
+            return true;
+        }
+        double entropy = com_entropy_file_block(path.c_str(), 32 * 1024, 7.0);
+        if(entropy >= 7.0f)
+        {
+            LOG_I("file=%s,entropy=%f", path.c_str(), entropy);
+        }
         return true;
     }, true);
 }

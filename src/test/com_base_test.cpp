@@ -383,7 +383,6 @@ XT& getXT()
 
 void com_base_unit_test_suit(void** state)
 {
-    com_stack_init();
     TIME_COST();
 
     std::vector<int> array_a;
@@ -510,7 +509,7 @@ void com_base_unit_test_suit(void** state)
     LOG_I("process name=%s", com_get_bin_name().c_str());
     LOG_I("process path=%s", com_get_bin_dir().c_str());
 
-    ComLRUMap<const char*, std::string> lru_map;
+    ComMapLRU<const char*, std::string> lru_map;
     lru_map.put("A1", "data of a1");
     lru_map.put("A2", "data of a2");
     lru_map.put("A3", "data of a3");

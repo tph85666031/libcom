@@ -2193,6 +2193,157 @@ std::string com_file_path_absolute(const char* path)
 #endif
 }
 
+double com_entropy_data(const uint8* buf, int buf_size)
+{
+    if(buf == NULL || buf_size <= 0)
+    {
+        return 0;
+    }
+
+    // 统计每个字节（0-255）出现的频率
+    std::vector<int64> counts(256, 0);
+    for(int i = 0; i < buf_size; i++)
+    {
+        counts[buf[i]]++;
+    }
+
+    double entropy = 0.0;
+    for(int i = 0; i < 256; ++i)
+    {
+        if(counts[i] > 0)
+        {
+            double p = ((double)counts[i]) / buf_size;
+            entropy -= p * std::log(p) * 1.4426950408889634;
+        }
+    }
+    return entropy;
+}
+
+double com_entropy_data_block(const uint8* buf, int buf_size, int block_size, double entropy_threshold)
+{
+    if(buf == NULL || buf_size <= 0)
+    {
+        return 0;
+    }
+
+    if(block_size <= 0)
+    {
+        block_size = 32 * 1024;
+    }
+
+    if(entropy_threshold <= 0)
+    {
+        entropy_threshold = 7.5;
+    }
+
+    double entropy = 0;
+    const uint8* p = buf;
+    for(int i = 0; i < buf_size / block_size; i++)
+    {
+        entropy = com_entropy_data(p, block_size);
+        if(entropy >= entropy_threshold)
+        {
+            return entropy;
+        }
+        p += block_size;
+    }
+
+    int remian_size = buf_size % block_size;
+    if(remian_size >= 64)
+    {
+        entropy = com_entropy_data(buf + buf_size - remian_size, remian_size);
+        if(entropy >= entropy_threshold)
+        {
+            return entropy;
+        }
+    }
+
+    return 0;
+}
+
+double com_entropy_file(const char* file)
+{
+    FILE* fp = com_file_open(file, "rb");
+    if(fp == NULL)
+    {
+        LOG_E("failed to open file:%s", file);
+        return -1;
+    }
+
+    std::vector<int64> counts(256, 0);
+    int64 total_size = 0;
+    uint8 buf[4096];
+    int size = 0;
+    double entropy = 0.0;
+    while((size = com_file_read(fp, buf, sizeof(buf))) > 0)
+    {
+        total_size += size;
+        for(int i = 0; i < size; i++)
+        {
+            counts[buf[i]]++;
+        }
+    }
+
+    if(total_size <= 0)
+    {
+        com_file_close(fp);
+        return 0;
+    }
+
+
+    for(int i = 0; i < 256; ++i)
+    {
+        if(counts[i] > 0)
+        {
+            double p = ((double)counts[i]) / total_size;
+            entropy -= p * std::log(p) * 1.4426950408889634;
+        }
+    }
+    com_file_close(fp);
+    return entropy;
+}
+
+double com_entropy_file_block(const char* file, int block_size, double entropy_threshold)
+{
+    FILE* fp = com_file_open(file, "rb");
+    if(fp == NULL)
+    {
+        return -1;
+    }
+
+    if(com_file_size(fp) <= 0)
+    {
+        com_file_close(fp);
+        return -2;
+    }
+
+    if(block_size <= 0)
+    {
+        block_size = 32 * 1024;
+    }
+
+    if(entropy_threshold <= 0)
+    {
+        entropy_threshold = 7.5;
+    }
+
+    std::vector<uint8> buf(block_size);
+    int size = 0;
+    double entropy = 0.0;
+    while((size = com_file_read(fp, buf.data(), block_size)) > 0)
+    {
+        entropy = com_entropy_data(buf.data(), size);
+        if(entropy >= entropy_threshold)
+        {
+            com_file_close(fp);
+            return entropy;
+        }
+    }
+
+    com_file_close(fp);
+    return 0;
+}
+
 FilePath::FilePath(const std::string& path)
 {
     parse(path.c_str());
