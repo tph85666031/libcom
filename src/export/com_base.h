@@ -277,6 +277,11 @@ COM_EXPORT std::string com_system_remove_env(const char* name);
 COM_EXPORT std::vector<std::string> com_system_get_disk_drives();
 COM_EXPORT bool com_system_set_locale_to_utf8();
 COM_EXPORT std::string com_system_get_device_uuid();
+COM_EXPORT std::string com_system_get_temp_dir();
+COM_EXPORT double com_entropy_data(const uint8* buf, int buf_size);
+COM_EXPORT double com_entropy_data_block(const uint8* buf, int buf_size, int block_size = 32 * 1024, double entropy_threshold = 7.5f);
+COM_EXPORT double com_entropy_file(const char* file);
+COM_EXPORT double com_entropy_file_block(const char* file, int block_size = 32 * 1024, double entropy_threshold = 7.5f);
 
 template <class T>
 COM_EXPORT bool com_float_equal(const T& a, const T& b, const T& tolerance = 1e-6)

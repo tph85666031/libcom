@@ -69,7 +69,6 @@ private:
     uint32 time_modify_s = 0;//文件内容修改时间,时间戳，秒，带时区
 };
 
-COM_EXPORT std::string com_dir_system_temp();
 COM_EXPORT int64 com_dir_size_max(const char* dir);
 COM_EXPORT int64 com_dir_size_used(const char* dir);
 COM_EXPORT int64 com_dir_size_freed(const char* dir);
@@ -166,10 +165,6 @@ COM_EXPORT bool com_file_is_locked(int fd, int& type, int64& pid);
 COM_EXPORT bool com_file_unlock(FILE* file);
 COM_EXPORT bool com_file_unlock(int fd);
 COM_EXPORT std::string com_file_path_absolute(const char* path);
-COM_EXPORT double com_entropy_data(const uint8* buf, int buf_size);
-COM_EXPORT double com_entropy_data_block(const uint8* buf, int buf_size, int block_size = 32 * 1024, double entropy_threshold = 7.5f);
-COM_EXPORT double com_entropy_file(const char* file);
-COM_EXPORT double com_entropy_file_block(const char* file, int block_size = 32 * 1024, double entropy_threshold = 7.5f);
 
 class COM_EXPORT SingleInstanceProcess
 {
