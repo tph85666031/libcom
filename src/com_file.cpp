@@ -1010,6 +1010,7 @@ bool com_file_copy(const char* file_path_to, const char* file_path_from, bool ap
     return true;
 }
 
+//将文件大小调整到size，超出部分删除,不足size的补0
 bool com_file_truncate(FILE* file, int64 size)
 {
     if(file == NULL || size < 0)
