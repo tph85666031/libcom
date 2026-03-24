@@ -2123,7 +2123,7 @@ std::string com_file_path_absolute(const char* path)
     }
 #if defined(_WIN32) || defined(_WIN64)
     wchar_t path_full[_MAX_PATH];
-    if(_wfullpath(path_full, com_wstring_from_utf8(path).c_str(), sizeof(path_full)) == NULL)
+    if(_wfullpath(path_full, com_wstring_from_utf8(path).c_str(), sizeof(path_full) / sizeof(path_full[0])) == NULL)
     {
         return std::string();
     }

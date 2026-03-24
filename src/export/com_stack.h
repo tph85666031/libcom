@@ -16,9 +16,12 @@
 #endif
 #endif
 
+typedef void (*signal_cb)(int sig);
+
 COM_EXPORT void com_stack_enable_coredump();
 COM_EXPORT void com_stack_disable_coredump();
 
+COM_EXPORT void com_system_signal_register(int sig, signal_cb cb);
 COM_EXPORT void com_system_signal_reset(int sig);
 COM_EXPORT void com_system_signal_ignore(int sig);
 COM_EXPORT void com_system_signal_send(int sig);

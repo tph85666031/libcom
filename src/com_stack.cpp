@@ -31,6 +31,23 @@ void com_stack_disable_coredump()
 #endif
 }
 
+void com_system_signal_register(int sig, signal_cb cb)
+{
+    if(cb == NULL)
+    {
+        return;
+    }
+#if defined(_WIN32) || defined(_WIN64)
+    signal(sig, cb);
+#else
+    struct sigaction sa;
+    sa.sa_handler = cb;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(sig, &sa, NULL);
+#endif
+}
+
 void com_system_signal_reset(int sig)
 {
     if(sig <= 0)

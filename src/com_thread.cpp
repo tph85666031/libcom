@@ -176,10 +176,10 @@ process_handle com_process_create(const char* app, std::vector<std::string> args
     ZeroMemory(&si, sizeof(si));
     ZeroMemory(&pi, sizeof(pi));
 
-    std::string val = "\"" + app + "\"";
+    std::string val = std::string("\"") + app + "\"";
     for(size_t i = 0; i < args.size(); i++)
     {
-        val += " " + "\"" + args[i] + "\"";
+        val += std::string(" ") + "\"" + args[i] + "\"";
     }
 
     std::wstring val_w = com_wstring_from_utf8(ComBytes(val));
