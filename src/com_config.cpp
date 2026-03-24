@@ -49,9 +49,9 @@ bool ComConfig::load(const char* file)
     std::lock_guard<std::mutex> lck(mutex_ini);
     this->ini.Reset();
 #if defined(_WIN32) || defined(_WIN64)
-	SI_Error ret = ini.LoadFile(com_string_utf8_to_ansi(file).c_str());
+    SI_Error ret = ini.LoadFile(com_string_utf8_to_ansi(file).c_str());
 #else
-	SI_Error ret = ini.LoadFile(file);
+    SI_Error ret = ini.LoadFile(file);
 #endif
     return (ret == SI_OK);
 }
@@ -65,13 +65,18 @@ bool ComConfig::loadFromString(const char* value)
     std::lock_guard<std::mutex> lck(mutex_ini);
     this->file_config.clear();
     this->ini.Reset();
-	SI_Error ret = ini.LoadData(value);
-	if (ret != SI_OK)
-	{
-		LOG_E("failed to load config from data: %s", value);
-		return false;
-	}
+    SI_Error ret = ini.LoadData(value);
+    if(ret != SI_OK)
+    {
+        LOG_E("failed to load config from data: %s", value);
+        return false;
+    }
     return true;
+}
+
+void ComConfig::setEnv(const std::map<std::string, std::string>& env)
+{
+    this->env = env;
 }
 
 bool ComConfig::save()
@@ -87,9 +92,9 @@ bool ComConfig::saveAs(const char* config_file)
     }
     std::lock_guard<std::mutex> lck(mutex_ini);
 #if defined(_WIN32) || defined(_WIN64)
-	SI_Error ret = ini.SaveFile(com_string_utf8_to_ansi(config_file).c_str(), false);
+    SI_Error ret = ini.SaveFile(com_string_utf8_to_ansi(config_file).c_str(), false);
 #else
-	SI_Error ret = ini.SaveFile(config_file, false);
+    SI_Error ret = ini.SaveFile(config_file, false);
 #endif
     return (ret == SI_OK);
 }
@@ -139,7 +144,12 @@ std::string ComConfig::getString(const char* section, const char* key, std::stri
     {
         return default_val;
     }
-    return pv;
+    std::string pv_str = pv;
+    for(auto it = env.begin(); it != env.end(); it++)
+    {
+        com_string_replace(pv_str, it->first.c_str(), it->second.c_str());
+    }
+    return pv_str;
 }
 
 int8 ComConfig::getInt8(const char* section, const char* key, int8 default_val)

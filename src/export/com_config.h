@@ -15,9 +15,10 @@ public:
     virtual ~ComConfig();
 
     ComConfig& operator=(const ComConfig& config);
-    
+
     bool load(const char* file);
     bool loadFromString(const char* value);
+    void setEnv(const std::map<std::string, std::string>& env);
     bool save();
     bool saveAs(const char* config_file);
     Message toMessage();
@@ -30,7 +31,7 @@ public:
     int32 getInt32(const char* section, const char* key, int32 default_val = 0);
     uint32 getUInt32(const char* section, const char* key, uint32 default_val = 0);
     int64 getInt64(const char* section, const char* key, int64 default_val = 0);
-	uint64 getUInt64(const char* section, const char* key, uint64 default_val = 0);
+    uint64 getUInt64(const char* section, const char* key, uint64 default_val = 0);
     bool getBool(const char* section, const char* key, bool default_val = false);
     float getFloat(const char* section, const char* key, float default_val = 0.0f);
     double getDouble(const char* section, const char* key, double default_val = 0.0f);
@@ -56,6 +57,7 @@ private:
     std::mutex mutex_ini;
     CSimpleIniA ini;
     std::string file_config;
+    std::map<std::string, std::string> env;
 };
 
 #endif /* __COM_CONFIG_H__ */
