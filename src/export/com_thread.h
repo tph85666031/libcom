@@ -13,11 +13,13 @@ typedef HANDLE process_sem_t;
 typedef HANDLE process_mutex_t;
 typedef HANDLE process_cond_t;
 typedef HANDLE process_share_mem_t;
+typedef HANDLE process_handle;
 #else
 typedef int process_sem_t;
 typedef int process_mutex_t;
 typedef int process_cond_t;
 typedef int process_share_mem_t;
+typedef int process_handle;
 #endif
 
 #define PROC_STAT_IDEL                   0
@@ -53,9 +55,10 @@ public:
     int thread_count = 0;
 };
 
+COM_EXPORT bool com_process_wait_for_exit(process_handle handle, bool block);
 COM_EXPORT bool com_process_exist(int pid);
 COM_EXPORT int com_process_join(int pid);
-COM_EXPORT int com_process_create(const char* app, std::vector<std::string> args = std::vector<std::string>());
+COM_EXPORT process_handle com_process_create(const char* app, std::vector<std::string> args = std::vector<std::string>());
 COM_EXPORT int com_process_get_pid(const char* name = NULL);
 COM_EXPORT std::vector<int> com_process_get_pid_all(const char* name = NULL);
 COM_EXPORT int com_process_get_ppid(int pid = -1);

@@ -83,6 +83,32 @@ ProcInfo::ProcInfo()
     thread_count = 0;
 }
 
+bool com_process_wait_for_exit(process_handle handle, bool block)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    if(handle == NULL)
+    {
+        return true;
+    }
+    DWORD ret = WaitForSingleObject(handle, block ? INFINITE : 0);
+    if(ret == WAIT_OBJECT_0)
+    {
+        return true;
+    }
+    return false;
+#else
+    if(handle <= 0)
+    {
+        return true;
+    }
+    if(waitpid(handle, NULL, block ? 0 : WNOHANG) > 0)
+    {
+        return true;
+    }
+    return false;
+#endif
+}
+
 bool com_process_exist(int pid)
 {
     if(pid < 0)
@@ -90,12 +116,12 @@ bool com_process_exist(int pid)
         return false;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, pid);
+    HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION  | SYNCHRONIZE, FALSE, pid);
     if(process == NULL)
     {
         return false;
     }
-    DWORD ret = WaitForSingleObject(process, INFINITE);
+    DWORD ret = WaitForSingleObject(process, 0);
     CloseHandle(process);
     return (ret == WAIT_TIMEOUT);
 #else
@@ -138,22 +164,22 @@ int com_process_join(int pid)
 #endif
 }
 
-int com_process_create(const char* app, std::vector<std::string> args)
+process_handle com_process_create(const char* app, std::vector<std::string> args)
 {
-    if(app == NULL)
-    {
-        return -1;
-    }
 #if defined(_WIN32) || defined(_WIN64)
+    if(app == NULL || app[0] == '\0')
+    {
+        return NULL;
+    }
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
     ZeroMemory(&pi, sizeof(pi));
 
-    std::string val = app;
+    std::string val = "\"" + app + "\"";
     for(size_t i = 0; i < args.size(); i++)
     {
-        val += " " + args[i];
+        val += " " + "\"" + args[i] + "\"";
     }
 
     std::wstring val_w = com_wstring_from_utf8(ComBytes(val));
@@ -162,25 +188,18 @@ int com_process_create(const char* app, std::vector<std::string> args)
     cmd.push_back(L'\0');
     if(CreateProcessW(NULL, &cmd[0], NULL, NULL, false, 0, NULL, NULL, &si, &pi) == false)
     {
+        return NULL;
+    }
+    CloseHandle(pi.hThread);
+    return pi.hProcess;
+#else
+    if(app == NULL || app[0] == '\0')
+    {
         return -1;
     }
-    return pi.dwProcessId;
-#else
-    //屏蔽SIGCHLD信号防止出现僵尸进程
-    sigset_t sig_pocess_mask;
-    struct sigaction sig_action_old;
-    sigset_t sig_pocess_mask_old;
-    memset(&sig_action_old, 0, sizeof(sig_action_old));
-    sigaction(SIGCHLD, NULL, &sig_action_old);
-    sigemptyset(&sig_pocess_mask);
-    sigaddset(&sig_pocess_mask, SIGCHLD);
-    sigprocmask(SIG_BLOCK, &sig_pocess_mask, &sig_pocess_mask_old);
-    signal(SIGCHLD, SIG_IGN);
     int ret = fork();
     if(ret != 0)
     {
-        sigaction(SIGCHLD, &sig_action_old, NULL);
-        sigprocmask(SIG_SETMASK, &sig_pocess_mask_old, NULL);
         return ret;
     }
 
@@ -207,7 +226,7 @@ int com_process_create(const char* app, std::vector<std::string> args)
         }
     }
     delete[] argv;
-    exit(0);
+    _exit(127);
 #endif
 }
 
