@@ -16,6 +16,7 @@ ComTimerManager& GetTimerManager()
 ComTimerManager::ComTimerManager()
 {
     setThreadsCount(1, 10).setQueueSize(10);
+    setThreadPoolName("ComTimerManager ThreadPool");
     startTimerManager();
 }
 

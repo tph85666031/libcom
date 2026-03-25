@@ -107,6 +107,11 @@ public:
     {
         stopThreadPool();
     }
+    ComThreadPool& setThreadPoolName(const char* name)
+    {
+        this->name = (name == NULL) ? "" : name;
+        return *this;
+    }
     ComThreadPool& setThreadsCount(int min_threads, int max_threads)
     {
         if(min_threads > 0 && max_threads > 0 && min_threads <= max_threads)
@@ -199,7 +204,7 @@ public:
     }
     void stopThreadPool(bool force = false)
     {
-        LOG_I("stop thread pool enter");
+        LOG_I("[%s]stop thread pool enter", name.c_str());
         thread_mgr_running = false;
         if(force)
         {
@@ -232,7 +237,7 @@ public:
         }
         while(true);
 
-        LOG_I("stop all threads");
+        LOG_I("[%s]stop all threads", name.c_str());
 
         mutex_threads.lock();
         std::map<std::thread::id, THREAD_POLL_INFO> threads_tmp = threads;
@@ -248,8 +253,8 @@ public:
             }
         }
 
-        LOG_I("all threads stopped");
-        LOG_I("stop mgr thread");
+        LOG_I("[%s]all threads stopped", name.c_str());
+        LOG_I("[%s]stop mgr thread", name.c_str());
         mutex_threads.lock();
         threads.clear();
         mutex_threads.unlock();
@@ -258,7 +263,7 @@ public:
         {
             thread_mgr.join();
         }
-        LOG_I("mgr thread stopped");
+        LOG_I("[%s]mgr thread stopped", name.c_str());
     }
     virtual void threadPoolRunner(T& msg) {};
 private:
@@ -324,7 +329,6 @@ private:
             des.running_flag = -1;
             LOG_T("pool thread[%llu] exit, set flag -1", com_thread_get_tid());
         }
-
         poll->mutex_threads.unlock();
 
         LOG_D("pool thread[%llu] quit", com_thread_get_tid());
@@ -365,14 +369,15 @@ private:
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
         }
+        LOG_D("[%s]ThreadManager quit", poll->name.c_str());
     }
     void createThread(int count)
     {
         mutex_threads.lock();
-        for(int i = 0; i < count; i++)
+        for(int i = 0; i < count && thread_mgr_running; i++)
         {
             std::thread* t = new std::thread(ThreadLoop, this);
-            com_thread_set_name(t, com_string_format("T-Poll %llu", com_thread_get_tid()).c_str());
+            com_thread_set_name(t, com_string_format("[%s]T-Poll %llu", name.c_str(), com_thread_get_tid()).c_str());
             THREAD_POLL_INFO des;
             des.t = t;
             des.running_flag = 0;
@@ -456,6 +461,7 @@ private:
     std::atomic<int> queue_size_per_thread;
     std::atomic<bool> thread_mgr_running;
     std::thread thread_mgr;
+    std::string name;
 };
 
 template <typename T>

@@ -17,6 +17,7 @@ ComTcpServer::ComTcpServer()
     epollfd = -1;
     thread_listener_running = false;
     epoll_timeout_ms = 3000;
+    setThreadPoolName("ComTcpServer ThreadPool");
 }
 
 ComTcpServer::ComTcpServer(uint16 port)
@@ -26,6 +27,7 @@ ComTcpServer::ComTcpServer(uint16 port)
     epollfd = -1;
     thread_listener_running = false;
     epoll_timeout_ms = 3000;
+    setThreadPoolName("ComTcpServer ThreadPool");
 }
 
 ComTcpServer::~ComTcpServer()

@@ -1070,12 +1070,12 @@ ComBytes com_wstring_to_utf8(const wchar_t* wstr)
     ComBytes result;
     if(sizeof(wchar_t) == 2)
     {
-        result.append((uint8*)wstr, (int)wcslen(wstr) * 2);
+        result.append((uint8*)wstr, (int)(wcslen(wstr) + 1) * 2);
         result = com_string_utf16_to_utf8(result);
     }
     else
     {
-        result.append((uint8*)wstr, (int)wcslen(wstr) * 4);
+        result.append((uint8*)wstr, (int)(wcslen(wstr) + 1) * 4);
         result = com_string_utf32_to_utf8(result);
     }
 
@@ -2356,8 +2356,10 @@ std::string com_get_bin_path()
         std::string val;
 #if defined(_WIN32) || defined(_WIN64)
         wchar_t name_buf[MAX_PATH] = { 0 };
-        GetModuleFileNameW(NULL, name_buf, sizeof(name_buf) / sizeof(wchar_t));
+        DWORD size = GetModuleFileNameW(NULL, name_buf, sizeof(name_buf) / sizeof(wchar_t));
+        wprintf(L"name=%s\n", name_buf);
         val = com_wstring_to_utf8(name_buf).toString();
+        LOG_I("val=%s", val.c_str());
 #elif defined(__APPLE__)
         char buf[PROC_PIDPATHINFO_MAXSIZE];
         memset(buf, 0, sizeof(buf));

@@ -82,9 +82,9 @@ fi
 cd ${DIR_ROOT}/tmp
 if [ -d ${DIR_ROOT} ];then
   if [ x"$OS_TYPE" == x"Windows" ];then
-      cmake -A ${BUILD_ARCH} -DBUILD_ARCH=${BUILD_ARCH} -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DOS_TYPE=${OS_TYPE} ${DIR_ROOT} -DCMAKE_WIN32_WINNT=0x0600 && cmake --build . --target install package --config ${BUILD_TYPE}
+      cmake -A ${BUILD_ARCH} -DBUILD_ARCH=${BUILD_ARCH} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DOS_TYPE=${OS_TYPE} ${DIR_ROOT} -DCMAKE_WIN32_WINNT=0x0600 && cmake --build . --target install package --config ${BUILD_TYPE}
   else
-      cmake -DBUILD_ARCH=${BUILD_ARCH} -DBUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DOS_TYPE=${OS_TYPE} ${DIR_ROOT} && make -j${JOBS} && make install && make package
+      cmake -DBUILD_ARCH=${BUILD_ARCH} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUNIT_TEST=${UNIT_TEST} -DOS_TYPE=${OS_TYPE} ${DIR_ROOT} && make -j${JOBS} && make install && make package
   fi
   if [ $? != 0 ]; then
     show_message "failed to make project"
