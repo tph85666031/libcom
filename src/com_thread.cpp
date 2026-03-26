@@ -179,15 +179,18 @@ process_handle com_process_create(const char* app, std::vector<std::string> args
     std::string val = std::string("\"") + app + "\"";
     for(size_t i = 0; i < args.size(); i++)
     {
-        val += std::string(" ") + "\"" + args[i] + "\"";
+        val += std::string(" \"") + args[i] + "\"";
     }
 
     std::wstring val_w = com_wstring_from_utf8(ComBytes(val));
     std::vector<wchar_t> cmd;
     cmd.assign(val_w.begin(), val_w.end());
     cmd.push_back(L'\0');
-    if(CreateProcessW(NULL, &cmd[0], NULL, NULL, false, 0, NULL, NULL, &si, &pi) == false)
+    std::string bin_dir = com_get_bin_dir();
+    std::wstring bin_dir_w = com_wstring_from_utf8(ComBytes(bin_dir));
+    if(CreateProcessW(NULL, &cmd[0], NULL, NULL, false, CREATE_NEW_CONSOLE, NULL, bin_dir_w.c_str(), &si, &pi) == false)
     {
+        LOG_E("failed to create process,err=%d,proc=%s", GetLastError(), val.c_str());
         return NULL;
     }
     CloseHandle(pi.hThread);
