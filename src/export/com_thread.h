@@ -118,6 +118,7 @@ public:
         {
             this->min_thread_count = min_threads;
             this->max_thread_count = max_threads;
+            LOG_I("[%s] set thread count:%d,%d", name.c_str(), min_threads, max_threads);
         }
         return *this;
     }
@@ -204,7 +205,7 @@ public:
     }
     void stopThreadPool(bool force = false)
     {
-        LOG_I("[%s]stop thread pool enter", name.c_str());
+        LOG_D("[%s]stop thread pool enter", name.c_str());
         thread_mgr_running = false;
         if(force)
         {
@@ -212,6 +213,7 @@ public:
             msgs.clear();
             mutex_msgs.unlock();
         }
+        int retry = 0;
         do
         {
             bool all_finished = true;
@@ -233,11 +235,11 @@ public:
             {
                 break;
             }
-            com_sleep_ms(100);
+            com_sleep_ms(100 * (++retry));
         }
-        while(true);
+        while(retry > 10);
 
-        LOG_I("[%s]stop all threads", name.c_str());
+        LOG_D("[%s]stop all threads", name.c_str());
 
         mutex_threads.lock();
         std::map<std::thread::id, THREAD_POLL_INFO> threads_tmp = threads;
@@ -253,8 +255,8 @@ public:
             }
         }
 
-        LOG_I("[%s]all threads stopped", name.c_str());
-        LOG_I("[%s]stop mgr thread", name.c_str());
+        LOG_D("[%s]all threads stopped", name.c_str());
+        LOG_D("[%s]stop mgr thread", name.c_str());
         mutex_threads.lock();
         threads.clear();
         mutex_threads.unlock();
@@ -263,113 +265,118 @@ public:
         {
             thread_mgr.join();
         }
-        LOG_I("[%s]mgr thread stopped", name.c_str());
+        LOG_D("[%s]mgr thread stopped", name.c_str());
     }
     virtual void threadPoolRunner(T& msg) {};
 private:
-    static void ThreadLoop(ComThreadPool* poll)
+    static void ThreadLoop(ComThreadPool* pool)
     {
-        if(poll == NULL)
+        if(pool == NULL)
         {
             return;
         }
         std::thread::id tid = std::this_thread::get_id();
-        while(poll->thread_mgr_running)
+        while(pool->thread_mgr_running)
         {
-            if(poll->getMessageCount() <= 0)  //数据已处理完
+            LOG_D("[%s] ThreadLoop running:%d", pool->name.c_str(), tid);
+            if(pool->getMessageCount() <= 0)  //数据已处理完
             {
-                if(poll->getRunningCount() > poll->min_thread_count)
+                if(pool->getRunningCount() > pool->min_thread_count)
                 {
                     //运行线程数量超过最低值,退出本线程
                     break;
                 }
 
                 //标记本线程为暂停状态
-                poll->mutex_threads.lock();
-                if(poll->threads.count(tid) > 0)
+                pool->mutex_threads.lock();
+                if(pool->threads.count(tid) > 0)
                 {
-                    THREAD_POLL_INFO& des = poll->threads[tid];
+                    THREAD_POLL_INFO& des = pool->threads[tid];
                     des.running_flag = 0;
                 }
-                poll->mutex_threads.unlock();
+                pool->mutex_threads.unlock();
 
                 //等待数据
-                poll->condition.wait();
+                pool->condition.wait();
+                LOG_D("[%s] ThreadLoop wait returned:%d", pool->name.c_str(), tid);
                 continue;
             }
 
             //更新线程状态为执行中
-            poll->mutex_threads.lock();
-            if(poll->threads.count(tid) > 0)
+            pool->mutex_threads.lock();
+            if(pool->threads.count(tid) > 0)
             {
-                THREAD_POLL_INFO& des = poll->threads[tid];
+                THREAD_POLL_INFO& des = pool->threads[tid];
                 des.running_flag = 1;
             }
-            poll->mutex_threads.unlock();
+            pool->mutex_threads.unlock();
 
 
             //继续获取数据进行处理
-            poll->mutex_msgs.lock();
-            while(poll->thread_mgr_running && poll->msgs.empty() == false)
+            pool->mutex_msgs.lock();
+            while(pool->thread_mgr_running && pool->msgs.empty() == false)
             {
-                T msg(std::move(poll->msgs.front()));
-                poll->msgs.pop_front();
-                poll->mutex_msgs.unlock();
-                poll->threadPoolRunner(msg);
-                poll->mutex_msgs.lock();
+                T msg(std::move(pool->msgs.front()));
+                pool->msgs.pop_front();
+                pool->mutex_msgs.unlock();
+                pool->threadPoolRunner(msg);
+                pool->mutex_msgs.lock();
             }
-            poll->mutex_msgs.unlock();
+            pool->mutex_msgs.unlock();
         }
 
         //本线程退出，设置标记为退出
-        poll->mutex_threads.lock();
-        if(poll->threads.count(tid) > 0)
+        pool->mutex_threads.lock();
+        if(pool->threads.count(tid) > 0)
         {
-            THREAD_POLL_INFO& des = poll->threads[tid];
+            THREAD_POLL_INFO& des = pool->threads[tid];
             des.running_flag = -1;
             LOG_T("pool thread[%llu] exit, set flag -1", com_thread_get_tid());
         }
-        poll->mutex_threads.unlock();
+        pool->mutex_threads.unlock();
 
         LOG_D("pool thread[%llu] quit", com_thread_get_tid());
         return;
     }
-    static void ThreadManager(ComThreadPool* poll)
+    static void ThreadManager(ComThreadPool* pool)
     {
-        if(poll == NULL)
+        if(pool == NULL)
         {
             return;
         }
+        LOG_D("[%s]ThreadManager start", pool->name.c_str());
         com_thread_set_name("T-PoolMGR");
-        poll->createThread(poll->min_thread_count);
-        while(poll->thread_mgr_running)
+        pool->createThread(pool->min_thread_count);
+        LOG_D("[%s]ThreadManager threads created", pool->name.c_str());
+        while(pool->thread_mgr_running)
         {
-            poll->recycleThread();
-            int threads_running_count = poll->getRunningCount();
-            int threads_pause_count = poll->getPauseCount();
+            pool->recycleThread();
+            int threads_running_count = pool->getRunningCount();
+            int threads_pause_count = pool->getPauseCount();
             int threads_count = threads_running_count + threads_pause_count;
             //LOG_D("threads_running_count=%d,threads_pause_count=%d",threads_running_count,threads_pause_count);
-            int msg_count = poll->getMessageCount();
-            if(threads_count < poll->max_thread_count && poll->queue_size_per_thread > 0)
+            int msg_count = pool->getMessageCount();
+            if(threads_count < pool->max_thread_count && pool->queue_size_per_thread > 0)
             {
-                int increase_count = (msg_count / poll->queue_size_per_thread) - threads_count;
-                if(increase_count > poll->max_thread_count - threads_count)
+                int increase_count = (msg_count / pool->queue_size_per_thread) - threads_count;
+                if(increase_count > pool->max_thread_count - threads_count)
                 {
-                    increase_count = poll->max_thread_count - threads_count;
+                    increase_count = pool->max_thread_count - threads_count;
                 }
                 if(increase_count > 0)
                 {
-                    LOG_D("thread increased, count=%d", increase_count);
-                    poll->createThread(increase_count);
+                    LOG_D("[%s]thread increased, count=%d", pool->name.c_str(), increase_count);
+                    pool->createThread(increase_count);
                 }
             }
             int sleep_count = 1;
-            while(poll->thread_mgr_running && sleep_count-- > 0)
+            while(pool->thread_mgr_running && sleep_count-- > 0)
             {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
         }
-        LOG_D("[%s]ThreadManager quit", poll->name.c_str());
+        pool->recycleThread();
+        LOG_D("[%s]ThreadManager quit", pool->name.c_str());
     }
     void createThread(int count)
     {
@@ -392,10 +399,16 @@ private:
         for(it = threads.begin(); it != threads.end();)
         {
             THREAD_POLL_INFO& des = it->second;
-            if(des.running_flag == -1 && des.t != NULL && des.t->joinable())
+            if(des.running_flag == -1)
             {
-                des.t->join();
-                delete des.t;
+                if(des.t != NULL)
+                {
+                    if(des.t->joinable())
+                    {
+                        des.t->join();
+                    }
+                    delete des.t;
+                }
                 it = threads.erase(it);
             }
             else
