@@ -1667,13 +1667,13 @@ bool com_file_readline(FILE* file, std::string& line)
             break;
         }
     }
-    if(result.back() == '\n')
-    {
-        result.pop_back();
-    }
     if(ret == NULL && result.empty())
     {
         return false;
+    }
+    if(result.back() == '\n')
+    {
+        result.pop_back();
     }
     line = result;
     return true;
