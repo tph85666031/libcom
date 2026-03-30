@@ -278,7 +278,7 @@ private:
         std::thread::id tid = std::this_thread::get_id();
         while(pool->thread_mgr_running)
         {
-            LOG_D("[%s] ThreadLoop running:%d", pool->name.c_str(), tid);
+            LOG_D("[%s] ThreadLoop running:%llu", pool->name.c_str(), com_thread_get_tid());
             if(pool->getMessageCount() <= 0)  //数据已处理完
             {
                 if(pool->getRunningCount() > pool->min_thread_count)
@@ -298,7 +298,7 @@ private:
 
                 //等待数据
                 pool->condition.wait();
-                LOG_D("[%s] ThreadLoop wait returned:%d", pool->name.c_str(), tid);
+                LOG_D("[%s] ThreadLoop wait returned:%llu", pool->name.c_str(), com_thread_get_tid());
                 continue;
             }
 
