@@ -521,6 +521,11 @@ public:
         return true;
     };
 
+    bool isRunning()
+    {
+        return thread_runner_running;
+    }
+
     size_t getMessageCount()
     {
         std::lock_guard<std::mutex> lck(mutex_msgs);
