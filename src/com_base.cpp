@@ -1962,7 +1962,7 @@ uint64 com_time_from_tm(struct tm* tm_val)
 
 uint64 com_time_from_string(const char* date_str, const char* format)
 {
-    if(date_str == NULL)
+    if(date_str == NULL || format == NULL)
     {
         return 0;
     }
