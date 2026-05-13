@@ -2456,15 +2456,28 @@ void* com_number_to_ptr(const uint64 val)
     return ptr;
 }
 
-std::string com_uuid_generator()
+std::string com_uuid_generator(const std::string& val)
 {
-    std::string val = com_string_format("%d-%llu-%llu-%llu-%u",
-                                        com_process_get_pid(),
-                                        com_thread_get_tid(),
-                                        com_time_rtc_us(),
-                                        com_time_cpu_us(),
-                                        com_rand(0, 0xFFFFFFFF));
-    std::string uuid = ComMD5::Digest(val.data(), (int)val.size()).toHexString(false);
+    return com_uuid_generator(val.c_str());
+}
+
+std::string com_uuid_generator(const char* val)
+{
+    std::string val_str;
+    if(com_string_is_empty(val))
+    {
+        val_str = com_string_format("%d-%llu-%llu-%llu-%u",
+                                    com_process_get_pid(),
+                                    com_thread_get_tid(),
+                                    com_time_rtc_us(),
+                                    com_time_cpu_us(),
+                                    com_rand(0, 0xFFFFFFFF));
+    }
+    else
+    {
+        val_str = val;
+    }
+    std::string uuid = ComMD5::Digest(val_str.data(), (int)val_str.size()).toHexString(false);
     if(uuid.length() == 32)
     {
         uuid.insert(20, "-");

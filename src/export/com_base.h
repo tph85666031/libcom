@@ -257,7 +257,8 @@ COM_EXPORT void* com_number_to_ptr(const uint64 val);
 COM_EXPORT std::string com_get_cwd();
 COM_EXPORT void com_set_cwd(const char* dir);
 
-COM_EXPORT std::string com_uuid_generator();
+COM_EXPORT std::string com_uuid_generator(const std::string& val);
+COM_EXPORT std::string com_uuid_generator(const char* val = NULL);
 COM_EXPORT int com_gcd(int x, int y);
 
 COM_EXPORT int com_user_get_uid(const char* user = NULL);
